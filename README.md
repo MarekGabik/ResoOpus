@@ -5,13 +5,13 @@
 > Screeny se generují z pluginu: `ResoOpusTests --shots docs/manual/img`.
 
 Drone syntezátor značky Gavr pro filmové, ambientní a experimentální plochy. Čtyři ručně, mikrotonálně laděné
-hlasy ve dvou párech hrají po vložení do Abletonu samy (HOLD). Ve středu nástroje bude knob GRAVITY, který vede
+hlasy ve dvou párech hrají po vložení do Abletonu samy (HOLD). Ve středu nástroje je knob GRAVITY, který vede
 od čistého ladění k chaosu. Formáty VST3 (Mac + Windows), AU (Mac), Standalone.
 
 Podrobnosti: [docs/SPECIFIKACE.md](docs/SPECIFIKACE.md) (architektura, roadmapa s branami), [docs/KONCEPT.md](docs/KONCEPT.md),
 vzhled [design/resoopus-mockup.html](design/resoopus-mockup.html).
 
-## Stav: fáze 4 (verze 0.1.0)
+## Stav: fáze 5 (verze 0.1.0)
 
 Hotovo a otestováno:
 - **4 hlasy** ve dvou párech (1·2 a 3·4 kolem GRAVITY). TYPE každého hlasu: **OFF / CHOIR / SIREN / PULSAR**
@@ -24,6 +24,8 @@ Hotovo a otestováno:
 - hraní: **Plates** (bílé klávesy C3–F3 = hlasy 1–4) a **Keys** (nota přeladí volný hlas), dynamika
   **Velocity / Aftertouch / obojí**, **Snap** Free / Chromatic / Scale, A = 415–466 Hz
 - UI stránky DRONE a LEAD · FX, klávesnice s čísly hlasů, undo/redo, A/B, modulační panel
+- **LEAD** (mono melodie: 2 oscilátory s morfem tvaru, SYNC, SUB, ADSR, glide, vibrato se zpožděním a tlakem) a **ARP** v tempu skladby;
+  zapíná se ikonou u záložky LEAD · FX, hrají ho klávesy mimo plates
 - **42 presetů** v kategoriích Basics, Drones, Cinematic, Textures, Orbits, Lead, Pulse; **prohlížeč presetů**
   (kategorie, All / Factory / User / Favourites, hledání, hvězdička, Save / Save as, výchozí preset, náhled hlasů a GRAVITY);
   vlastní presety v `Dokumenty/Gavr/ResoOpus Presets` (*.ropreset)
