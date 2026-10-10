@@ -191,6 +191,16 @@ void PresetBrowser::rebuild()
             && ! p.description.toLowerCase().contains (query)) continue;
         visible.add (i);
     }
+    // grouped by category in the browser's order (factory before user within a category)
+    const auto cats = PresetManager::categories();
+    std::stable_sort (visible.begin(), visible.end(), [&all, &cats] (int a, int b)
+    {
+        const auto& pa = all.getReference (a);
+        const auto& pb = all.getReference (b);
+        const int ca = cats.indexOf (pa.category), cb = cats.indexOf (pb.category);
+        if (ca != cb) return (ca < 0 ? 99 : ca) < (cb < 0 ? 99 : cb);
+        return pa.isFactory && ! pb.isFactory;
+    });
     for (int i = 0; i < categoryButtons.size(); ++i)
         categoryButtons[i]->setToggleState ((i == 0 && category.isEmpty()) || categoryButtons[i]->getButtonText() == category, dontSendNotification);
 
