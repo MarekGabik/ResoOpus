@@ -39,7 +39,7 @@ Formáty VST3 (Win + Mac), AU (Mac), Standalone. Cíl: Ableton Live 11/12.
    každý hlas: TUNE, charakter, obálka (ATT/RLS), VOL, PAN · skupina: HOLD, PITCH     │
         │  FM síť: pár ← sousední pár / BINARY LFO / FEEDBACK / sidechain              │
         ▼                                                                              │
- STEREO MIX (8 hlasů + LEAD + sidechain audio)                                         │
+ STEREO MIX (4 hlasy + LEAD + sidechain audio)                                          │
         ▼                                                                              │
  FILTER L / FILTER R (12 dB SVF s nelineárními integrátory, LP/BP, DRIVE, LINK, SPREAD)│
         ▼                                                                              │

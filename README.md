@@ -1,7 +1,7 @@
 # ResoOpus
 
 Drone syntezátor značky Gavr pro filmové, ambientní a experimentální plochy. Čtyři ručně, mikrotonálně laděné
-hlasy ve dvou párech hraje po vložení do Abletonu samo (HOLD). Ve středu nástroje bude knob GRAVITY, který vede
+hlasy ve dvou párech hrají po vložení do Abletonu samy (HOLD). Ve středu nástroje bude knob GRAVITY, který vede
 od čistého ladění k chaosu. Formáty VST3 (Mac + Windows), AU (Mac), Standalone.
 
 Podrobnosti: [docs/SPECIFIKACE.md](docs/SPECIFIKACE.md) (architektura, roadmapa s branami), [docs/KONCEPT.md](docs/KONCEPT.md),
