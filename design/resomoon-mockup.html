@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>ResoMoon mockup</title>
+<style>
+:root{--bar:#08090b;--edge:#34353c;--text:#ecedf0;--lab:#c9cad1;--dim:#9a9ba4;--faint:#6c6d76;--gold:#f4c95d;--mono:Menlo,Consolas,monospace}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#050506;font-family:-apple-system,"SF Pro Text","Helvetica Neue",Arial,sans-serif;color:var(--text);display:flex;justify-content:center;padding:24px}
+.win{width:1200px;border-radius:10px;overflow:hidden;box-shadow:0 30px 80px #000c;border:1px solid #1d1e23;position:relative}
+/* top bar */
+.top{height:36px;background:var(--bar);display:flex;align-items:center;padding:0 14px;gap:16px;font-size:12px;border-bottom:1px solid #16171b}
+.logo{font-weight:800;font-size:15px;letter-spacing:-.2px}.logo b{color:var(--gold)}
+.tabs{display:flex;gap:2px;margin-left:6px}
+.tab{padding:10px 11px;color:var(--faint);font-weight:700;font-size:11px;letter-spacing:.7px;position:relative;cursor:pointer;display:flex;align-items:center;gap:6px}
+.tab:hover{color:var(--dim)}.tab.on{color:var(--text)}
+.tab.on:after{content:"";position:absolute;left:11px;right:11px;bottom:3px;height:2px;border-radius:2px;background:var(--gold)}
+.tab .pw{width:13px;height:13px;border-radius:50%;border:1.6px solid var(--gold);position:relative;display:inline-block}
+.tab .pw:after{content:"";position:absolute;left:4px;top:-3px;width:2px;height:6px;background:var(--gold);border:1.5px solid var(--bar);border-radius:2px}
+.tab .pw.off{border-color:#5e5f68}.tab .pw.off:after{background:#5e5f68}
+.ic{color:var(--dim);font-size:14px}.chip{color:var(--dim);font-size:11.5px}.chip b{color:var(--text)}
+.preset{margin:0 auto;display:flex;align-items:center;gap:10px;color:var(--dim)}
+.preset .name{background:#15161a;border:1px solid #23242a;border-radius:5px;padding:4px 0;width:220px;text-align:center;color:var(--text);font-size:12.5px}
+/* stage */
+.stage{position:relative;background:linear-gradient(#17181c,#0f1013);padding:12px 18px;overflow:hidden;height:564px}
+.tex{position:absolute;inset:0;opacity:.05;pointer-events:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/></filter><rect width='160' height='160' filter='url(%23n)'/></svg>")}
+.stars{position:absolute;inset:0;pointer-events:none;opacity:.5}
+.page{display:grid;gap:10px;position:relative;height:540px}
+/* module */
+.mod{background:rgba(22,23,27,.96);border:1px solid var(--edge);border-radius:8px;position:relative;overflow:hidden;display:flex;flex-direction:column;box-shadow:inset 0 1px 0 #ffffff08,0 2px 8px #0006}
+.mod.sel{box-shadow:0 0 0 1.5px var(--c),0 0 18px color-mix(in srgb,var(--c) 30%,transparent)}
+.hd{height:25px;flex:none;display:flex;align-items:center;justify-content:center;position:relative;
+ background:linear-gradient(#c4c1b9,#a8a59d);color:#141416;font-size:11.5px;font-weight:800;letter-spacing:1.3px;border-bottom:2px solid var(--c)}
+.hd .dot{position:absolute;left:9px;width:8px;height:8px;border-radius:50%;background:var(--c);box-shadow:0 0 0 1.5px #0005}
+.hd .dot.off{background:#6f6c66}
+.hd .dot.blink{animation:bl var(--r,1s) infinite steps(2)}
+@keyframes bl{50%{opacity:.25}}
+.hd .r{position:absolute;right:9px;font-family:var(--mono);font-weight:700;letter-spacing:0;font-size:10.5px;color:#2c2c30}
+.hd .drag{position:absolute;right:8px;font-size:14px;color:#2a2a2e;letter-spacing:0}
+.body{flex:1;display:grid;align-content:space-evenly;justify-items:center;align-items:center;padding:4px 6px 6px;gap:2px 0}
+/* knob */
+.k{display:flex;flex-direction:column;align-items:center;width:96px}
+.k .lb{font-size:10.5px;font-weight:800;letter-spacing:.5px;color:var(--lab);text-align:center;line-height:12px;min-height:12px;white-space:nowrap}
+.k svg{display:block}
+.k .v{font-family:var(--mono);font-size:10.5px;color:var(--dim);margin-top:-1px;white-space:nowrap}
+.k .v.m{color:var(--mc)}
+/* buttons */
+.ctl{display:flex;flex-direction:column;align-items:center;gap:6px;min-width:70px}
+.ctl .lb{font-size:10.5px;font-weight:800;letter-spacing:.5px;color:var(--lab);white-space:nowrap}
+.btn{width:30px;height:28px;border-radius:5px;background:radial-gradient(circle at 40% 30%,#3a2d18,#1d160c 70%);border:1px solid #000;box-shadow:inset 0 1px 0 #ffffff14,0 2px 3px #0008}
+.btn.on{background:radial-gradient(circle at 40% 30%,#ffe9a6,#f4c95d 55%,#c99a2e);box-shadow:0 0 14px #f4c95d66,inset 0 1px 0 #fff8}
+.btn.sm{width:24px;height:20px;border-radius:4px}
+.radio{display:flex;align-items:center;gap:9px}
+.leds{display:flex;flex-direction:column;gap:3px}
+.leds span{display:flex;align-items:center;gap:6px;font-size:10.5px;font-weight:700;letter-spacing:.3px;color:var(--faint);white-space:nowrap}
+.leds span:before{content:"";width:6px;height:6px;border-radius:50%;background:#2d2e35;box-shadow:inset 0 1px 1px #000}
+.leds span.on{color:var(--text)}.leds span.on:before{background:var(--gold);box-shadow:0 0 6px var(--gold)}
+/* voice strip extras */
+.vb{width:88px;display:flex;flex-direction:column;gap:4px}
+.vb .row{display:flex;justify-content:space-between;font-size:10px;font-weight:800;letter-spacing:.5px;color:var(--lab)}
+.vb .row .mono{font-weight:400;color:var(--dim);letter-spacing:0}
+.vb .bar{height:5px;border-radius:3px;background:#24252b;overflow:hidden}.vb .bar i{display:block;height:100%;background:var(--c);opacity:.85}
+.vb .meter{height:3px;border-radius:2px;background:#1b1c21;overflow:hidden}.vb .meter i{display:block;height:100%;background:linear-gradient(90deg,#5ee08f,#f4c95d)}
+.part{display:flex;flex-direction:column;align-items:center;gap:4px}
+.part .bt{display:flex;gap:10px}
+.part .bt div{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:9.5px;font-weight:800;letter-spacing:.4px;color:var(--dim)}
+/* keyboard */
+.kbd{background:var(--bar);border-top:1px solid #17181c;display:flex;padding:12px 14px;gap:14px;height:148px}
+.wheel{width:26px;display:flex;flex-direction:column;align-items:center;gap:6px;font-size:10.5px;font-weight:700;color:var(--dim)}
+.wheel div{flex:1;width:18px;border-radius:5px;background:#16171b;border:1px solid #26272d;position:relative}
+.wheel div i{position:absolute;left:2px;right:2px;height:10px;border-radius:3px;background:#4a4b53}
+.keys{flex:1;display:flex;flex-direction:column;gap:6px}
+.range{height:6px;border-radius:3px;background:#16171b;position:relative}.range i{position:absolute;left:30%;width:42%;top:0;bottom:0;border-radius:3px;background:#3a3b42}
+.keyrow{flex:1;display:flex;gap:3px}
+.key{flex:1;border-radius:6px;display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:5px 0 7px;font-size:10px;font-weight:700;font-family:var(--mono);position:relative}
+.key.w{background:linear-gradient(#e9e8e4,#c9c7c1);color:#55565e;border:1px solid #000;box-shadow:inset 0 -3px 0 #0002}
+.key.b{background:linear-gradient(#24252a,#16171b);color:#7a7b84;border:1px solid #000}
+.key .pl{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#141416;background:var(--c);box-shadow:0 0 0 2px #0003}
+.key.on{box-shadow:0 0 0 2px var(--gold),0 0 16px #f4c95d55}
+.side{width:118px;display:flex;flex-direction:column;justify-content:center;gap:6px}
+.pill{text-align:center;padding:5px 0;border-radius:5px;background:#1c1d22;font-size:11px;font-weight:700;color:var(--lab);border:1px solid #2a2b31}
+.pill small{display:block;font-size:9.5px;color:var(--faint);letter-spacing:.6px}
+.bot{height:28px;background:var(--bar);border-top:1px solid #16171b;display:flex;align-items:center;padding:0 14px;gap:18px;font-size:11.5px;color:var(--dim)}
+.bot .c{margin:0 auto;background:#15161a;border-radius:5px;padding:3px 26px;color:var(--text);display:flex;gap:8px;align-items:center}
+.bot .c:before{content:"";width:6px;height:6px;border-radius:50%;background:var(--gold)}
+.mono{font-family:var(--mono)}
+.disp{background:#0b0c0e;border:1px solid #26272d;border-radius:7px;box-shadow:inset 0 2px 8px #000}
+.fader{display:flex;flex-direction:column;align-items:center;gap:6px}
+.small-note{font-size:10px;color:var(--faint);letter-spacing:.4px}
+</style></head><body>
+<div class="win" id="win">
+ <div class="top">
+  <div class="logo">Reso<b>Moon</b></div>
+  <div class="tabs" id="tabs"></div>
+  <span class="ic">↶</span><span class="ic" style="opacity:.4">↷</span><span class="chip"><b>A</b>/B</span><span class="chip">Copy</span>
+  <div class="preset"><span>‹</span><div class="name">Night Tide <span style="color:var(--gold)">★</span></div><span>›</span></div>
+  <span class="chip">Mod</span><span class="chip">Help</span><span class="ic">⛶</span>
+ </div>
+ <div class="stage"><div class="tex"></div><svg class="stars" id="stars" width="1200" height="564"></svg><div class="page" id="page"></div></div>
+ <div class="kbd">
+  <div class="wheel">PB<div><i style="top:44%"></i></div></div>
+  <div class="wheel">MW<div><i style="bottom:38%"></i></div></div>
+  <div class="keys"><div class="range"><i></i></div><div class="keyrow" id="keys"></div></div>
+  <div class="side" id="side"></div>
+ </div>
+ <div class="bot"><span><b style="color:var(--text)">Plates</b> · C3–C4</span><span>Touch · Aftertouch</span><span>Snap · D Dorian</span><div class="c">Drones · Night Tide</div><span>Oversampling 2×</span><span class="mono" style="color:var(--text)">CPU 5 %</span><span class="mono" style="color:var(--text)">−6.1 dB</span></div>
+</div>
+<script>
+// ---------- colours ----------
+const C={choir:'#38d6f0',siren:'#ff74b8',pulsar:'#b98bff',lead:'#a5e844',flt:'#f4c95d',echo:'#ff9a4d',space:'#4aa8ff',master:'#e6e6ea',grav:'#4aa8ff',
+ bin:'#ffe066',lfoa:'#4aa8ff',lfob:'#5ee0c8',rnd:'#ff9a4d',light:'#fff1a8',aether:'#e6e6ea',steps:'#a5e844',foll:'#ff74b8',touch:'#e6e6ea',grp:'#c9cad1'};
+const ZONES=[{n:'STILL',a:0,b:.25,c:'#5ee0c8'},{n:'ORBIT',a:.25,b:.55,c:'#4aa8ff'},{n:'TURBULENCE',a:.55,b:.85,c:'#ff9a4d'},{n:'COLLAPSE',a:.85,b:1,c:'#ff5c6c'}];
+const A0=-135,rad=a=>(a-90)*Math.PI/180,pt=(cx,cy,r,a)=>[cx+r*Math.cos(rad(a)),cy+r*Math.sin(rad(a))];
+function arc(cx,cy,r,a,b){const[s,e]=[pt(cx,cy,r,a),pt(cx,cy,r,b)];return `M${s[0]} ${s[1]}A${r} ${r} 0 ${b-a>180?1:0} 1 ${e[0]} ${e[1]}`}
+let gid=0;
+const tx=(x,y,s,an,c='#8b8c95',fs=9)=>`<text x="${x}" y="${y}" text-anchor="${an}" font-size="${fs}" font-weight="700" fill="${c}" font-family="-apple-system,Arial">${s}</text>`;
+function capKnob(cx,cy,R,a,id){
+ return `<defs><radialGradient id="${id}b" cx=".45" cy=".3" r=".8"><stop offset="0" stop-color="#34353c"/><stop offset="1" stop-color="#0d0e11"/></radialGradient>
+ <radialGradient id="${id}c" cx=".4" cy=".3" r=".9"><stop offset="0" stop-color="#d8d9dd"/><stop offset=".45" stop-color="#8d8f96"/><stop offset="1" stop-color="#3c3d43"/></radialGradient></defs>
+ <circle cx="${cx}" cy="${cy+2}" r="${R-1.5}" fill="#000" opacity=".55"/><circle cx="${cx}" cy="${cy}" r="${R-1.5}" fill="url(#${id}b)" stroke="#000"/>
+ <circle cx="${cx}" cy="${cy}" r="${R-3}" fill="none" stroke="#fff" stroke-opacity=".09" stroke-width="2" stroke-dasharray="1 2.2"/>
+ <circle cx="${cx}" cy="${cy}" r="${R*.52}" fill="url(#${id}c)" stroke="#000" stroke-opacity=".6"/>`+(()=>{const[p0x,p0y]=pt(cx,cy,R*.15,a),[p1x,p1y]=pt(cx,cy,R-3.5,a);
+ return `<line x1="${p0x}" y1="${p0y}" x2="${p1x}" y2="${p1y}" stroke="#fff" stroke-width="${R>40?3.4:2.4}" stroke-linecap="round"/>`})()}
+// knob: {l,v,c,t,lo,hi,bi,mod:[srcKey,depth,label],marks,small,mid}
+function knob(o){const col=C[o.c]||o.c,sm=o.small,W=sm?78:96,H=sm?60:70,cx=W/2,cy=sm?27:33,R=sm?16:21,id='g'+(gid++),a=A0+o.v*270;let g='';
+ for(let i=0;i<=10;i++){const t=A0+i*27,[x1,y1]=pt(cx,cy,R+(i%5?4.5:3),t),[x2,y2]=pt(cx,cy,R+8,t);g+=`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#fff" stroke-opacity="${i%5?.2:.45}" stroke-width="1.1"/>`}
+ if(o.mid){const t=A0+o.mid*270,[x1,y1]=pt(cx,cy,R+2,t),[x2,y2]=pt(cx,cy,R+10,t);g+=`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#ff9a4d" stroke-width="2"/><path d="${arc(cx,cy,R+10.5,t,135)}" stroke="#ff9a4d" stroke-opacity=".55" stroke-width="2" fill="none"/>`}
+ g+=`<path d="${arc(cx,cy,R+1.5,A0,135)}" stroke="#fff" stroke-opacity=".08" stroke-width="2.4" fill="none"/>`;
+ const f=o.bi?0:A0,[lo,hi]=[Math.min(f,a),Math.max(f,a)];
+ if(hi-lo>1)g+=`<path d="${arc(cx,cy,R+1.5,lo,hi)}" stroke="${col}" stroke-opacity=".14" stroke-width="8" fill="none"/><path d="${arc(cx,cy,R+1.5,lo,hi)}" stroke="${col}" stroke-width="2.4" fill="none" stroke-linecap="round"/>`;
+ if(o.mod){const mc=C[o.mod[0]]||o.mod[0],d=o.mod[1]*270,[mx,my]=pt(cx,cy,R+10.5,a+d*.45);g+=`<path d="${arc(cx,cy,R+10.5,Math.max(A0,a-d),Math.min(135,a+d))}" stroke="${mc}" stroke-width="2.6" fill="none" stroke-linecap="round"/><circle cx="${mx}" cy="${my}" r="2.4" fill="#fff"/>`}
+ g+=capKnob(cx,cy,R,a,id);
+ if(o.lo!==undefined){const[lx,ly]=pt(cx,cy,R+11,-135),[hx,hy]=pt(cx,cy,R+11,135);g+=tx(lx+2,ly+9,o.lo,'end')+tx(hx-2,hy+9,o.hi,'start')}
+ if(o.marks){const n=o.marks.length;o.marks.forEach((s,i)=>{const t=n==1?0:A0+i*270/(n-1),[x,y]=pt(cx,cy,R+15,t);g+=tx(x,y+3.5,s,'middle',i===o.sel?col:'#8b8c95')})}
+ const vt=o.mod?`<span class="v m" style="--mc:${C[o.mod[0]]||o.mod[0]}">${o.mod[2]}</span>`:`<span class="v">${o.t||''}</span>`;
+ return `<div class="k" style="${sm?'width:80px':''}"><span class="lb">${o.l||''}</span><svg width="${W}" height="${H}" overflow="visible" style="${o.marks?'margin-top:12px':''}">${g}</svg>${vt}</div>`}
+const btn=(l,on,sm)=>`<div class="ctl"><span class="lb">${l}</span><div class="btn ${on?'on':''} ${sm?'sm':''}"></div></div>`;
+const radio=(l,opts,sel)=>`<div class="ctl" style="align-items:flex-start"><span class="lb">${l}</span><div class="radio"><div class="btn"></div><div class="leds">${opts.map((o,i)=>`<span class="${i==sel?'on':''}">${o}</span>`).join('')}</div></div></div>`;
+function mod(o){const dot=o.rate?`<span class="dot blink" style="--r:${o.rate}"></span>`:`<span class="dot ${o.off?'off':''}"></span>`;
+ return `<div class="mod ${o.sel?'sel':''}" style="--c:${C[o.c]||o.c};${o.a?`grid-area:${o.a}`:''}"><div class="hd">${dot}${o.t}${o.src?'<span class="drag" title="Drag to modulate">⤳</span>':''}${o.r?`<span class="r">${o.r}</span>`:''}</div>
+ <div class="body" style="grid-template-columns:${o.cols||'1fr'};${o.bs||''}">${o.items.join('')}</div></div>`}
+
+// ---------- GRAVITY ----------
+const GV=.42;
+function gravity(){const W=270,H=240,cx=W/2,cy=116,R=50,id='grav';let g='';
+ // zone arcs + labels
+ ZONES.forEach(z=>{const a=A0+z.a*270,b=A0+z.b*270;g+=`<path d="${arc(cx,cy,R+30,a+1,b-1)}" stroke="${z.c}" stroke-opacity=".22" stroke-width="5" fill="none"/>`;
+  const m=(a+b)/2,[x,y]=pt(cx,cy,R+53,m);g+=tx(x,y+3,z.n,'middle',GV>=z.a&&GV<z.b?z.c:'#6c6d76',9.5)});
+ // active value arc coloured by zone
+ ZONES.forEach(z=>{if(GV>z.a){const a=A0+z.a*270,b=A0+Math.min(GV,z.b)*270;g+=`<path d="${arc(cx,cy,R+30,a+1,b-.5)}" stroke="${z.c}" stroke-width="5" fill="none"/><path d="${arc(cx,cy,R+30,a+1,b-.5)}" stroke="${z.c}" stroke-opacity=".18" stroke-width="14" fill="none"/>`}});
+ // ticks
+ for(let i=0;i<=20;i++){const t=A0+i*13.5,[x1,y1]=pt(cx,cy,R+21,t),[x2,y2]=pt(cx,cy,R+(i%5?25:26.5),t);g+=`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#fff" stroke-opacity="${i%5?.18:.45}" stroke-width="1.1"/>`}
+ // modulation ring (aftertouch)
+ const a=A0+GV*270,d=.12*270;g+=`<path d="${arc(cx,cy,R+37,a,Math.min(135,a+d))}" stroke="${C.touch}" stroke-width="2.6" fill="none" stroke-linecap="round" opacity=".9"/>`;
+ const[mx,my]=pt(cx,cy,R+37,a+d*.55);g+=`<circle cx="${mx}" cy="${my}" r="3" fill="#fff"/>`;
+ // orbit with 8 voices
+ g+=`<ellipse cx="${cx}" cy="${cy}" rx="${R+13}" ry="${R+13}" fill="none" stroke="#fff" stroke-opacity=".07" stroke-dasharray="2 4"/>`;
+ g+=`<g id="orbit"></g>`;
+ g+=capKnob(cx,cy,R,a,id);
+ g+=`<text x="${cx}" y="${cy+R+46}" text-anchor="middle" font-size="12" fill="#4aa8ff" font-family="Menlo,monospace">${Math.round(GV*100)} %</text>`;
+ return `<svg width="${W}" height="${H}" overflow="visible">${g}</svg>`}
+const VOICES=[['choir',1],['choir',1],['siren',0],['pulsar',1],['pulsar',0],['choir',1],['choir',1],['siren',0]];
+function orbitAnim(){requestAnimationFrame(orbitAnim);const o=document.getElementById('orbit');if(!o)return;const t=performance.now()/1000,cx=135,cy=116,R=63;let s='';
+ VOICES.forEach(([ty,on],i)=>{const base=i/8*Math.PI*2+t*.25,pull=Math.sin(t*.7+i)*GV*.5,ang=base+pull*((i%2)?1:-1)*.6,rr=R+Math.sin(t*1.3+i*2)*GV*6;
+  const x=cx+rr*Math.cos(ang),y=cy+rr*Math.sin(ang),c=C[ty];s+=`<circle cx="${x}" cy="${y}" r="${on?4:3}" fill="${on?c:'#2b2c33'}" stroke="${c}" stroke-width="1.2" ${on?`style="filter:drop-shadow(0 0 4px ${c})"`:''}/>`});
+ o.innerHTML=s}
+
+// ---------- DRONE page ----------
+const TY={choir:'CHOIR',siren:'SIREN',pulsar:'PULSAR'};
+function strip(n,ty,tune,tuneT,ch,chV,chT,vol,pan,sel,on){
+ return mod({t:TY[ty],c:ty,r:n,sel,off:!on,bs:'align-content:space-between;padding-top:6px',items:[
+  knob({l:'TUNE',v:tune,c:ty,small:1,t:tuneT}),knob({l:ch,v:chV,c:ty,small:1,t:chT,mid:ch=='TIDE'?.5:0}),
+  `<div class="vb"><div class="row"><span>VOL</span><span class="mono">${pan}</span></div><div class="bar"><i style="width:${vol*100}%"></i></div><div class="meter"><i style="width:${on?vol*80:0}%"></i></div></div>`]})}
+function group(name,a,hold,pitch,pull,f1,f2,p1,p2){return mod({t:name,c:'grp',a,cols:'repeat(5,1fr)',items:[
+ knob({l:'HOLD',v:hold,c:'grp',small:1,t:Math.round(hold*100)+' %'}),knob({l:'PITCH',v:pitch,c:'grp',small:1,bi:1,t:pitch==.5?'0 st':(pitch>.5?'+':'−')+Math.round(Math.abs(pitch-.5)*48)+' st'}),
+ knob({l:'PULL',v:pull,c:'grav',small:1,bi:1,t:(pull>=.5?'+':'−')+Math.round(Math.abs(pull-.5)*200)+' %'}),btn('FAST '+p1,f1),btn('FAST '+p2,f2)]})}
+function drone(){return {grid:'grid-template-columns:1fr 292px 1fr;grid-template-rows:112px 246px 162px;grid-template-areas:"ga gv gb" "va gv vb" "de de de"',mods:[
+ group('GROUP A · 1–4','ga',.62,.5,.5,0,1,'1·2','3·4'),group('GROUP B · 5–8','gb',.55,.5,.62,0,0,'5·6','7·8'),
+ `<div style="grid-area:va;display:grid;grid-template-columns:repeat(4,1fr);gap:6px">${[
+  strip(1,'choir',.32,'D2 +4','TIDE',.38,'−1.9 oct',.78,'L 30',1,1),strip(2,'choir',.41,'A2 −6','TIDE',.22,'−1.1 oct',.7,'R 25',0,1),
+  strip(3,'siren',.55,'F#3','DIVIDER',.3,'1:5',.42,'L 60',0,0),strip(4,'pulsar',.6,'A3 +2','SHARP',.25,'25 %',.6,'C',0,1)].join('')}</div>`,
+ `<div style="grid-area:vb;display:grid;grid-template-columns:repeat(4,1fr);gap:6px">${[
+  strip(5,'pulsar',.66,'E4 −3','SHARP',.55,'55 %',.55,'C',0,0),strip(6,'choir',.48,'D3','TIDE',.12,'−0.6 oct',.72,'L 25',0,1),
+  strip(7,'choir',.52,'A3 +9','TIDE',.6,'FM 20 %',.66,'R 30',0,1),strip(8,'siren',.7,'C#5','DIVIDER',.6,'1:10',.38,'R 60',0,0)].join('')}</div>`,
+ mod({t:'GRAVITY',c:'grav',a:'gv',r:'ORBIT',bs:'align-content:start;gap:0;padding-top:4px',items:[gravity(),
+  `<div style="display:flex;justify-content:center;gap:2px;margin-top:-4px;width:100%">${knob({l:'FEEDBACK',v:.18,c:'echo',small:1,t:'18 %'})}${radio('PATH',['2 LOOPS','RING','AUTO'],2)}${knob({l:'DUST',v:.2,c:'master',small:1,t:'20 %'})}</div>`]}),
+ mod({t:'VOICE 1 · CHOIR',c:'choir',a:'de',r:'5 OSC · L 30',cols:'120px repeat(5,84px) 14px repeat(5,1fr)',items:[
+  radio('TYPE',['CHOIR','SIREN','PULSAR'],0),
+  ...[['OSC 1',.30,'D1',1,0],['OSC 2',.55,'A2 −6',1,1],['OSC 3',.42,'D3 +2',1,0],['OSC 4',.5,'F#4 −14',0,0],['OSC 5',.38,'A5',1,1]].map(([l,v,t,on,lt])=>
+   `<div class="part">${knob({l,v,c:'choir',small:1,t})}<div class="bt"><div><div class="btn sm ${on?'on':''}"></div>ON</div><div><div class="btn sm ${lt?'on':''}"></div>LIGHT</div></div></div>`),
+  '<div style="width:1px;height:120px;background:#2a2b31"></div>',
+  knob({l:'TIDE',v:.38,c:'choir',lo:'0',hi:'MAX',t:'−1.9 oct',mid:.5,mod:['light',.05,'LIGHT ±8 %']}),
+  knob({l:'ATTACK',v:.62,c:'choir',lo:'1ms',hi:'30s',t:'6.2 s'}),knob({l:'RELEASE',v:.7,c:'choir',lo:'1ms',hi:'30s',t:'11 s'}),
+  knob({l:'VOLUME',v:.78,c:'choir',lo:'0',hi:'10',t:'7.8'}),knob({l:'PAN',v:.35,c:'choir',bi:1,lo:'L',hi:'R',t:'L 30'})]})]}}
+
+// ---------- MOTION page ----------
+function aether(){const W=330,H=300;let g=`<rect x="0" y="0" width="${W}" height="${H}" rx="8" fill="#0b0c0e" stroke="#26272d"/>`;
+ for(let i=1;i<6;i++){g+=`<line x1="${i*W/6}" y1="0" x2="${i*W/6}" y2="${H}" stroke="#fff" stroke-opacity=".05"/><line x1="0" y1="${i*H/6}" x2="${W}" y2="${i*H/6}" stroke="#fff" stroke-opacity=".05"/>`}
+ g+=`<line x1="${W/2}" y1="0" x2="${W/2}" y2="${H}" stroke="#fff" stroke-opacity=".12"/><line x1="0" y1="${H/2}" x2="${W}" y2="${H/2}" stroke="#fff" stroke-opacity=".12"/>`;
+ const px=W*.64,py=H*.34;g+=`<path d="M${W*.3} ${H*.7} C ${W*.4} ${H*.55}, ${W*.5} ${H*.45}, ${px} ${py}" stroke="#e6e6ea" stroke-opacity=".35" stroke-width="2" fill="none" stroke-dasharray="1 5" stroke-linecap="round"/>`;
+ g+=`<circle cx="${px}" cy="${py}" r="20" fill="#e6e6ea" opacity=".08"/><circle cx="${px}" cy="${py}" r="9" fill="#e6e6ea" style="filter:drop-shadow(0 0 8px #fff)"/>`;
+ g+=tx(W-8,H-8,'X  PITCH DRIFT · VIBRATO →','end','#9a9ba4',10)+`<text x="14" y="${H-12}" transform="rotate(-90 14 ${H-12})" font-size="10" font-weight="700" fill="#9a9ba4" font-family="-apple-system,Arial">Y  SWELL →</text>`;
+ g+=tx(W-8,16,'Y ← MOD WHEEL','end','#6c6d76',9.5);
+ return `<svg width="${W}" height="${H}">${g}</svg>`}
+function motion(){const lfo2=mod({t:'LFO A · LFO B',c:'lfoa',a:'lf',src:1,rate:'2.4s',cols:'repeat(4,1fr)',items:[
+  knob({l:'RATE A',v:.25,c:'lfoa',small:1,lo:'.01',hi:'5',t:'0.08 Hz'}),knob({l:'WAVE A',v:.7,c:'lfoa',small:1,marks:['⊓','⋀'],t:'tri 70 %'}),
+  knob({l:'RATE B',v:.55,c:'lfob',small:1,lo:'.1',hi:'40',t:'2.3 Hz'}),knob({l:'WAVE B',v:.2,c:'lfob',small:1,marks:['⊓','⋀'],t:'sq 80 %'})]});
+ return {grid:'grid-template-columns:372px 1fr 330px;grid-template-rows:repeat(3,173px);grid-template-areas:"bi st st" "lf ae rn" "fo ae li"',mods:[
+ mod({t:'BINARY LFO',c:'bin',a:'bi',src:1,rate:'.7s',cols:'1fr 1fr 1fr 1fr',items:[knob({l:'FREQ A',v:.35,c:'bin',lo:'.05',hi:'30',t:'0.6 Hz'}),knob({l:'FREQ B',v:.52,c:'bin',lo:'.05',hi:'30',t:'1.9 Hz'}),
+  radio('LOGIC',['OR  +','AND ×'],0),radio('LINK',['OFF','LINK','SYNC'],1)]}),
+ mod({t:'STEPS',c:'steps',a:'st',src:1,rate:'.5s',cols:'repeat(5,1fr) 14px 1fr 1fr',items:[
+  ...[.2,.55,.8,.4,.65].map((v,i)=>`<div class="part">${knob({l:'STEP '+(i+1),v,c:i==2?'#ffffff':'steps',small:1,t:(v*5).toFixed(1)+' V'})}<div class="bt"><div><div class="btn sm ${i!=3?'on':''}"></div>GATE</div></div></div>`),
+  '<div style="width:1px;height:110px;background:#2a2b31"></div>',radio('STAGES',['3','4','5'],2),knob({l:'RATE',v:.5,c:'steps',lo:'1/1',hi:'1/32',t:'1/8 sync'})]}),
+ lfo2,
+ mod({t:'AETHER',c:'aether',a:'ae',src:1,items:[aether()]}),
+ mod({t:'RANDOM 1 · 2',c:'rnd',a:'rn',src:1,rate:'.35s',cols:'repeat(4,1fr)',items:[knob({l:'RATE 1',v:.45,c:'rnd',small:1,lo:'.05',hi:'50',t:'1.4 Hz'}),knob({l:'SLEW 1',v:.3,c:'rnd',small:1,lo:'0',hi:'10',t:'3.0'}),
+  knob({l:'RATE 2',v:.2,c:'#ffb07a',small:1,lo:'.05',hi:'50',t:'0.2 Hz'}),knob({l:'SLEW 2',v:.7,c:'#ffb07a',small:1,lo:'0',hi:'10',t:'7.0'})]}),
+ mod({t:'FOLLOWER',c:'foll',a:'fo',src:1,r:'SIDECHAIN',cols:'repeat(4,1fr)',items:[knob({l:'GAIN',v:.5,c:'foll',small:1,lo:'0',hi:'+40',t:'+20 dB'}),knob({l:'ATTACK',v:.2,c:'foll',small:1,lo:'1ms',hi:'1s',t:'12 ms'}),
+  knob({l:'RELEASE',v:.45,c:'foll',small:1,lo:'10ms',hi:'5s',t:'420 ms'}),knob({l:'GATE',v:.4,c:'foll',small:1,lo:'-60',hi:'0',t:'−36 dB'})]}),
+ mod({t:'LIGHT',c:'light',a:'li',src:1,rate:'3s',cols:'repeat(3,1fr)',items:[knob({l:'SPEED',v:.2,c:'light',small:1,lo:'slow',hi:'fast',t:'0.03 Hz'}),knob({l:'FLICKER',v:.15,c:'light',small:1,lo:'0',hi:'10',t:'1.5'}),
+  knob({l:'DEPTH',v:.4,c:'light',small:1,lo:'0',hi:'100',t:'40 %'})]})]}}
+
+// ---------- SPACE page ----------
+function meterBars(){let s='';const bar=(x,lv)=>{for(let i=0;i<18;i++){const y=196-i*10,on=i<lv,c=i>=15?'#ff5c6c':i>=11?'#f4c95d':'#5ee08f';s+=`<rect x="${x}" y="${y}" width="9" height="7" rx="1.5" fill="${c}" opacity="${on?1:.12}"/>`}};bar(4,12);bar(17,11);return `<svg width="30" height="206">${s}</svg>`}
+function space(){const filt=(n,a,v)=>mod({t:'FILTER '+n,c:'flt',a,r:'12 dB',cols:'1fr 1fr',items:[knob({l:'CUTOFF',v:v[0],c:'flt',lo:'20',hi:'20k',t:v[1],mod:n=='L'?['lfoa',.06,'LFO A ±12 %']:null}),knob({l:'RESONANCE',v:v[2],c:'flt',lo:'0',hi:'10',t:(v[2]*10).toFixed(1)}),
+  knob({l:'DRIVE',v:v[3],c:'flt',lo:'0',hi:'10',t:(v[3]*10).toFixed(1)}),n=='L'?radio('MODE',['LOW PASS','BAND PASS'],0):`<div style="display:flex;gap:6px">${btn('LINK',1)}${knob({l:'SPREAD',v:.3,c:'flt',small:1,t:'+4 %'})}</div>`]});
+ const fader=`<div class="fader" style="align-self:stretch"><span class="k"><span class="lb">VOLUME</span></span><div style="flex:1;display:flex;gap:8px;align-items:stretch"><div style="width:8px;border-radius:4px;background:#0b0c0e;border:1px solid #26272d;position:relative"><div style="position:absolute;left:-12px;top:30%;width:30px;height:16px;border-radius:4px;background:linear-gradient(#d8d9dd,#7d7f86);border:1px solid #000;box-shadow:0 2px 4px #000"></div><div style="position:absolute;left:0;right:0;bottom:0;top:34%;background:#f4c95d;border-radius:4px;opacity:.85"></div></div><div class="mono" style="display:flex;flex-direction:column;justify-content:space-between;font-size:9.5px;color:#8b8c95">${['+6','0','-6','-12','-24','-∞'].map(x=>`<span>${x}</span>`).join('')}</div></div><span class="v mono" style="font-size:10.5px;color:var(--dim)">−2.0 dB</span></div>`;
+ return {grid:'grid-template-columns:290px 1fr 1fr 200px;grid-template-rows:265px 265px;grid-template-areas:"fl ec ec ma" "fr sp sp ma"',mods:[
+ filt('L','fl',[.52,'1.2 kHz',.55,.3]),filt('R','fr',[.52,'1.25 kHz',.55,.3]),
+ mod({t:'ECHO',c:'echo',a:'ec',r:'2 LINES',cols:'repeat(4,1fr)',items:[knob({l:'TIME 1',v:.48,c:'echo',lo:'5ms',hi:'2s',t:'340 ms'}),knob({l:'TIME 2',v:.56,c:'echo',lo:'5ms',hi:'2s',t:'520 ms'}),
+  knob({l:'FEEDBACK',v:.46,c:'echo',lo:'0',hi:'MAX',t:'46 %',mid:.52}),knob({l:'MIX',v:.35,c:'echo',lo:'DRY',hi:'WET',t:'35 %'}),
+  knob({l:'MOD 1',v:.2,c:'echo',lo:'0',hi:'10',t:'2.0',mod:['bin',.05,'BINARY ±10 %']}),knob({l:'MOD 2',v:.28,c:'echo',lo:'0',hi:'10',t:'2.8'}),radio('MOD SOURCE',['SELF','LFO','SIDECHAIN'],0),btn('SYNC',0)]}),
+ mod({t:'SPACE',c:'space',a:'sp',r:'RUNNER',cols:'150px repeat(4,1fr) 70px',items:[radio('ALGORITHM',['AURORA','VOID','RUNNER','SATURN','COMET'],2),
+  knob({l:'FEEDBACK',v:.55,c:'space',lo:'X',hi:'',t:'55 %'}),knob({l:'TIME',v:.42,c:'space',lo:'Y',hi:'',t:'1/4 D'}),knob({l:'PITCH',v:.33,c:'space',bi:1,lo:'Z',hi:'',t:'−5 st',mod:['rnd',.06,'RANDOM 1 ±12 %']}),
+  knob({l:'BLEND',v:.4,c:'space',lo:'DRY',hi:'WET',t:'40 %'}),btn('REVERSE',1)]}),
+ mod({t:'MASTER',c:'master',a:'ma',bs:'grid-template-rows:auto 1fr auto;align-content:stretch',cols:'1fr 1fr',items:[
+  `<div style="grid-column:1/-1">${knob({l:'DUST',v:.2,c:'master',lo:'CLEAN',hi:'LO-FI',t:'20 %'})}</div>`,fader,`<div style="align-self:center">${meterBars()}</div>`,
+  `<div style="grid-column:1/-1">${btn('SOFT LIMIT',1)}</div>`]})]}}
+
+// ---------- LEAD page ----------
+function lead(){const vco=(n,a,sync)=>mod({t:'VCO '+n,c:'lead',a,cols:sync?'1fr 1fr 1fr 64px':'repeat(3,1fr)',items:[knob({l:'OCTAVE',v:n==1?.57:.43,c:'lead',marks:['LO','64','32','16','8','4','2','1'],sel:n==1?4:3,t:n==1?"8'":"16'"}),
+  knob({l:'TUNE',v:.5,c:'lead',bi:1,lo:'-1',hi:'+1',t:n==1?'0 ct':'+7 ct'}),knob({l:'WAVE',v:n==1?.45:.8,c:'lead',marks:['∿','⋀','◿','⊓','≈','⟋'],sel:n==1?2:4,t:n==1?'Saw':'Morph saw'}),...(sync?[btn('SYNC',0)]:[]),
+  knob({l:'SHAPE',v:.5,c:'lead',lo:'0',hi:'100',t:'50 %'}),knob({l:sync?'FM ← VCO 1':'SUB',v:sync?.2:.3,c:'lead',lo:'0',hi:'10',t:sync?'2.0':'3.0'}),knob({l:'LEVEL',v:sync?.5:.75,c:'lead',lo:'0',hi:'10',t:sync?'5.0':'7.5'}),...(sync?['<div></div>']:[])]});
+ return {grid:'grid-template-columns:1fr 1fr 300px;grid-template-rows:265px 265px;grid-template-areas:"v1 v2 vo" "en ar vo"',mods:[vco(1,'v1'),vco(2,'v2',1),
+ mod({t:'ENVELOPE',c:'lead',a:'en',src:1,cols:'repeat(4,1fr)',items:[knob({l:'ATTACK',v:.3,c:'lead',lo:'1ms',hi:'10s',t:'120 ms'}),knob({l:'DECAY',v:.45,c:'lead',lo:'1ms',hi:'30s',t:'900 ms'}),
+  knob({l:'SUSTAIN',v:.7,c:'lead',lo:'0',hi:'100',t:'70 %'}),knob({l:'RELEASE',v:.55,c:'lead',lo:'1ms',hi:'30s',t:'2.4 s'}),btn('HOLD',0),btn('LOOP',0),'<div></div>','<div></div>']}),
+ mod({t:'ARP',c:'lead',a:'ar',r:'OFF',cols:'repeat(4,1fr)',items:[btn('ARP',0),radio('DIRECTION',['UP','DOWN','PING-PONG','RANDOM'],2),knob({l:'RATE',v:.5,c:'lead',lo:'1/1',hi:'1/32',t:'1/16'}),knob({l:'OCTAVES',v:.33,c:'lead',lo:'1',hi:'4',t:'2'}),
+  `<div style="grid-column:1/-1;display:flex;flex-direction:column;align-items:center;gap:6px"><span class="ctl"><span class="lb">RHYTHM</span></span><div style="display:flex;gap:6px">${[1,0,1,1,0,1,0,1].map(o=>`<div class="btn sm ${o?'on':''}"></div>`).join('')}</div></div>`]}),
+ mod({t:'VOICING',c:'lead',a:'vo',cols:'1fr 1fr',items:[knob({l:'GLIDE',v:.35,c:'lead',lo:'0',hi:'5s',t:'180 ms'}),btn('LEGATO',1),
+  knob({l:'VIBRATO',v:.3,c:'lead',lo:'0',hi:'10',t:'3.0',mod:['touch',.1,'TOUCH +40 %']}),knob({l:'VIB RATE',v:.45,c:'lead',lo:'.5',hi:'12',t:'5.2 Hz'}),
+  knob({l:'VIB DELAY',v:.4,c:'lead',lo:'0',hi:'3s',t:'600 ms'}),knob({l:'BRIGHT',v:.5,c:'lead',lo:'0',hi:'10',t:'5.0',mod:['touch',.08,'TOUCH +30 %']}),
+  knob({l:'VOLUME',v:.7,c:'lead',lo:'0',hi:'10',t:'7.0'}),knob({l:'PAN',v:.5,c:'lead',bi:1,lo:'L',hi:'R',t:'C'})]})]}}
+
+const PAGES={drone,motion,space,lead},NAMES={drone:'DRONE',motion:'MOTION',space:'SPACE',lead:'LEAD'};
+function stars(){let s='';let seed=7;const r=()=>{seed=(seed*16807)%2147483647;return seed/2147483647};for(let i=0;i<70;i++){s+=`<circle cx="${r()*1200}" cy="${r()*564}" r="${r()*.9+.2}" fill="#fff" opacity="${r()*.25+.05}"/>`}document.getElementById('stars').innerHTML=s}
+function show(p){if(!PAGES[p])p='drone';const d=PAGES[p]();const pg=document.getElementById('page');pg.setAttribute('style',d.grid);pg.innerHTML=d.mods.join('');
+ document.getElementById('tabs').innerHTML=Object.keys(NAMES).map(k=>`<div class="tab ${k==p?'on':''}" onclick="location.hash='${k}'">${NAMES[k]}${k=='lead'?'<span class="pw" title="Lead layer on/off"></span>':''}</div>`).join('');}
+// keyboard: C2..C4, PLATES on C3..C4 white keys
+const notes=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'],plates=[12,14,16,17,19,21,23,24];let kh='';
+for(let i=0;i<25;i++){const n=notes[i%12],pi=plates.indexOf(i),v=pi>=0?VOICES[pi]:null,on=pi===1||pi===5;
+ kh+=`<div class="key ${n.includes('#')?'b':'w'} ${on?'on':''}">${pi>=0?`<span class="pl" style="--c:${C[v[0]]};${v[1]?'':'opacity:.35'}">${pi+1}</span>`:'<span></span>'}<span>${n}${2+Math.floor(i/12)}</span></div>`}
+document.getElementById('keys').innerHTML=kh;
+document.getElementById('side').innerHTML='<div class="pill"><small>PLAY</small>Plates</div><div class="pill"><small>TOUCH</small>Aftertouch</div><div class="pill" style="color:var(--gold);border-color:#f4c95d55"><small>DRONE</small>Hold on</div>';
+stars();window.onhashchange=()=>show(location.hash.slice(1));show(location.hash.slice(1));requestAnimationFrame(orbitAnim);
+</script></body></html>

@@ -1,0 +1,8 @@
+# local reference material (manuals, photos, audio) – never commit
+reference/
+# JUCE is fetched by CMake in CI, local copy only
+JUCE/
+build/
+build-*/
+snapshots/
+.DS_Store
