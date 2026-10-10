@@ -55,14 +55,17 @@ Formáty VST3 (Win + Mac), AU (Mac), Standalone. Cíl: Ableton Live 11/12.
 
 | Typ | Zdroj | Ovladače | Charakter |
 |---|---|---|---|
-| **CHOIR** | 5 pilovitých oscilátorů **laděných relativně k TUNE hlasu** (OSC 1 = kořen, OSC 2–5 = intervaly −24 až +36 st + centy), ON a LIGHT (modulace) pro každý | TUNE (posune celý akord), **CHORD** (Unison / Octaves / Fifths / Major / Minor / Sus / Cluster naplní intervaly jedním klikem), 5× interval, 5× ON, 5× LIGHT, **TIDE** | sborový akord v jednom hlasu. TIDE 0–50 % transpozice dolů, 50–100 % dál dolů + vzájemná FM pil („gravitace uvnitř hlasu“), dole sub-audio praskání |
+| **CHOIR** | 5 pilovitých oscilátorů **laděných relativně k TUNE hlasu** (OSC 1 = kořen, OSC 2–5 = intervaly −24 až +36 st + centy) | TUNE (posune celý akord), **CHORD** (Unison / Octaves / Fifths / Major / Minor / Sus / Cluster naplní intervaly jedním klikem), 5× interval se zap/vyp, **TIDE** | sborový akord v jednom hlasu. TIDE 0–50 % transpozice dolů, 50–100 % dál dolů + vzájemná FM pil („gravitace uvnitř hlasu“), dole sub-audio praskání |
 | **SIREN** | 2 Schmittovy oscilátory (pomalý modulátor + tónový C0–E7) + bílý šum | PITCH, RANGE, RATE (×1/×10), FM AMT, DIVIDER (dělič 1:1–1:16), přepínače FM / AM, NOISE | sirény, ptáci, „monstra“, lasery, vítr, příboj. Šum napájí S&H |
 | **PULSAR** | tónový generátor trojúhelník ↔ obdélník, obálka ovlivňuje výšku a tvar | TUNE, SHARP, BLOOM (vliv obálky na výšku/barvu) | jemný až ostrý tón, nejcitlivější na FM, „živý“ |
 
-Hierarchie ovladačů: **hlas** (TYPE, TUNE, charakter TIDE/DIVIDER/SHARP, ATT/RLS 1 ms – 30 s, VOL, PAN),
-**pár** (FAST: rychlejší doznění a vyšší práh HOLD), **skupina** (HOLD = spodní mez hlasitosti, PITCH, PULL),
-**globál** (GRAVITY, FEEDBACK, PATH, DUST). FAST páry potřebují vyšší HOLD → při pomalém otáčení HOLD
-naskakují hlasy postupně.
+Hierarchie ovladačů (zjednodušeno 10. 10. – „méně je víc“):
+- **hlas:** v pásu skupiny jen TUNE a charakter (TIDE / DIVIDER / SHARP). V detailu vybraného hlasu: TYPE, CHORD,
+  intervaly OSC 1–5 (zap/vyp kliknutím na LED v popisku), TIDE, ATTACK, RELEASE (1 ms – 30 s), VOLUME, PAN.
+- **skupina:** HOLD (spodní mez hlasitosti), PITCH, menu FILL.
+- **globál:** GRAVITY (sám, velký). DUST je na stránce SPACE v MASTER, FEEDBACK do hlasů jako TO VOICES v ECHO.
+- Vypuštěno z UI: PULL, FAST (rychlé doznění = krátký RELEASE), tlačítka LIGHT (LIGHT se přiřazuje tažením
+  jako každý zdroj modulace), PATH (výchozí AUTO, ruční volba v menu pravého tlačítka na GRAVITY).
 Dotyk (velocity / aftertouch / MPE pressure) přidává hlasitost nad HOLD a lehký dotyk dává pomalejší náběh.
 
 Ladění: TUNE v Hz i jako nota (`A2+12`), **SNAP** Free / Chromatic / Scale (stupnice + kořen). Skupina má
@@ -72,7 +75,7 @@ jemně doladí uchem. Běžné ladění = 8 knobů TUNE, ne 40.
 
 ### 3.2 GRAVITY (středobod)
 
-Jedno makro (0–100 %), modulovatelné (aftertouch, LFO, AETHER), plus lokální **PULL** pro každou skupinu (±).
+Jedno makro (0–100 %), modulovatelné (aftertouch, LFO, AETHER).
 
 | Zóna | Co dělá v DSP |
 |---|---|
@@ -83,7 +86,7 @@ Jedno makro (0–100 %), modulovatelné (aftertouch, LFO, AETHER), plus lokáln�
 
 Pravidla: spojitý průběh bez skoků (přechody vah lineárně v rámci kousku ≤ 32 vzorků), kompenzace hlasitosti
 (tabulka zisku + měkký limiter), FM vychází z naladěných intervalů (konsonantní ladění = hudební chaos).
-Ruční režim pro pokročilé: v panelu GRAVITY jde rozbalit „mapování“ a nastavit zdroj FM každého páru ručně
+Ruční režim pro pokročilé (menu pravého tlačítka na GRAVITY): a nastavit zdroj FM každého páru ručně
 (PAIR / LFO / FEEDBACK / SIDECHAIN / OFF) a strukturu (2 smyčky / kruh).
 
 ### 3.3 DUST
@@ -94,7 +97,7 @@ přeslechy mezi hlasy (−60 až −30 dB, do výstupu i do FM vstupů), šum po
 ### 3.4 Efekty
 - **FILTER L / R:** 2pólový TPT SVF s asymetricky saturujícími integrátory (agresivní, při rezonanci neztrácí
   basy), LP / BP, CUTOFF, RES, DRIVE, **LINK** (pravý sleduje levý), **SPREAD** (rozladění L/R pro stereo šířku).
-- **ECHO:** dvě linky (TIME 1, TIME 2: 5 ms – 2 s, sync volitelně), MOD 1/2, FB (nad polovinou samooscilace,
+- **ECHO:** dvě linky (TIME 1, TIME 2: 5 ms – 2 s, sync volbou v menu / psaním `1/8`), MOD 1/2, **TO VOICES** (feedback do FM hlasů), FB (nad polovinou samooscilace,
   ve smyčce měkký limiter a tlumení), modulace času SELF (vlastním výstupem) / LFO / SIDECHAIN, MIX.
   Charakter čistší, s DUST jde do lo-fi.
 - **SPACE:** 5 algoritmů, společné knoby X / Y / Z (modulovatelné) + BLEND, popisky X/Y/Z se mění s algoritmem:

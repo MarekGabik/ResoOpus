@@ -84,6 +84,17 @@ body{background:#050506;font-family:-apple-system,"SF Pro Text","Helvetica Neue"
 .disp{background:#0b0c0e;border:1px solid #26272d;border-radius:7px;box-shadow:inset 0 2px 8px #000}
 .fader{display:flex;flex-direction:column;align-items:center;gap:6px}
 .small-note{font-size:10px;color:var(--faint);letter-spacing:.4px}
+/* drone page */
+.vrow{display:grid;grid-template-columns:repeat(4,1fr);align-self:end}
+.vcol{display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 0 4px;border-radius:7px;border-left:1px solid #26272d}
+.vcol:first-child{border-left:none}
+.vcol.sel{background:color-mix(in srgb,var(--c) 7%,transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--c) 45%,transparent)}
+.vcol .chip{display:flex;align-items:center;gap:6px;font-size:10.5px;font-weight:800;letter-spacing:.8px;color:var(--c);margin-bottom:4px}
+.vcol .chip i{width:7px;height:7px;border-radius:50%;background:#2d2e35}
+.selp{display:flex;flex-direction:column;gap:4px}.selp span{font-size:10.5px;font-weight:800;letter-spacing:.5px;color:var(--lab)}
+.selp b{display:flex;justify-content:space-between;align-items:center;background:#1c1d22;border:1px solid #2a2b31;border-radius:5px;padding:5px 9px;font-size:12px;font-weight:600;color:var(--text);width:128px}
+.selp b i{font-style:normal;color:var(--dim);font-size:10px}
+.led{display:inline-block;width:6px;height:6px;border-radius:50%;background:#2d2e35;margin-right:5px;vertical-align:1px}.led.on{background:var(--gold);box-shadow:0 0 5px var(--gold)}
 </style></head><body>
 <div class="win" id="win">
  <div class="top">
@@ -139,7 +150,7 @@ function mod(o){const dot=o.rate?`<span class="dot blink" style="--r:${o.rate}">
 
 // ---------- GRAVITY ----------
 const GV=.42;
-function gravity(){const W=270,H=240,cx=W/2,cy=116,R=50,id='grav';let g='';
+function gravity(){const W=280,H=290,cx=W/2,cy=140,R=60,id='grav';let g='';
  // zone arcs + labels
  ZONES.forEach(z=>{const a=A0+z.a*270,b=A0+z.b*270;g+=`<path d="${arc(cx,cy,R+30,a+1,b-1)}" stroke="${z.c}" stroke-opacity=".22" stroke-width="5" fill="none"/>`;
   const m=(a+b)/2,[x,y]=pt(cx,cy,R+53,m);g+=tx(x,y+3,z.n,'middle',GV>=z.a&&GV<z.b?z.c:'#6c6d76',9.5)});
@@ -154,41 +165,38 @@ function gravity(){const W=270,H=240,cx=W/2,cy=116,R=50,id='grav';let g='';
  g+=`<ellipse cx="${cx}" cy="${cy}" rx="${R+13}" ry="${R+13}" fill="none" stroke="#fff" stroke-opacity=".07" stroke-dasharray="2 4"/>`;
  g+=`<g id="orbit"></g>`;
  g+=capKnob(cx,cy,R,a,id);
- g+=`<text x="${cx}" y="${cy+R+46}" text-anchor="middle" font-size="12" fill="#4aa8ff" font-family="Menlo,monospace">${Math.round(GV*100)} %</text>`;
+ g+=`<text x="${cx}" y="${cy+R+52}" text-anchor="middle" font-size="12" fill="#4aa8ff" font-family="Menlo,monospace">${Math.round(GV*100)} %</text>`;
  return `<svg width="${W}" height="${H}" overflow="visible">${g}</svg>`}
 const VOICES=[['choir',1],['choir',1],['siren',0],['pulsar',1],['pulsar',0],['choir',1],['choir',1],['siren',0]];
-function orbitAnim(){requestAnimationFrame(orbitAnim);const o=document.getElementById('orbit');if(!o)return;const t=performance.now()/1000,cx=135,cy=116,R=63;let s='';
+function orbitAnim(){requestAnimationFrame(orbitAnim);const o=document.getElementById('orbit');if(!o)return;const t=performance.now()/1000,cx=140,cy=140,R=75;let s='';
  VOICES.forEach(([ty,on],i)=>{const base=i/8*Math.PI*2+t*.25,pull=Math.sin(t*.7+i)*GV*.5,ang=base+pull*((i%2)?1:-1)*.6,rr=R+Math.sin(t*1.3+i*2)*GV*6;
   const x=cx+rr*Math.cos(ang),y=cy+rr*Math.sin(ang),c=C[ty];s+=`<circle cx="${x}" cy="${y}" r="${on?4:3}" fill="${on?c:'#2b2c33'}" stroke="${c}" stroke-width="1.2" ${on?`style="filter:drop-shadow(0 0 4px ${c})"`:''}/>`});
  o.innerHTML=s}
 
 // ---------- DRONE page ----------
 const TY={choir:'CHOIR',siren:'SIREN',pulsar:'PULSAR'};
-function strip(n,ty,tune,tuneT,ch,chV,chT,vol,pan,sel,on){
- return mod({t:TY[ty],c:ty,r:n,sel,off:!on,bs:'align-content:space-between;padding-top:6px',items:[
-  knob({l:'TUNE',v:tune,c:ty,small:1,t:tuneT}),knob({l:ch,v:chV,c:ty,small:1,t:chT,mid:ch=='TIDE'?.5:0}),
-  `<div class="vb"><div class="row"><span>VOL</span><span class="mono">${pan}</span></div><div class="bar"><i style="width:${vol*100}%"></i></div><div class="meter"><i style="width:${on?vol*80:0}%"></i></div></div>`]})}
-function group(name,a,hold,pitch,pull,f1,f2,p1,p2){return mod({t:name,c:'grp',a,r:'FILL · D DORIAN ▾',cols:'repeat(5,1fr)',items:[
- knob({l:'HOLD',v:hold,c:'grp',small:1,t:Math.round(hold*100)+' %'}),knob({l:'PITCH',v:pitch,c:'grp',small:1,bi:1,t:pitch==.5?'0 st':(pitch>.5?'+':'−')+Math.round(Math.abs(pitch-.5)*48)+' st'}),
- knob({l:'PULL',v:pull,c:'grav',small:1,bi:1,t:(pull>=.5?'+':'−')+Math.round(Math.abs(pull-.5)*200)+' %'}),btn('FAST '+p1,f1),btn('FAST '+p2,f2)]})}
-function drone(){return {grid:'grid-template-columns:1fr 292px 1fr;grid-template-rows:112px 246px 162px;grid-template-areas:"ga gv gb" "va gv vb" "de de de"',mods:[
- group('GROUP A · 1–4','ga',.62,.5,.5,0,1,'1·2','3·4'),group('GROUP B · 5–8','gb',.55,.5,.62,0,0,'5·6','7·8'),
- `<div style="grid-area:va;display:grid;grid-template-columns:repeat(4,1fr);gap:6px">${[
-  strip(1,'choir',.32,'D2 +4','TIDE',.38,'−1.9 oct',.78,'L 30',1,1),strip(2,'choir',.41,'A2 −6','TIDE',.22,'−1.1 oct',.7,'R 25',0,1),
-  strip(3,'siren',.55,'F#3','DIVIDER',.3,'1:5',.42,'L 60',0,0),strip(4,'pulsar',.6,'A3 +2','SHARP',.25,'25 %',.6,'C',0,1)].join('')}</div>`,
- `<div style="grid-area:vb;display:grid;grid-template-columns:repeat(4,1fr);gap:6px">${[
-  strip(5,'pulsar',.66,'E4 −3','SHARP',.55,'55 %',.55,'C',0,0),strip(6,'choir',.48,'D3','TIDE',.12,'−0.6 oct',.72,'L 25',0,1),
-  strip(7,'choir',.52,'A3 +9','TIDE',.6,'FM 20 %',.66,'R 30',0,1),strip(8,'siren',.7,'C#5','DIVIDER',.6,'1:10',.38,'R 60',0,0)].join('')}</div>`,
- mod({t:'GRAVITY',c:'grav',a:'gv',r:'ORBIT',bs:'align-content:start;gap:0;padding-top:4px',items:[gravity(),
-  `<div style="display:flex;justify-content:center;gap:2px;margin-top:-4px;width:100%">${knob({l:'FEEDBACK',v:.18,c:'echo',small:1,t:'18 %'})}${radio('PATH',['2 LOOPS','RING','AUTO'],2)}${knob({l:'DUST',v:.2,c:'master',small:1,t:'20 %'})}</div>`]}),
- mod({t:'VOICE 1 · CHOIR',c:'choir',a:'de',r:'ROOT D2 · L 30',cols:'104px 104px repeat(5,80px) 12px repeat(5,1fr)',items:[
-  radio('TYPE',['CHOIR','SIREN','PULSAR'],0),radio('CHORD',['UNISON','OCTAVES','FIFTHS','MAJOR','MINOR','SUS','CLUSTER'],2),
-  ...[['OSC 1',.5,'ROOT',1,0],['OSC 2',.6,'+7 st',1,1],['OSC 3',.67,'+12 st',1,0],['OSC 4',.79,'+19 −8c',0,0],['OSC 5',.83,'+24 st',1,1]].map(([l,v,t,on,lt])=>
-   `<div class="part">${knob({l,v,c:'choir',small:1,bi:1,t})}<div class="bt"><div><div class="btn sm ${on?'on':''}"></div>ON</div><div><div class="btn sm ${lt?'on':''}"></div>LIGHT</div></div></div>`),
-  '<div style="width:1px;height:120px;background:#2a2b31"></div>',
-  knob({l:'TIDE',v:.38,c:'choir',lo:'0',hi:'MAX',t:'−1.9 oct',mid:.5,mod:['light',.05,'LIGHT ±8 %']}),
+// one voice = a light column inside the group panel (no box of its own)
+function vcol(n,ty,tune,tuneT,ch,chV,chT,sel,on){const c=C[ty];
+ return `<div class="vcol ${sel?'sel':''}" style="--c:${c}"><div class="chip"><i style="${on?`background:${c};box-shadow:0 0 6px ${c}`:''}"></i>${n} ${TY[ty]}</div>
+ ${knob({l:'TUNE',v:tune,c:ty,small:1,t:tuneT})}${knob({l:ch,v:chV,c:ty,small:1,t:chT,mid:ch=='TIDE'?.5:0})}</div>`}
+function group(name,a,hold,pitch,voices){return mod({t:name,c:'grp',a,r:'FILL ▾',bs:'grid-template-rows:auto 1fr;align-content:stretch;padding:8px 8px 10px',items:[
+ `<div style="display:flex;gap:28px;justify-content:center">${knob({l:'HOLD',v:hold,c:'grp',t:Math.round(hold*100)+' %'})}${knob({l:'PITCH',v:pitch,c:'grp',bi:1,t:'0 st'})}</div>`,
+ `<div class="vrow">${voices.join('')}</div>`]})}
+function drone(){return {grid:'grid-template-columns:1fr 300px 1fr;grid-template-rows:352px 178px;grid-template-areas:"ga gv gb" "de de de"',mods:[
+ group('GROUP A · 1–4','ga',.62,.5,[vcol(1,'choir',.32,'D2 +4','TIDE',.38,'−1.9 oct',1,1),vcol(2,'choir',.41,'A2 −6','TIDE',.22,'−1.1 oct',0,1),
+  vcol(3,'siren',.55,'F#3','DIVIDER',.3,'1:5',0,0),vcol(4,'pulsar',.6,'A3 +2','SHARP',.25,'25 %',0,1)]),
+ group('GROUP B · 5–8','gb',.55,.5,[vcol(5,'pulsar',.66,'E4 −3','SHARP',.55,'55 %',0,0),vcol(6,'choir',.48,'D3','TIDE',.12,'−0.6 oct',0,1),
+  vcol(7,'choir',.52,'A3 +9','TIDE',.6,'FM 20 %',0,1),vcol(8,'siren',.7,'C#5','DIVIDER',.6,'1:10',0,0)]),
+ mod({t:'GRAVITY',c:'grav',a:'gv',r:'ORBIT',bs:'align-content:center',items:[gravity()]}),
+ mod({t:'VOICE 1 · CHOIR',c:'choir',a:'de',cols:'150px repeat(5,1fr) 1px repeat(5,1fr)',items:[
+  `<div style="display:flex;flex-direction:column;gap:12px">${selp('TYPE','CHOIR')}${selp('CHORD','Fifths')}</div>`,
+  ...[['OSC 1',.5,'root',1],['OSC 2',.6,'+7 st',1],['OSC 3',.67,'+12 st',1],['OSC 4',.79,'+19 −8c',0],['OSC 5',.83,'+24 st',1]].map(([l,v,t,on])=>
+   knob({l:`<span class="led ${on?'on':''}"></span>${l}`,v,c:on?'choir':'#5e5f68',small:1,bi:1,t})),
+  '<div style="width:1px;height:110px;background:#2a2b31"></div>',
+  knob({l:'TIDE',v:.38,c:'choir',lo:'0',hi:'MAX',t:'−1.9 oct',mid:.5}),
   knob({l:'ATTACK',v:.62,c:'choir',lo:'1ms',hi:'30s',t:'6.2 s'}),knob({l:'RELEASE',v:.7,c:'choir',lo:'1ms',hi:'30s',t:'11 s'}),
   knob({l:'VOLUME',v:.78,c:'choir',lo:'0',hi:'10',t:'7.8'}),knob({l:'PAN',v:.35,c:'choir',bi:1,lo:'L',hi:'R',t:'L 30'})]})]}}
+const selp=(l,v)=>`<div class="selp"><span>${l}</span><b>${v}<i>▾</i></b></div>`;
 
 // ---------- MOTION page ----------
 function aether(){const W=330,H=300;let g=`<rect x="0" y="0" width="${W}" height="${H}" rx="8" fill="#0b0c0e" stroke="#26272d"/>`;
@@ -226,7 +234,7 @@ function space(){const filt=(n,a,v)=>mod({t:'FILTER '+n,c:'flt',a,r:'12 dB',cols
  filt('L','fl',[.52,'1.2 kHz',.55,.3]),filt('R','fr',[.52,'1.25 kHz',.55,.3]),
  mod({t:'ECHO',c:'echo',a:'ec',r:'2 LINES',cols:'repeat(4,1fr)',items:[knob({l:'TIME 1',v:.48,c:'echo',lo:'5ms',hi:'2s',t:'340 ms'}),knob({l:'TIME 2',v:.56,c:'echo',lo:'5ms',hi:'2s',t:'520 ms'}),
   knob({l:'FEEDBACK',v:.46,c:'echo',lo:'0',hi:'MAX',t:'46 %',mid:.52}),knob({l:'MIX',v:.35,c:'echo',lo:'DRY',hi:'WET',t:'35 %'}),
-  knob({l:'MOD 1',v:.2,c:'echo',lo:'0',hi:'10',t:'2.0',mod:['bin',.05,'BINARY ±10 %']}),knob({l:'MOD 2',v:.28,c:'echo',lo:'0',hi:'10',t:'2.8'}),radio('MOD SOURCE',['SELF','LFO','SIDECHAIN'],0),btn('SYNC',0)]}),
+  knob({l:'MOD 1',v:.2,c:'echo',lo:'0',hi:'10',t:'2.0',mod:['bin',.05,'BINARY ±10 %']}),knob({l:'MOD 2',v:.28,c:'echo',lo:'0',hi:'10',t:'2.8'}),radio('MOD SOURCE',['SELF','LFO','SIDECHAIN'],0),knob({l:'TO VOICES',v:.18,c:'echo',lo:'0',hi:'10',t:'1.8'})]}),
  mod({t:'SPACE',c:'space',a:'sp',r:'RUNNER',cols:'150px repeat(4,1fr) 70px',items:[radio('ALGORITHM',['AURORA','VOID','RUNNER','SATURN','COMET'],2),
   knob({l:'FEEDBACK',v:.55,c:'space',lo:'X',hi:'',t:'55 %'}),knob({l:'TIME',v:.42,c:'space',lo:'Y',hi:'',t:'1/4 D'}),knob({l:'PITCH',v:.33,c:'space',bi:1,lo:'Z',hi:'',t:'−5 st',mod:['rnd',.06,'RANDOM 1 ±12 %']}),
   knob({l:'BLEND',v:.4,c:'space',lo:'DRY',hi:'WET',t:'40 %'}),btn('REVERSE',1)]}),
