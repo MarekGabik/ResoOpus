@@ -134,6 +134,12 @@ Ovládání: knoby **X / Y / Z** (s modulací) + **BLEND**. Každý algoritmus m
 
 Volitelně později (jako Solar): v režimu DUAL jiný algoritmus vlevo a vpravo.
 
+## Ladění bez otravy (Marek 10. 10.: 8 × 5 oscilátorů je moc na ruční ladění)
+- Inspirace: 8 hlasů × 1 oscilátor (Lyra), 4 hlasy × 5 oscilátorů (Solar). U nás 4× CHOIR = 20 oscilátorů.
+- CHOIR oscilátory jsou **intervaly relativně k TUNE hlasu** + **CHORD** jedním klikem.
+- **FILL** ve skupině rozprostře hlasy po stupnici/akordu.
+- Výsledek: běžně 8 knobů TUNE, jemné ladění jen tam, kde chci.
+
 ## Hraní z MIDI
 - **Režim Plates:** 8 bílých kláves jedné oktávy (C–C) = 8 hlasů. Hlasy si drží vlastní ruční ladění, klávesa je jen „prst na senzoru“. Oktávu půjde posunout.
 - **Režim Keys:** zahraná nota přeladí volný hlas (nebo pár) na danou notu (chromaticky nebo ve stupnici, s mikrotonálním posunem). Slouží jako usnadnění.

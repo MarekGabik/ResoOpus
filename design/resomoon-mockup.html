@@ -168,7 +168,7 @@ function strip(n,ty,tune,tuneT,ch,chV,chT,vol,pan,sel,on){
  return mod({t:TY[ty],c:ty,r:n,sel,off:!on,bs:'align-content:space-between;padding-top:6px',items:[
   knob({l:'TUNE',v:tune,c:ty,small:1,t:tuneT}),knob({l:ch,v:chV,c:ty,small:1,t:chT,mid:ch=='TIDE'?.5:0}),
   `<div class="vb"><div class="row"><span>VOL</span><span class="mono">${pan}</span></div><div class="bar"><i style="width:${vol*100}%"></i></div><div class="meter"><i style="width:${on?vol*80:0}%"></i></div></div>`]})}
-function group(name,a,hold,pitch,pull,f1,f2,p1,p2){return mod({t:name,c:'grp',a,cols:'repeat(5,1fr)',items:[
+function group(name,a,hold,pitch,pull,f1,f2,p1,p2){return mod({t:name,c:'grp',a,r:'FILL · D DORIAN ▾',cols:'repeat(5,1fr)',items:[
  knob({l:'HOLD',v:hold,c:'grp',small:1,t:Math.round(hold*100)+' %'}),knob({l:'PITCH',v:pitch,c:'grp',small:1,bi:1,t:pitch==.5?'0 st':(pitch>.5?'+':'−')+Math.round(Math.abs(pitch-.5)*48)+' st'}),
  knob({l:'PULL',v:pull,c:'grav',small:1,bi:1,t:(pull>=.5?'+':'−')+Math.round(Math.abs(pull-.5)*200)+' %'}),btn('FAST '+p1,f1),btn('FAST '+p2,f2)]})}
 function drone(){return {grid:'grid-template-columns:1fr 292px 1fr;grid-template-rows:112px 246px 162px;grid-template-areas:"ga gv gb" "va gv vb" "de de de"',mods:[
@@ -181,10 +181,10 @@ function drone(){return {grid:'grid-template-columns:1fr 292px 1fr;grid-template
   strip(7,'choir',.52,'A3 +9','TIDE',.6,'FM 20 %',.66,'R 30',0,1),strip(8,'siren',.7,'C#5','DIVIDER',.6,'1:10',.38,'R 60',0,0)].join('')}</div>`,
  mod({t:'GRAVITY',c:'grav',a:'gv',r:'ORBIT',bs:'align-content:start;gap:0;padding-top:4px',items:[gravity(),
   `<div style="display:flex;justify-content:center;gap:2px;margin-top:-4px;width:100%">${knob({l:'FEEDBACK',v:.18,c:'echo',small:1,t:'18 %'})}${radio('PATH',['2 LOOPS','RING','AUTO'],2)}${knob({l:'DUST',v:.2,c:'master',small:1,t:'20 %'})}</div>`]}),
- mod({t:'VOICE 1 · CHOIR',c:'choir',a:'de',r:'5 OSC · L 30',cols:'120px repeat(5,84px) 14px repeat(5,1fr)',items:[
-  radio('TYPE',['CHOIR','SIREN','PULSAR'],0),
-  ...[['OSC 1',.30,'D1',1,0],['OSC 2',.55,'A2 −6',1,1],['OSC 3',.42,'D3 +2',1,0],['OSC 4',.5,'F#4 −14',0,0],['OSC 5',.38,'A5',1,1]].map(([l,v,t,on,lt])=>
-   `<div class="part">${knob({l,v,c:'choir',small:1,t})}<div class="bt"><div><div class="btn sm ${on?'on':''}"></div>ON</div><div><div class="btn sm ${lt?'on':''}"></div>LIGHT</div></div></div>`),
+ mod({t:'VOICE 1 · CHOIR',c:'choir',a:'de',r:'ROOT D2 · L 30',cols:'104px 104px repeat(5,80px) 12px repeat(5,1fr)',items:[
+  radio('TYPE',['CHOIR','SIREN','PULSAR'],0),radio('CHORD',['UNISON','OCTAVES','FIFTHS','MAJOR','MINOR','SUS','CLUSTER'],2),
+  ...[['OSC 1',.5,'ROOT',1,0],['OSC 2',.6,'+7 st',1,1],['OSC 3',.67,'+12 st',1,0],['OSC 4',.79,'+19 −8c',0,0],['OSC 5',.83,'+24 st',1,1]].map(([l,v,t,on,lt])=>
+   `<div class="part">${knob({l,v,c:'choir',small:1,bi:1,t})}<div class="bt"><div><div class="btn sm ${on?'on':''}"></div>ON</div><div><div class="btn sm ${lt?'on':''}"></div>LIGHT</div></div></div>`),
   '<div style="width:1px;height:120px;background:#2a2b31"></div>',
   knob({l:'TIDE',v:.38,c:'choir',lo:'0',hi:'MAX',t:'−1.9 oct',mid:.5,mod:['light',.05,'LIGHT ±8 %']}),
   knob({l:'ATTACK',v:.62,c:'choir',lo:'1ms',hi:'30s',t:'6.2 s'}),knob({l:'RELEASE',v:.7,c:'choir',lo:'1ms',hi:'30s',t:'11 s'}),

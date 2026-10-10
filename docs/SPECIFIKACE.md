@@ -55,7 +55,7 @@ Formáty VST3 (Win + Mac), AU (Mac), Standalone. Cíl: Ableton Live 11/12.
 
 | Typ | Zdroj | Ovladače | Charakter |
 |---|---|---|---|
-| **CHOIR** | 5 pilovitých oscilátorů, každý s vlastním laděním (rozsahy po ~2 oktávách: C0–G2, B1–G3, D3–B4, E4–C6, G5–D7), MUTE a LIGHT (modulace) pro každý | 5× TUNE, 5× MUTE, 5× LIGHT, **TIDE** | sborový akord v jednom hlasu. TIDE 0–50 % transpozice dolů, 50–100 % dál dolů + vzájemná FM pil („gravitace uvnitř hlasu“), dole sub-audio praskání |
+| **CHOIR** | 5 pilovitých oscilátorů **laděných relativně k TUNE hlasu** (OSC 1 = kořen, OSC 2–5 = intervaly −24 až +36 st + centy), ON a LIGHT (modulace) pro každý | TUNE (posune celý akord), **CHORD** (Unison / Octaves / Fifths / Major / Minor / Sus / Cluster naplní intervaly jedním klikem), 5× interval, 5× ON, 5× LIGHT, **TIDE** | sborový akord v jednom hlasu. TIDE 0–50 % transpozice dolů, 50–100 % dál dolů + vzájemná FM pil („gravitace uvnitř hlasu“), dole sub-audio praskání |
 | **SIREN** | 2 Schmittovy oscilátory (pomalý modulátor + tónový C0–E7) + bílý šum | PITCH, RANGE, RATE (×1/×10), FM AMT, DIVIDER (dělič 1:1–1:16), přepínače FM / AM, NOISE | sirény, ptáci, „monstra“, lasery, vítr, příboj. Šum napájí S&H |
 | **PULSAR** | tónový generátor trojúhelník ↔ obdélník, obálka ovlivňuje výšku a tvar | TUNE, SHARP, BLOOM (vliv obálky na výšku/barvu) | jemný až ostrý tón, nejcitlivější na FM, „živý“ |
 
@@ -67,6 +67,8 @@ Dotyk (velocity / aftertouch / MPE pressure) přidává hlasitost nad HOLD a leh
 
 Ladění: TUNE v Hz i jako nota (`A2+12`), **SNAP** Free / Chromatic / Scale (stupnice + kořen). Skupina má
 PITCH (transpozice se zachováním intervalů), celý nástroj **GLOBAL TUNE** (A4 = 415–466 Hz).
+**FILL** (menu v hlavičce skupiny): zvolená stupnice/akord rozprostře 4 hlasy skupiny po svých tónech, pak se
+jemně doladí uchem. Běžné ladění = 8 knobů TUNE, ne 40.
 
 ### 3.2 GRAVITY (středobod)
 
@@ -126,6 +128,8 @@ Matice modulací převzatá z ResoOG (sloty: zdroj → funkce → controller →
 ### 3.7 Hraní z MIDI
 - **PLATES:** 8 bílých kláves jedné oktávy (výchozí C3–C4) = hlasy 1–8. Hlasy drží své ladění.
 - **KEYS:** nota přeladí hlas (alokace: nejbližší volný hlas ve vybraných skupinách, glide přeladění), SNAP platí.
+  Na klávesnici se hlasy na stejné notě zobrazí jako malé barevné tečky vedle sebe (max. 4 + „+n“). V PLATES je
+  přiřazení pevné, čísla se nepřekrývají.
 - **LEAD:** vrstva LEAD hraje chromaticky (rozsah kláves nastavitelný, nebo vlastní MIDI kanál).
 - **TOUCH SOURCE:** Velocity / Aftertouch / Obojí / MPE. HOLD hraje bez MIDI.
 
