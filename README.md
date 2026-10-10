@@ -19,12 +19,16 @@ Hotovo a otestováno:
 - u každého hlasu **HOLD** (drone bez dotyku), PAN, VOL; **MASTER**: PITCH (transpozice všeho), VOLUME, **FILL**
 - hraní: **Plates** (bílé klávesy C3–F3 = hlasy 1–4) a **Keys** (nota přeladí volný hlas), dynamika
   **Velocity / Aftertouch / obojí**, **Snap** Free / Chromatic / Scale, A = 415–466 Hz
-- UI stránky DRONE, klávesnice s čísly hlasů, 7 presetů, undo/redo, A/B, modulační panel
+- UI stránky DRONE a LEAD · FX, klávesnice s čísly hlasů, undo/redo, A/B, modulační panel
+- **42 presetů** v kategoriích Basics, Drones, Cinematic, Textures, Orbits, Lead, Pulse; **prohlížeč presetů**
+  (kategorie, All / Factory / User / Favourites, hledání, hvězdička, Save / Save as, výchozí preset, náhled hlasů a GRAVITY);
+  vlastní presety v `Dokumenty/Gavr/ResoOpus Presets` (*.ropreset)
+- nápověda (tooltipy) je vypnutá, zapíná se ikonou **?** vedle Help
 - **GRAVITY** (velký knob uprostřed): STILL (čisté ladění, zázněje) → ORBIT (hlasy v páru se navzájem modulují) →
   TURBULENCE (všechny 4 v jedné smyčce + zpětná vazba výstupu) → COLLAPSE (smyčka pulzuje sama). PATH Auto / Pairs / Ring
   (pravé tlačítko), dá se modulovat (např. tlakem prstu). **DUST**: drift ladění, prosakování hlasů, šum pozadí
-- 9 presetů včetně *Gravity Well* (aftertouch táhne GRAVITY) a *Collapse*
-- stránka **FX**: **FILTER** (stereo, špinavý 12 dB, LP/BP, DRIVE, SPREAD), **ECHO** (2 linky s křížovou zpětnou vazbou,
+- stránka **FX**: **FILTER** (stereo, LP/BP/HP, DRIVE, SPREAD, modely **GROWL** špinavý 12 dB, **LADDER** tranzistorový
+  24 dB, **DIODE** diodový žebřík, **SCREAM** ostrá 12 dB rezonance, **SILK** čistý 12 dB), **ECHO** (2 linky s křížovou zpětnou vazbou,
   nad 55 % samo zpívá; SELF/LFO modulace času; TO VOICES vrací echo do hlasů), **SPACE** (AURORA shimmer, VOID s FREEZE,
   RUNNER stoupající/klesající opakování, SATURN kovová kruhová modulace, COMET špinavé zpívající delay; X/Y/Z podle algoritmu)
 
@@ -42,7 +46,8 @@ Naměřeno (`ResoOpusTests`, Apple M1, 48 kHz):
 | GRAVITY: hlasitost STILL → COLLAPSE / stabilita 60 s všech pásem 44,1–192 kHz | rozdíl 2,2 dB / bez NaN, špička −0,3 dBFS |
 | Efekty: stabilita v extrémech / ECHO 100 % + TO VOICES + GRAVITY 90 % 30 s / VOID FREEZE | bez NaN, ≤ −0,3 dBFS / stabilní / drží ±0,5 dB |
 | CPU: výchozí patch se SPACE / nečinnost | 2,7 % / 0,65 % jádra |
-| Audit parametrů | 151 ze 151 mění zvuk |
+| FILTER: 5 modelů, LP na 3 kHz / HP na 110 Hz / BP při max. rezonanci | −31 až −64 dB / −53 až −109 dB / +0,6 až +9,8 dB proti rezonanci 0 |
+| Audit parametrů | 175 ze 175 mění zvuk |
 | UBSan (nedefinované chování) | 0 chyb |
 
 ## Build (macOS)
