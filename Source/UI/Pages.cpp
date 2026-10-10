@@ -694,65 +694,99 @@ void DronePage::refreshLive()
 //==============================================================================
 FxPage::FxPage (ResoOpusProcessor& p) : Page (p)
 {
-    const int rowH = 262, gap = 10, fw = 372;
-    auto* filter = panel ("FILTER", Palette::filter, { 0, 0, fw, rowH }, -1, "12 dB");
+    auto sm = [] (String lo, String hi, bool bi = false) { return range (lo, hi, bi, true); };
+    const int fxH = 236, gap = 10, g6 = 6;
+
+    // FX row: FILTER, ECHO, SPACE
+    auto* filter = panel ("FILTER", Palette::filter, { 0, 0, 300, fxH }, -1, "12 dB");
     auto* mode = new LedRadio (proc, "flt_mode", "MODE", { "LOW PASS", "BAND PASS", "HIGH PASS" });
     owned.add (mode);
-    filter->setGrid ({ 1.0f, 1.0f, 1.0f }, {
-        knob ("flt_cutoff", "CUTOFF", Palette::filter, range ("20", "20k")),
-        knob ("flt_res", "RESONANCE", Palette::filter, range ("0", "10")),
-        knob ("flt_drive", "DRIVE", Palette::filter, range ("0", "10")),
-        mode,
-        knob ("flt_spread", "SPREAD", Palette::filter, range ("0", "100")),
-        nullptr });
+    filter->setGrid ({ 1.3f, 1.0f, 1.0f }, {
+        knob ("flt_cutoff", "CUTOFF", Palette::filter, sm ("20", "20k")),
+        knob ("flt_res", "RESONANCE", Palette::filter, sm ("0", "10")),
+        knob ("flt_drive", "DRIVE", Palette::filter, sm ("0", "10")),
+        mode, knob ("flt_spread", "SPREAD", Palette::filter, sm ("0", "100")), nullptr });
 
-    auto* echoPanel = panel ("ECHO", Palette::mixer, { fw + gap, 0, width - fw - gap, rowH }, -1, "2 LINES");
+    auto* echoPanel = panel ("ECHO", Palette::mixer, { 300 + gap, 0, 470, fxH }, -1, "2 LINES");
     auto* src = new LedRadio (proc, "echo_self", "MOD SOURCE", { "SELF", "LFO" });
     owned.add (src);
     echoPanel->setGrid ({ 1.0f, 1.0f, 1.0f, 1.0f }, {
-        knob ("echo_time1", "TIME 1", Palette::mixer, range ("5ms", "2s")),
-        knob ("echo_time2", "TIME 2", Palette::mixer, range ("5ms", "2s")),
-        knob ("echo_fb", "FEEDBACK", Palette::mixer, range ("0", "MAX")),
-        knob ("echo_mix", "MIX", Palette::mixer, range ("DRY", "WET")),
-        knob ("echo_mod", "MOD", Palette::mixer, range ("0", "100")),
-        src,
-        knob ("echo_voices", "TO VOICES", Palette::mixer, range ("0", "100")),
-        nullptr });
+        knob ("echo_time1", "TIME 1", Palette::mixer, sm ("5ms", "2s")),
+        knob ("echo_time2", "TIME 2", Palette::mixer, sm ("5ms", "2s")),
+        knob ("echo_fb", "FEEDBACK", Palette::mixer, sm ("0", "MAX")),
+        knob ("echo_mix", "MIX", Palette::mixer, sm ("DRY", "WET")),
+        knob ("echo_mod", "MOD", Palette::mixer, sm ("0", "100")), src,
+        knob ("echo_voices", "TO VOICES", Palette::mixer, sm ("0", "100")), nullptr });
 
-    spacePanel = panel ("SPACE", Palette::fx2, { 0, rowH + gap, width, height - rowH - gap }, -1, "VOID");
+    spacePanel = panel ("SPACE", Palette::fx2, { 780 + gap, 0, width - 790, fxH }, -1, "VOID");
     auto* algo = new LedRadio (proc, "space_algo", "ALGORITHM", { "AURORA", "VOID", "RUNNER", "SATURN", "COMET" });
     algo->setTooltip (Params::findDef ("space_algo")->tip);
     owned.add (algo);
-    xyz[0] = knob ("space_x", "X", Palette::fx2, range ("0", "100"));
-    xyz[1] = knob ("space_y", "Y", Palette::fx2, range ("0", "100"));
-    xyz[2] = knob ("space_z", "Z", Palette::fx2, range ("0", "100"));
-    spacePanel->setGrid ({ 1.3f, 1.0f, 1.0f, 1.0f, 1.0f }, { algo, xyz[0], xyz[1], xyz[2], knob ("space_blend", "BLEND", Palette::fx2, range ("DRY", "WET")) });
-    for (auto* c : spacePanel->getChildren()) c->setTopLeftPosition (c->getX(), c->getY() - 28);
+    xyz[0] = knob ("space_x", "X", Palette::fx2, sm ("0", "100"));
+    xyz[1] = knob ("space_y", "Y", Palette::fx2, sm ("0", "100"));
+    xyz[2] = knob ("space_z", "Z", Palette::fx2, sm ("0", "100"));
     spaceInfo = new Label();
     owned.add (spaceInfo);
-    spaceInfo->setFont (Fonts::regular (12.5f));
+    spaceInfo->setFont (Fonts::regular (10.5f));
     spaceInfo->setColour (Label::textColourId, Palette::textDim);
-    spaceInfo->setJustificationType (Justification::centred);
-    spaceInfo->setBounds (40, spacePanel->getHeight() - 64, spacePanel->getWidth() - 80, 36);
-    spacePanel->addAndMakeVisible (spaceInfo);
+    spaceInfo->setJustificationType (Justification::topLeft);
+    spaceInfo->setSize (118, 96);
+    spacePanel->setGrid ({ 1.25f, 1.0f, 1.0f }, { algo, xyz[0], xyz[1], spaceInfo, xyz[2], knob ("space_blend", "BLEND", Palette::fx2, sm ("DRY", "WET")) });
+
+    // LEAD row: OSC, ENVELOPE, VOICE, ARP (dimmed when the LEAD is off; switch it at the tab)
+    const int y = fxH + gap, h = height - y;
+    auto* osc = panel ("LEAD OSC", Palette::lead, { 0, y, 300, h });
+    osc->setGrid ({ 1.0f, 1.0f, 1.0f }, {
+        knob ("lead_wave", "WAVE", Palette::lead, sm ("SINE", "SQR")),
+        knob ("lead_osc2", "OSC 2", Palette::lead, sm ("-12", "+12", true)),
+        knob ("lead_mix", "OSC 2 LEVEL", Palette::lead, sm ("0", "100")),
+        knob ("lead_octave", "OCTAVE", Palette::lead, sm ("-2", "+2", true)),
+        knob ("lead_sub", "SUB", Palette::lead, sm ("0", "100")),
+        static_cast<Component*> (owned.add (new LedButton (proc, "lead_sync", "SYNC"))) });
+    auto* env = panel ("ENVELOPE", Palette::lead, { 300 + g6, y, 230, h });
+    env->setEnvelopeIcon (4);
+    env->setGrid ({ 1.0f, 1.0f }, {
+        knob ("lead_attack", "ATTACK", Palette::lead, sm ("1ms", "10s")), knob ("lead_decay", "DECAY", Palette::lead, sm ("1ms", "30s")),
+        knob ("lead_sustain", "SUSTAIN", Palette::lead, sm ("0", "100")), knob ("lead_release", "RELEASE", Palette::lead, sm ("1ms", "30s")) });
+    auto* voice = panel ("LEAD VOICE", Palette::lead, { 536 + g6, y, 380, h });
+    voice->setGrid ({ 1.0f, 1.0f, 1.0f, 1.0f }, {
+        knob ("lead_glide", "GLIDE", Palette::lead, sm ("0", "2s")),
+        knob ("lead_vib", "VIBRATO", Palette::lead, sm ("0", "1 st")),
+        knob ("lead_vib_rate", "VIB RATE", Palette::lead, sm (".5", "12")),
+        knob ("lead_vib_delay", "VIB DELAY", Palette::lead, sm ("0", "3s")),
+        knob ("lead_touch_vib", "TOUCH VIB", Palette::lead, sm ("0", "100")),
+        knob ("lead_level", "VOLUME", Palette::lead, sm ("-inf", "+6")),
+        knob ("lead_pan", "PAN", Palette::lead, sm ("L", "R", true)), nullptr });
+    auto* arp = panel ("ARP", Palette::lead, { 922 + g6, y, width - 928, h });
+    auto* arpMode = new LedRadio (proc, "arp_mode", "DIRECTION", { "UP", "DOWN", "PING-PONG", "RANDOM" });
+    owned.add (arpMode);
+    arp->setGrid ({ 1.0f, 1.0f }, {
+        static_cast<Component*> (owned.add (new LedButton (proc, "arp_on", "ARP"))),
+        static_cast<Component*> (owned.add (new LedButton (proc, "arp_latch", "LATCH"))),
+        arpMode, knob ("arp_rate", "RATE", Palette::lead, sm ("1/4", "1/32")),
+        nullptr, knob ("arp_octaves", "OCTAVES", Palette::lead, sm ("1", "4")) });
+    leadPanels = { osc, env, voice, arp };
     refreshLive();
 }
 
 void FxPage::refreshLive()
 {
     Page::refreshLive();
+    const bool leadOn = proc.getParamReal ("lead_on") > 0.5f;
+    for (auto* p : leadPanels)
+        if (std::abs (p->getAlpha() - (leadOn ? 1.0f : 0.45f)) > 0.01f) p->setAlpha (leadOn ? 1.0f : 0.45f);
     const int a = roundToInt (proc.getParamReal ("space_algo"));
     if (a == shownAlgo) return;
     shownAlgo = a;
-    static const char* labels[5][3] = { { "OCT UP", "OCT DOWN", "DECAY" }, { "PRE-DELAY", "WOBBLE", "DECAY / FREEZE" },
+    static const char* labels[5][3] = { { "OCT UP", "OCT DOWN", "DECAY" }, { "PRE-DELAY", "WOBBLE", "DECAY" },
                                         { "FEEDBACK", "TIME", "PITCH" }, { "FREQUENCY", "STEPS", "ROOM" }, { "FEEDBACK", "TIME", "WOBBLE" } };
     for (int i = 0; i < 3; ++i) xyz[i]->setLabel (labels[jlimit (0, 4, a)][i]);
     spacePanel->setRightText (Params::findDef ("space_algo")->choices[jlimit (0, 4, a)].toUpperCase());
     static const char* info[5] = {
-        "Shimmer: the reverb rises an octave (OCT UP) or falls one (OCT DOWN) as it decays. Angelic pads; DECAY for the length.",
-        "A huge dark space. PRE-DELAY moves it away, WOBBLE makes it drift; DECAY at the very top freezes what is sounding.",
-        "Repeats that rise or fall: PITCH sets the step per repeat (middle = none), FEEDBACK how many, TIME how far apart.",
-        "Metallic ring modulation: FREQUENCY of the ring, STEPS makes it jump to random notes, ROOM puts it in a small space.",
-        "A dirty, saturated delay that sings on its own at high FEEDBACK. WOBBLE bends it like worn tape." };
+        "Shimmer: the reverb rises (OCT UP) or falls (OCT DOWN) an octave as it decays.",
+        "Huge dark space. DECAY at the very top freezes what is sounding.",
+        "Repeats that rise or fall: PITCH per repeat (middle = none).",
+        "Metallic ring. STEPS jumps to random notes, ROOM adds a space.",
+        "Dirty, saturated delay that sings at high FEEDBACK." };
     spaceInfo->setText (info[jlimit (0, 4, a)], dontSendNotification);
 }

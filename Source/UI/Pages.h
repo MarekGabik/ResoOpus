@@ -101,6 +101,7 @@ private:
     Knob* xyz[3] {};
     ModulePanel* spacePanel = nullptr;
     juce::Label* spaceInfo = nullptr;
+    juce::Array<ModulePanel*> leadPanels;
     int shownAlgo = -1;
 };
 

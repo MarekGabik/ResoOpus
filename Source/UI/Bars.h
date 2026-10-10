@@ -32,7 +32,11 @@ public:
     juce::Rectangle<float> area (int item) const;
 
 private:
-    enum Item { None = -1, Tab0 = 0, Undo = 10, Redo, AB, Copy, Prev, Name, Next, Mod, Help };
+    enum Item { None = -1, Tab0 = 0, Undo = 10, Redo, AB, Copy, Prev, Name, Next, Mod, Help, LeadPower };
+public:
+    juce::Rectangle<float> leadPowerArea() const { return area (LeadPower); }
+private:
+    bool leadOn = false;
     void changeListenerCallback (juce::ChangeBroadcaster*) override { repaint(); }
     int itemAt (juce::Point<float>) const;
     void showPresetMenu();

@@ -1196,6 +1196,12 @@ static void testEditor()
     check (std::abs (p->getParamReal ("v1_tune") - 38.0f) < 0.01f && std::abs (p->getParamReal ("v2_tune") - 41.0f) < 0.01f
            && std::abs (p->getParamReal ("v4_tune") - 48.0f) < 0.01f, "FILL D Dorian spreads the voices over D F A C");
 
+    {
+        auto& top = editor->getTopBar();
+        const auto pc = top.leadPowerArea().getCentre();
+        top.mouseDown (mouse (top, pc, pc, false));
+        check (p->getParamReal ("lead_on") > 0.5f, "the power icon at the LEAD tab switches the LEAD on");
+    }
     editor->showPage (1);
     setParam (*p, "space_algo", 2.0f);
     for (int i = 0; i < 3; ++i) { render (*p, 0.05); pumpMessages (40); }

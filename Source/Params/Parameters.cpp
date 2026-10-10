@@ -379,7 +379,7 @@ String Params::format (const ParamDef& d, float v, bool withUnit)
             if (v <= d.min + 0.01f && d.min <= -59.0f) return "-inf" + u (" dB");
             return String (std::abs (v) < 0.05f ? 0.0f : v, 1) + u (" dB");
         case Unit::Pan:
-            if (String (d.id) == "pan")
+            if (String (d.id).endsWith ("pan"))
             {
                 const int p = roundToInt (v * 100.0f);
                 return p == 0 ? String ("C") : (p < 0 ? "L " + String (-p) : "R " + String (p));
@@ -452,7 +452,7 @@ float Params::parse (const ParamDef& d, const String& text, float fallback)
             if (lower.contains ("inf")) return d.min;
             return hasDigit ? clampV (num) : fallback;
         case Unit::Pan:
-            if (String (d.id) == "pan")
+            if (String (d.id).endsWith ("pan"))
             {
                 if (lower == "c") return 0.0f;
                 if (lower.startsWith ("l")) return clampV (-std::abs (num) / 100.0);
