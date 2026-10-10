@@ -40,7 +40,7 @@ void Stage::paint (Graphics& g)
 
 //==============================================================================
 ResoOpusEditor::ResoOpusEditor (ResoOpusProcessor& p)
-    : AudioProcessorEditor (p), proc (p), top (p, *settings), keyboard (p), bottom (p), drawer (p)
+    : AudioProcessorEditor (p), proc (p), top (p, *settings), keyboard (p), bottom (p), drawer (p), browser (p)
 {
     setLookAndFeel (&lnf);
     proc.editorOpen = true;
@@ -51,6 +51,7 @@ ResoOpusEditor::ResoOpusEditor (ResoOpusProcessor& p)
     content.addAndMakeVisible (keyboard);
     content.addAndMakeVisible (bottom);
     content.addChildComponent (drawer);
+    content.addChildComponent (browser);
 
     pages.add (new DronePage (p));
     pages.add (new FxPage (p));
@@ -66,6 +67,9 @@ ResoOpusEditor::ResoOpusEditor (ResoOpusProcessor& p)
     top.onScale = [this] (int s) { setScalePercent (s); };
     top.getScale = [this] { return roundToInt (scale * 100.0f); };
     drawer.onClose = [this] { setModDrawer (false); };
+    top.onPresets = [this] { setPresetBrowser (! browser.isVisible()); };
+    top.isBrowserOpen = [this] { return browser.isVisible(); };
+    browser.onClose = [this] { setPresetBrowser (false); };
 
     settings->addChangeListener (this);
     updateTooltips();
@@ -109,6 +113,7 @@ void ResoOpusEditor::resized()
     keyboard.setBounds (0, TopBar::height + Stage::height, logicalWidth, logicalHeight - TopBar::height - Stage::height - BottomBar::height);
     bottom.setBounds (0, logicalHeight - BottomBar::height, logicalWidth, BottomBar::height);
     drawer.setBounds (0, TopBar::height, ModDrawer::width, logicalHeight - TopBar::height);
+    browser.setBounds (0, TopBar::height, logicalWidth, logicalHeight - TopBar::height);
     proc.uiState.setProperty ("scale", roundToInt (scale * 100.0f), nullptr);
 }
 
@@ -129,6 +134,7 @@ void ResoOpusEditor::showPage (int index)
 
 void ResoOpusEditor::setModDrawer (bool open, int slot)
 {
+    if (open && browser.isVisible()) browser.setVisible (false);
     drawer.setVisible (open);
     if (open)
     {
@@ -136,6 +142,14 @@ void ResoOpusEditor::setModDrawer (bool open, int slot)
         if (slot >= 0) drawer.select (slot);
         drawer.toFront (false);
     }
+    top.repaint();
+}
+
+void ResoOpusEditor::setPresetBrowser (bool open)
+{
+    if (open && drawer.isVisible()) setModDrawer (false);
+    browser.setVisible (open);
+    if (open) browser.toFront (true);
     top.repaint();
 }
 
@@ -169,7 +183,8 @@ void ResoOpusEditor::changeListenerCallback (ChangeBroadcaster*)
 
 void ResoOpusEditor::updateTooltips()
 {
-    const bool on = settings->getBool (GlobalSettings::tooltips);
+    const bool on = settings->getBool (GlobalSettings::tooltips, false);
+    top.repaint();
     if (on && tooltips == nullptr)
         tooltips = std::make_unique<TooltipWindow> (this, 700);
     else if (! on)

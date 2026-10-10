@@ -48,6 +48,7 @@ set(RESOOPUS_SOURCES
     Source/Params/Parameters.cpp
     Source/DSP/ModMatrix.cpp
     Source/State/StateHistory.cpp
+    Source/State/PresetManager.cpp
     Source/State/GlobalSettings.cpp
     Source/State/FactoryPresets.cpp
     Source/PluginProcessor.cpp
@@ -58,6 +59,7 @@ set(RESOOPUS_SOURCES
     Source/UI/Pages.cpp
     Source/UI/Keyboard.cpp
     Source/UI/Bars.cpp
+    Source/UI/PresetBrowser.cpp
     Source/UI/ModDrawer.cpp)
 
 target_sources(ResoOpus PRIVATE ${RESOOPUS_SOURCES})

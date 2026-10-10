@@ -30,6 +30,37 @@ int GlobalSettings::getInt (const String& key, int fallback) const
     return file->getIntValue (key, fallback);
 }
 
+bool GlobalSettings::isFavourite (const String& key) const
+{
+    return StringArray::fromLines (file->getValue ("favourites")).contains (key);
+}
+
+void GlobalSettings::setFavourite (const String& key, bool fav)
+{
+    auto list = StringArray::fromLines (file->getValue ("favourites"));
+    list.removeEmptyStrings();
+    if (fav) list.addIfNotAlreadyThere (key); else list.removeString (key);
+    file->setValue ("favourites", list.joinIntoString ("\n"));
+    file->saveIfNeeded();
+    sendChangeMessage();
+}
+
+String GlobalSettings::getDefaultPreset() const { return file->getValue ("defaultPreset"); }
+
+void GlobalSettings::setDefaultPreset (const String& key)
+{
+    file->setValue ("defaultPreset", key);
+    file->saveIfNeeded();
+    sendChangeMessage();
+}
+
+File GlobalSettings::getUserPresetFolder()
+{
+    auto f = File::getSpecialLocation (File::userDocumentsDirectory).getChildFile ("Gavr").getChildFile ("ResoOpus Presets");
+    f.createDirectory();
+    return f;
+}
+
 void GlobalSettings::setInt (const String& key, int value)
 {
     file->setValue (key, value);

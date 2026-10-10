@@ -8,6 +8,7 @@
 #include "DSP/Effects.h"
 #include "DSP/ModMatrix.h"
 #include "State/StateHistory.h"
+#include "State/PresetManager.h"
 
 class ResoOpusProcessor : public juce::AudioProcessor, private juce::AsyncUpdater
 {
@@ -46,6 +47,9 @@ public:
     void resetToDefaults();
     juce::String getPresetName() const { return uiState.getProperty ("presetName", "Init").toString(); }
     void setPresetName (const juce::String& n) { uiState.setProperty ("presetName", n, nullptr); }
+    juce::String getPresetKey() const { return uiState.getProperty ("presetKey", "factory:" + getPresetName()).toString(); }
+    // Called by the PresetManager after a preset was applied (factoryIndex -1 for user presets)
+    void presetApplied (const juce::String& name, const juce::String& key, int factoryIndex);
 
     // Parameter helpers (message thread)
     juce::RangedAudioParameter* param (const juce::String& id) const { return apvts.getParameter (id); }
@@ -66,6 +70,7 @@ public:
     juce::AudioProcessorValueTreeState apvts;
     juce::ValueTree uiState { "UI" };
     std::unique_ptr<StateHistory> history;
+    std::unique_ptr<PresetManager> presets;
     juce::MidiKeyboardState keyboardState;
 
     // UI -> audio

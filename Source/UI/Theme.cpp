@@ -134,6 +134,57 @@ Path drag()
     return p;
 }
 
+Path star()
+{
+    Path p;
+    p.addStar ({ 0.5f, 0.53f }, 5, 0.21f, 0.5f, 0.0f);
+    return p;
+}
+
+Path pin()
+{
+    Path p;
+    p.addEllipse (0.3f, 0.06f, 0.4f, 0.4f);
+    p.startNewSubPath (0.5f, 0.46f);
+    p.lineTo (0.5f, 0.95f);
+    return p;
+}
+
+Path menu()
+{
+    Path p;
+    for (float y : { 0.22f, 0.5f, 0.78f })
+    {
+        p.startNewSubPath (0.12f, y);
+        p.lineTo (0.88f, y);
+    }
+    return p;
+}
+
+Path dots()
+{
+    Path p;
+    for (float x : { 0.18f, 0.5f, 0.82f })
+        p.addEllipse (x - 0.08f, 0.42f, 0.16f, 0.16f);
+    return p;
+}
+
+Path user()
+{
+    Path p;
+    p.addEllipse (0.3f, 0.06f, 0.4f, 0.4f);
+    p.addCentredArc (0.5f, 0.98f, 0.4f, 0.42f, 0.0f, -MathConstants<float>::halfPi, MathConstants<float>::halfPi, true);
+    return p;
+}
+
+void fill (Graphics& g, const Path& unitPath, Rectangle<float> area, Colour c)
+{
+    auto p = unitPath;
+    p.applyTransform (AffineTransform::scale (area.getWidth(), area.getHeight()).translated (area.getX(), area.getY()));
+    g.setColour (c);
+    g.fillPath (p);
+}
+
 void draw (Graphics& g, const Path& unitPath, Rectangle<float> area, Colour c, float strokeWidth)
 {
     auto p = unitPath;
@@ -233,10 +284,14 @@ Font ResoLookAndFeel::getTextButtonFont (TextButton&, int) { return Fonts::regul
 
 Rectangle<int> ResoLookAndFeel::getTooltipBounds (const String& tipText, Point<int> screenPos, Rectangle<int> parentArea)
 {
-    const auto font = Fonts::regular (13.0f);
-    const int w = std::min (320, GlyphArrangement::getStringWidthInt (font, tipText) + 18);
-    const int lines = 1 + GlyphArrangement::getStringWidthInt (font, tipText) / 300;
-    const int h = 10 + 16 * lines;
+    // lay the text out at the real wrap width, so long tips get as many lines as they need
+    AttributedString s;
+    s.append (tipText, Fonts::regular (13.0f), Palette::text);
+    s.setWordWrap (AttributedString::byWord);
+    TextLayout layout;
+    layout.createLayout (s, 300.0f);
+    const int w = (int) std::ceil (layout.getWidth()) + 20;
+    const int h = (int) std::ceil (layout.getHeight()) + 12;
     return Rectangle<int> (screenPos.x > parentArea.getCentreX() ? screenPos.x - (w + 12) : screenPos.x + 24,
                            screenPos.y > parentArea.getCentreY() ? screenPos.y - (h + 6) : screenPos.y + 6,
                            w, h).constrainedWithin (parentArea);
@@ -249,9 +304,13 @@ void ResoLookAndFeel::drawTooltip (Graphics& g, const String& text, int width, i
     g.fillRoundedRectangle (r, 4.0f);
     g.setColour (Palette::panelEdge);
     g.drawRoundedRectangle (r.reduced (0.5f), 4.0f, 1.0f);
-    g.setColour (Palette::text);
-    g.setFont (Fonts::regular (13.0f));
-    g.drawFittedText (text, Rectangle<int> (width, height).reduced (9, 4), Justification::centredLeft, 4);
+    AttributedString s;
+    s.append (text, Fonts::regular (13.0f), Palette::text);
+    s.setWordWrap (AttributedString::byWord);
+    s.setJustification (Justification::topLeft);
+    TextLayout layout;
+    layout.createLayout (s, 300.0f);
+    layout.draw (g, Rectangle<float> (10.0f, 6.0f, (float) width - 20.0f, (float) height - 12.0f));
 }
 
 void ResoLookAndFeel::drawComboBox (Graphics& g, int width, int height, bool, int, int, int, int, ComboBox& box)

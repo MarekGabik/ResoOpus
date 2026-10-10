@@ -81,6 +81,14 @@ namespace Icons
     juce::Path scissors();
     juce::Path chevron (bool right);
     juce::Path drag();
+    juce::Path star();
+    juce::Path pin();
+    juce::Path menu();
+    juce::Path dots();
+    juce::Path user();
+
+    // Fills a unit-square icon path into the given area
+    void fill (juce::Graphics&, const juce::Path& unitPath, juce::Rectangle<float> area, juce::Colour);
 
     // Draws a unit-square icon path into the given area
     void draw (juce::Graphics&, const juce::Path& unitPath, juce::Rectangle<float> area, juce::Colour, float strokeWidth = 1.5f);

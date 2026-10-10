@@ -18,6 +18,13 @@ public:
     int getInt (const juce::String& key, int fallback) const;
     void setInt (const juce::String& key, int value);
 
+    // Presets: favourites and the user default (preset keys), user preset folder
+    bool isFavourite (const juce::String& presetKey) const;
+    void setFavourite (const juce::String& presetKey, bool fav);
+    juce::String getDefaultPreset() const;
+    void setDefaultPreset (const juce::String& presetKey);
+    static juce::File getUserPresetFolder();
+
 private:
     std::unique_ptr<juce::PropertiesFile> file;
 };

@@ -1062,6 +1062,51 @@ static void testPresets()
         const double pk = peakDb (out);
         check (allFinite (out) && pk > -30.0 && pk < -1.0, String (all[(size_t) i].category) + " / " + all[(size_t) i].name + ": peak " + String (pk, 1) + " dBFS");
     }
+
+    std::cout << "Preset manager" << std::endl;
+    {
+        bool catsOk = true;
+        for (auto& pr : all) catsOk = catsOk && PresetManager::categories().contains (pr.category);
+        check (catsOk, "every factory preset is in one of the browser categories");
+
+        // the manager's factory state = defaults + preset values + modulations (same as the old direct load)
+        auto a = makeProc(), b = makeProc();
+        a->loadFactoryPreset (8);
+        b->presets->load (8, false);
+        int diff = 0;
+        for (auto* prm : a->getParameters())
+            if (auto* rp = dynamic_cast<RangedAudioParameter*> (prm))
+                if (std::abs (rp->getValue() - b->param (rp->paramID)->getValue()) > 1.0e-5f) ++diff;
+        check (diff == 0 && b->getPresetName() == all[8].name && ! b->presets->isModified(),
+               "browser load = program change, name shown, not modified (" + String (diff) + " differ)");
+        setParam (*b, "gravity", 77.0f);
+        check (b->presets->isModified(), "a turned knob marks the preset as modified");
+
+        // user preset: save as, rescan, load back, delete
+        const String name = "zz ResoOpus test " + String (Random::getSystemRandom().nextInt (100000));
+        setParam (*b, "v2_tune", 51.25f);
+        const bool saved = b->presets->saveAs (name, "Orbits", "test");
+        const int idx = b->presets->indexOf (b->presets->getCurrentKey());
+        const bool found = idx >= b->presets->numFactory() && b->presets->getPresets()[idx].name == name;
+        auto c = makeProc();
+        c->presets->rescan();
+        const int ci = c->presets->indexOf (b->presets->getCurrentKey());
+        if (ci >= 0) c->presets->load (ci, false);
+        const bool same = ci >= 0 && std::abs (c->getParamReal ("v2_tune") - 51.25f) < 0.01f && std::abs (c->getParamReal ("gravity") - 77.0f) < 0.01f;
+        check (saved && found && same, "Save as writes a user preset that another instance finds and loads exactly");
+        setParam (*c, "dust", 63.0f);
+        const bool overwritten = c->presets->saveCurrent();
+        auto d = makeProc();
+        if (const int di = d->presets->indexOf (c->presets->getCurrentKey()); di >= 0) d->presets->load (di, false);
+        check (overwritten && std::abs (d->getParamReal ("dust") - 63.0f) < 0.01f, "Save overwrites the current user preset");
+        const bool removed = c->presets->remove (ci);
+        check (removed && c->presets->indexOf (b->presets->getCurrentKey()) < 0, "Delete removes the user preset file");
+
+        // next / previous wraps around the list
+        auto e = makeProc();
+        e->presets->next (-1, false);
+        check (e->presets->getCurrentKey() == e->presets->getPresets().getLast().key(), "previous from Init wraps to the last preset");
+    }
 }
 
 static double cpuPercent (int os, bool allChoir, double seconds = 6.0)
@@ -1216,6 +1261,39 @@ static void testEditor()
     check (editor->isModDrawerOpen(), "modulation panel opens");
     editor->setModDrawer (false);
 
+    {
+        // preset browser from the name in the top bar, closes with the mod drawer
+        auto& top = editor->getTopBar();
+        const auto nc = top.area (TopBar::Name).getCentre();
+        top.mouseDown (mouse (top, nc, nc, false));
+        pumpMessages (40);
+        check (editor->isPresetBrowserOpen(), "clicking the preset name opens the preset browser");
+        p->loadFactoryPreset (5);
+        pumpMessages (40);
+        saveShot (*ed, "presets", 2.0f);
+        editor->setModDrawer (true);
+        check (! editor->isPresetBrowserOpen(), "opening the modulation panel closes the preset browser");
+        editor->setModDrawer (false);
+
+        // tooltips off by default, ? toggles them
+        SharedResourcePointer<GlobalSettings> st;
+        const bool was = st->getBool (GlobalSettings::tooltips, false);
+        const auto tc = top.area (TopBar::Tips).getCentre();
+        top.mouseDown (mouse (top, tc, tc, false));
+        const bool toggled = st->getBool (GlobalSettings::tooltips, false) != was;
+        top.mouseDown (mouse (top, tc, tc, false));
+        check (toggled && st->getBool (GlobalSettings::tooltips, false) == was, "the ? button toggles the tooltips");
+        LookAndFeel& lf = ed->getLookAndFeel();
+        const String longTip = "Oversampling of the voices: 2x is the sweet spot, 4x for the cleanest high notes and pull. A deliberately long tooltip that has to wrap over several lines to fit.";
+        const auto tb = lf.getTooltipBounds (longTip, { 100, 100 }, { 0, 0, 1600, 1000 });
+        AttributedString as;
+        as.append (longTip, Fonts::regular (13.0f));
+        as.setWordWrap (AttributedString::byWord);
+        TextLayout tl;
+        tl.createLayout (as, 300.0f);
+        check (tb.getHeight() >= tl.getHeight() + 8.0f && tb.getWidth() <= 330, "a long tooltip box fits its wrapped text (" + String (tb.getWidth()) + " x " + String (tb.getHeight()) + ")");
+    }
+
     editor->setScalePercent (70);
     check (std::abs (ed->getWidth() - roundToInt (ResoOpusEditor::logicalWidth * 0.7f)) <= 1, "window size 70 % (" + String (ed->getWidth()) + " px)");
     ed.reset();
@@ -1255,6 +1333,7 @@ static void testHostedPlugin (const String& path)
 int main (int argc, char* argv[])
 {
     ScopedJuceInitialiser_GUI gui;
+    setenv ("RESOOPUS_NO_DEFAULT", "1", 1);   // the user's default preset must not change the tested patches
     auto root = File::getSpecialLocation (File::currentExecutableFile);
     while (root.exists() && ! root.getChildFile ("CMakeLists.txt").existsAsFile()) root = root.getParentDirectory();
     if (root.exists())

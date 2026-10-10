@@ -7,6 +7,7 @@
 #include "UI/Keyboard.h"
 #include "UI/Bars.h"
 #include "UI/ModDrawer.h"
+#include "UI/PresetBrowser.h"
 
 // Panel background with a fine grain and a faint star field; hosts the current page
 class Stage : public juce::Component
@@ -38,6 +39,8 @@ public:
     void showPage (int index);
     int getPage() const { return page; }
     void setModDrawer (bool open, int selectSlot = -1);
+    void setPresetBrowser (bool open);
+    bool isPresetBrowserOpen() const { return browser.isVisible(); }
     bool isModDrawerOpen() const { return drawer.isVisible(); }
     void setScalePercent (int percent);
     Page* getPageComponent (int i) { return pages[i]; }
@@ -62,6 +65,7 @@ private:
     KeyboardPanel keyboard;
     BottomBar bottom;
     ModDrawer drawer;
+    PresetBrowser browser;
     std::unique_ptr<juce::TooltipWindow> tooltips;
     juce::ComponentBoundsConstrainer constrainer;
 

@@ -1,6 +1,5 @@
 #include "Bars.h"
 #include "PluginProcessor.h"
-#include "State/FactoryPresets.h"
 #include "Keyboard.h"
 
 using namespace juce;
@@ -38,15 +37,16 @@ Rectangle<float> TopBar::area (int item) const
     const float w = (float) getWidth();
     switch (item)
     {
-        case Prev: return { cx - 105.0f - 26.0f, 6.0f, 20.0f, 24.0f };
-        case Name: return { cx - 105.0f, 6.0f, 210.0f, 24.0f };
-        case Next: return { cx + 105.0f + 6.0f, 6.0f, 20.0f, 24.0f };
+        case Prev: return { cx - 90.0f - 24.0f, 6.0f, 20.0f, 24.0f };
+        case Name: return { cx - 90.0f, 6.0f, 180.0f, 24.0f };
+        case Next: return { cx + 90.0f + 4.0f, 6.0f, 20.0f, 24.0f };
         case Undo: return { w - 284.0f, 8.0f, 20.0f, 20.0f };
         case Redo: return { w - 258.0f, 8.0f, 20.0f, 20.0f };
         case AB:   return { w - 226.0f, 6.0f, 32.0f, 24.0f };
         case Copy: return { w - 190.0f, 6.0f, 38.0f, 24.0f };
         case Mod:  return { w - 142.0f, 6.0f, 42.0f, 24.0f };
-        case Help: return { (float) getWidth() - 94.0f, 6.0f, 40.0f, 24.0f };
+        case Help: return { w - 96.0f, 6.0f, 40.0f, 24.0f };
+        case Tips: return { w - 52.0f, 8.0f, 20.0f, 20.0f };
         default:   return {};
     }
 }
@@ -55,7 +55,7 @@ int TopBar::itemAt (Point<float> p) const
 {
     if (area (LeadPower).contains (p)) return LeadPower;
     for (int i = 0; i < tabNames().size(); ++i) if (area (i).contains (p)) return i;
-    for (int i = Undo; i <= Help; ++i) if (area (i).contains (p)) return i;
+    for (int i = Undo; i <= Tips; ++i) if (area (i).contains (p)) return i;
     return None;
 }
 
@@ -63,7 +63,8 @@ void TopBar::refresh()
 {
     const auto n = proc.getPresetName();
     const bool lo = proc.getParamReal ("lead_on") > 0.5f;
-    if (n != shownName || lo != leadOn) { shownName = n; leadOn = lo; repaint(); }
+    const bool mod = proc.presets->isModified();
+    if (n != shownName || lo != leadOn || mod != shownModified) { shownName = n; leadOn = lo; shownModified = mod; repaint(); }
 }
 
 void TopBar::paint (Graphics& g)
@@ -123,13 +124,15 @@ void TopBar::paint (Graphics& g)
     Icons::draw (g, Icons::chevron (false), area (Prev).reduced (5.0f, 7.0f), hover == Prev ? Palette::text : Palette::textDim);
     Icons::draw (g, Icons::chevron (true), area (Next).reduced (5.0f, 7.0f), hover == Next ? Palette::text : Palette::textDim);
     auto nr = area (Name);
-    g.setColour (hover == Name ? Palette::buttonHover : Colour (0xff15161a));
+    const bool browserOpen = isBrowserOpen && isBrowserOpen();
+    g.setColour (hover == Name || browserOpen ? Palette::buttonHover : Colour (0xff15161a));
     g.fillRoundedRectangle (nr, 5.0f);
-    g.setColour (Colour (0xff23242a));
+    g.setColour (browserOpen ? Palette::curve.withAlpha (0.6f) : Colour (0xff23242a));
     g.drawRoundedRectangle (nr.reduced (0.5f), 5.0f, 1.0f);
+    Icons::draw (g, Icons::menu(), Rectangle<float> (nr.getX() + 9.0f, nr.getCentreY() - 5.0f, 10.0f, 10.0f), Palette::textDim, 1.3f);
     g.setColour (Palette::text);
     g.setFont (Fonts::regular (13.0f));
-    g.drawText (proc.getPresetName(), nr, Justification::centred, true);
+    g.drawText (proc.getPresetName() + (shownModified ? " *" : ""), nr.reduced (24.0f, 0.0f), Justification::centred, true);
 
     // Mod, Help
     const bool modOpen = isModOpen && isModOpen();
@@ -144,6 +147,15 @@ void TopBar::paint (Graphics& g)
     g.drawText ("Mod", mr, Justification::centred, false);
     g.setColour (hover == Help ? Palette::text : Palette::textDim);
     g.drawText ("Help", area (Help), Justification::centred, false);
+
+    // ? = tooltips on (gold) / off
+    const bool tips = settings.getBool (GlobalSettings::tooltips, false);
+    const auto tr = area (Tips).reduced (1.0f);
+    if (tips) { g.setColour (Palette::curve); g.fillEllipse (tr); }
+    else { g.setColour (hover == Tips ? Palette::text : Palette::textDim); g.drawEllipse (tr.reduced (0.6f), 1.2f); }
+    g.setColour (tips ? Palette::bar : (hover == Tips ? Palette::text : Palette::textDim));
+    g.setFont (Fonts::bold (12.0f));
+    g.drawText ("?", tr.translated (0.0f, 0.5f), Justification::centred, false);
 }
 
 void TopBar::mouseMove (const MouseEvent& e)
@@ -163,9 +175,10 @@ String TopBar::getTooltipFor (Point<float> p) const
         case Redo: return "Redo (Shift+Cmd/Ctrl+Z)";
         case AB:   return "Compare two settings: click to switch between A and B";
         case Copy: return "Copy the current setting to the other slot (A to B or B to A)";
-        case Name: return "Presets: factory sounds by category, save and load your own";
+        case Name: return "Preset browser: categories, favourites, search, save your own";
         case Mod:  return "Modulation panel: all routings, amounts, controllers and functions (key 9)";
-        case Help: return "Help, tooltips, window size";
+        case Help: return "Help, window size, preset changes";
+        case Tips: return "Tooltips on / off";
         default:   return {};
     }
 }
@@ -182,9 +195,10 @@ void TopBar::mouseDown (const MouseEvent& e)
         case Redo: if (h) h->redo(); break;
         case AB:   if (h) h->switchTo (1 - h->getActiveSlot()); break;
         case Copy: if (h) h->copyToOther(); break;
-        case Prev: stepPreset (-1); break;
-        case Next: stepPreset (1); break;
-        case Name: showPresetMenu(); break;
+        case Prev: proc.presets->next (-1); break;
+        case Next: proc.presets->next (1); break;
+        case Name: if (onPresets) onPresets(); break;
+        case Tips: settings.setBool (GlobalSettings::tooltips, ! settings.getBool (GlobalSettings::tooltips, false)); break;
         case Mod:  if (onMod) onMod(); break;
         case Help: showHelpMenu(); break;
         default: break;
@@ -192,114 +206,10 @@ void TopBar::mouseDown (const MouseEvent& e)
     repaint();
 }
 
-void TopBar::stepPreset (int dir)
-{
-    const int n = (int) factoryPresets().size();
-    const int next = ((proc.getCurrentProgram() + dir) % n + n) % n;
-    loadFactory (next);
-}
-
-void TopBar::loadFactory (int index)
-{
-    if (settings.getBool (GlobalSettings::silentPresets))
-    {
-        auto& pr = proc;
-        pr.changeSilently ([&pr, index] { pr.loadFactoryPreset (index); });
-    }
-    else
-        proc.loadFactoryPreset (index);
-}
-
-void TopBar::showPresetMenu()
-{
-    PopupMenu m;
-    StringArray cats;
-    for (auto& p : factoryPresets()) cats.addIfNotAlreadyThere (p.category);
-    PopupMenu factory;
-    for (auto& c : cats)
-    {
-        PopupMenu sub;
-        for (int i = 0; i < (int) factoryPresets().size(); ++i)
-            if (c == factoryPresets()[(size_t) i].category)
-                sub.addItem (100 + i, factoryPresets()[(size_t) i].name, true, proc.getPresetName() == factoryPresets()[(size_t) i].name);
-        factory.addSubMenu (c, sub);
-    }
-    m.addSubMenu ("Factory", factory);
-    m.addSeparator();
-    m.addItem (1, "Save preset...");
-    m.addItem (2, "Load preset...");
-    m.addSeparator();
-    m.addItem (3, "Init (reset everything)");
-
-    // description of the current factory preset
-    for (auto& p : factoryPresets())
-        if (proc.getPresetName() == p.name)
-        {
-            m.addSeparator();
-            m.addSectionHeader (p.description);
-        }
-
-    m.showMenuAsync (PopupMenu::Options().withTargetComponent (this).withTargetScreenArea (localAreaToGlobal (area (Name).toNearestInt())),
-                     [sp = SafePointer<TopBar> (this)] (int r)
-    {
-        if (sp == nullptr || r == 0) return;
-        if (r >= 100) sp->loadFactory (r - 100);
-        else if (r == 1) sp->savePreset();
-        else if (r == 2) sp->loadPreset();
-        else if (r == 3) sp->loadFactory (0);
-        sp->refresh();
-    });
-}
-
-static File presetFolder()
-{
-    auto f = File::getSpecialLocation (File::userDocumentsDirectory).getChildFile ("Gavr").getChildFile ("ResoOpus Presets");
-    f.createDirectory();
-    return f;
-}
-
-void TopBar::savePreset()
-{
-    chooser = std::make_unique<FileChooser> ("Save preset", presetFolder().getChildFile (proc.getPresetName() + ".resoopus"), "*.resoopus");
-    chooser->launchAsync (FileBrowserComponent::saveMode | FileBrowserComponent::canSelectFiles | FileBrowserComponent::warnAboutOverwriting,
-                          [sp = SafePointer<TopBar> (this)] (const FileChooser& fc)
-    {
-        if (sp == nullptr) return;
-        auto f = fc.getResult();
-        if (f == File()) return;
-        sp->proc.setPresetName (f.getFileNameWithoutExtension());
-        MemoryBlock mb;
-        sp->proc.getStateInformation (mb);
-        f.withFileExtension ("resoopus").replaceWithData (mb.getData(), mb.getSize());
-        sp->refresh();
-    });
-}
-
-void TopBar::loadPreset()
-{
-    chooser = std::make_unique<FileChooser> ("Load preset", presetFolder(), "*.resoopus");
-    chooser->launchAsync (FileBrowserComponent::openMode | FileBrowserComponent::canSelectFiles, [sp = SafePointer<TopBar> (this)] (const FileChooser& fc)
-    {
-        if (sp == nullptr) return;
-        auto f = fc.getResult();
-        auto mb = std::make_shared<MemoryBlock>();
-        if (f.existsAsFile() && f.loadFileAsData (*mb))
-        {
-            auto& pr = sp->proc;
-            auto apply = [&pr, mb, name = f.getFileNameWithoutExtension()]
-            {
-                pr.setStateInformation (mb->getData(), (int) mb->getSize());
-                pr.setPresetName (name);
-            };
-            if (sp->settings.getBool (GlobalSettings::silentPresets)) pr.changeSilently (apply); else apply();
-        }
-    });
-}
-
 void TopBar::showHelpMenu()
 {
     PopupMenu m;
-    m.addItem (1, "Show tooltips", true, settings.getBool (GlobalSettings::tooltips));
+    m.addItem (1, "Show tooltips (the ? button)", true, settings.getBool (GlobalSettings::tooltips, false));
     m.addItem (3, "Silent preset changes (fade out, clear echoes, fade in)", true, settings.getBool (GlobalSettings::silentPresets));
     PopupMenu size;
     const int cur = getScale ? getScale() : 100;
@@ -316,7 +226,7 @@ void TopBar::showHelpMenu()
                      [sp = SafePointer<TopBar> (this)] (int r)
     {
         if (sp == nullptr || r == 0) return;
-        if (r == 1) sp->settings.setBool (GlobalSettings::tooltips, ! sp->settings.getBool (GlobalSettings::tooltips));
+        if (r == 1) sp->settings.setBool (GlobalSettings::tooltips, ! sp->settings.getBool (GlobalSettings::tooltips, false));
         else if (r == 3) sp->settings.setBool (GlobalSettings::silentPresets, ! sp->settings.getBool (GlobalSettings::silentPresets));
         else if (r >= 100 && sp->onScale) sp->onScale (r - 100);
     });
@@ -387,7 +297,7 @@ void BottomBar::paint (Graphics& g)
     g.setColour (Colour (0xff15161a));
     g.fillRoundedRectangle (pill, 5.0f);
     String cat;
-    for (auto& p : factoryPresets()) if (preset == p.name) cat = p.category;
+    if (auto* cur = proc.presets->getCurrent()) cat = cur->category;
     g.setColour (Palette::curve);
     g.fillEllipse (pill.getX() + 14.0f, pill.getCentreY() - 3.0f, 6.0f, 6.0f);
     g.setColour (Palette::text);

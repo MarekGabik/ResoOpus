@@ -17,6 +17,8 @@ public:
     std::function<void (int)> onScale;       // percent
     std::function<int()> getScale;
     std::function<bool()> isModOpen;
+    std::function<void()> onPresets;          // opens / closes the preset browser
+    std::function<bool()> isBrowserOpen;
 
     void setPage (int p) { page = p; repaint(); }
     void refresh();
@@ -31,26 +33,20 @@ public:
     static const juce::StringArray& tabNames();
     juce::Rectangle<float> area (int item) const;
 
-private:
-    enum Item { None = -1, Tab0 = 0, Undo = 10, Redo, AB, Copy, Prev, Name, Next, Mod, Help, LeadPower };
-public:
+    enum Item { None = -1, Tab0 = 0, Undo = 10, Redo, AB, Copy, Prev, Name, Next, Mod, Help, Tips, LeadPower };
+
     juce::Rectangle<float> leadPowerArea() const { return area (LeadPower); }
 private:
     bool leadOn = false;
     void changeListenerCallback (juce::ChangeBroadcaster*) override { repaint(); }
     int itemAt (juce::Point<float>) const;
-    void showPresetMenu();
     void showHelpMenu();
-    void stepPreset (int dir);
-    void loadFactory (int index);
-    void savePreset();
-    void loadPreset();
 
     ResoOpusProcessor& proc;
     GlobalSettings& settings;
     int page = 0, hover = None;
     juce::String shownName;
-    std::unique_ptr<juce::FileChooser> chooser;
+    bool shownModified = false;
 };
 
 // Bottom bar: play mode, touch, snap, current preset, oversampling, CPU, output level

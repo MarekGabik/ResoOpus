@@ -47,6 +47,12 @@ ResoOpusProcessor::ResoOpusProcessor()
 
     uiState.setProperty ("presetName", "Init", nullptr);
     history = std::make_unique<StateHistory> (*this);
+    presets = std::make_unique<PresetManager> (*this);
+
+    // the user's default preset (a host session restores its own state on top of it)
+    const auto def = presets->getDefaultKey();
+    if (def.isNotEmpty() && ! SystemStats::getEnvironmentVariable ("RESOOPUS_NO_DEFAULT", {}).isNotEmpty())
+        if (const int i = presets->indexOf (def); i > 0) presets->load (i, false);
 }
 
 ResoOpusProcessor::~ResoOpusProcessor()
@@ -779,6 +785,15 @@ void ResoOpusProcessor::resetToDefaults()
 
 int ResoOpusProcessor::getNumPrograms() { return (int) factoryPresets().size(); }
 
+void ResoOpusProcessor::presetApplied (const String& name, const String& key, int factoryIndex)
+{
+    if (factoryIndex >= 0) currentPreset = factoryIndex;
+    uiState.setProperty ("presetName", name, nullptr);
+    uiState.setProperty ("presetKey", key, nullptr);
+    uiState.setProperty ("presetIndex", currentPreset, nullptr);
+    if (history) history->resync();
+}
+
 void ResoOpusProcessor::setCurrentProgram (int index)
 {
     if (index >= 0 && index < getNumPrograms())
@@ -793,32 +808,8 @@ const String ResoOpusProcessor::getProgramName (int index)
 
 void ResoOpusProcessor::loadFactoryPreset (int index)
 {
-    const auto& all = factoryPresets();
-    if (index < 0 || index >= (int) all.size()) return;
-    const auto& pr = all[(size_t) index];
-    resetToDefaults();
-    for (auto& v : pr.values)
-        if (auto* p = param (v.first))
-            p->setValueNotifyingHost (p->convertTo0to1 (v.second));
-    int slot = 0;
-    for (auto& m : pr.mods)
-    {
-        if (slot >= Params::numModSlots) break;
-        auto set = [&] (const char* id, float v) { if (auto* p = param (Params::modID (slot, id))) p->setValueNotifyingHost (p->convertTo0to1 (v)); };
-        set ("on", 1.0f);
-        set ("src", (float) m.source);
-        set ("dst", (float) Mod::destCode (m.dest));
-        set ("amt", m.amount);
-        set ("bi", m.bipolar ? 1.0f : 0.0f);
-        set ("fn", (float) m.function);
-        set ("fnamt", m.functionAmount);
-        set ("ctl", (float) m.controller);
-        ++slot;
-    }
-    currentPreset = index;
-    uiState.setProperty ("presetName", String (pr.name), nullptr);
-    uiState.setProperty ("presetIndex", index, nullptr);
-    if (history) history->resync();
+    // factory presets come first in the manager's list
+    if (index >= 0 && index < (int) factoryPresets().size()) presets->load (index, false);
 }
 
 void ResoOpusProcessor::getStateInformation (MemoryBlock& dest)
@@ -843,6 +834,7 @@ void ResoOpusProcessor::setStateInformation (const void* data, int size)
     auto ui = root.getChildWithName ("UI");
     if (ui.isValid()) uiState.copyPropertiesAndChildrenFrom (ui, nullptr);
     currentPreset = (int) uiState.getProperty ("presetIndex", 0);
+    presets->setCurrent (getPresetKey(), getPresetName());
     if (history)
     {
         history->fromValueTree (root.getChildWithName ("AB"));
