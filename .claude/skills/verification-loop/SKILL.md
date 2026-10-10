@@ -52,7 +52,7 @@ UBSan build of the test app, run it, expect zero `runtime error` lines:
 ```bash
 cmake -B build-ubsan -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_OSX_ARCHITECTURES=arm64 -DRESOOPUS_TESTS=ON \
   -DCMAKE_CXX_FLAGS="-fsanitize=undefined -fno-omit-frame-pointer" -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=undefined"
-cmake --build build-ubsan --target ResoOpusTests && ./build-ubsan/ResoOpusTests_artefacts/RelWithDebInfo/ResoOpusTests 2>&1 | grep -c "runtime error"
+cmake --build build-ubsan --target ResoOpusTests && SANITIZED=1 ./build-ubsan/ResoOpusTests_artefacts/RelWithDebInfo/ResoOpusTests 2>&1 | grep -c "runtime error"
 ```
 Known issue (2026-10, macOS Darwin 27): the AddressSanitizer runtime of Apple clang deadlocks in its own
 initialisation (`InitializeShadowMemory`) before main() runs. Do not wait for it; use UBSan and report ASan as skipped.

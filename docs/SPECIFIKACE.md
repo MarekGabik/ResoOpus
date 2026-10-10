@@ -199,7 +199,7 @@ Cíl ve verzi 1.0: ~40 presetů. Recepty v manuálu: ambient, dub techno, filmov
 | **1** ✅ (Mac) | projekt, CMake, CI, převzatá infrastruktura z ResoOG, parametry, 8 hlasů CHOIR s CHORD a TIDE, HOLD, PITCH, FILL, Plates/Keys, Touch, Snap, UI stránky DRONE, 5 presetů | universal ✅, `lipo` ✅, `auval` ✅, testy proti nainstalovanému VST3 ✅, audit 150/150 ✅; **CI Windows čeká na push** |
 | **2** ✅ (Mac) | 4 hlasy, TYPE OFF, MASTER (VOLUME, PITCH, FILL), engine SIREN a PULSAR, BLOOM, 7 presetů | universal ✅, auval ✅, testy + hostovaný VST3 ✅, audit 115/115 ✅, UBSan 0 ✅; aliasing SIREN 2× −93 dB |
 | **3** ✅ (Mac) | GRAVITY (velký knob, pásma, PATH Auto/Pairs/Ring, modulace tlakem), FM síť po vzorcích s modulací průchodem nulou, zpětná vazba výstupu, DUST (drift, prosakování hlasů, šum) | stabilita 60 s ve všech pásmech a 44,1–192 kHz ✅ (špička −0,3 dBFS), hlasitost napříč pásmy 2,2 dB ✅, sweep bez skoků ✅, audit 134/134 ✅ |
-| **4** | FILTER L/R, ECHO, SPACE (5 algoritmů) | stabilita při max FB, RT60, FREEZE, CPU |
+| **4** ✅ (Mac) | stránka **FX**: FILTER (jeden stereo filtr se SPREAD místo L/R + LINK), ECHO (2 linky, SELF/LFO, TO VOICES), SPACE (AURORA, VOID + FREEZE, RUNNER, SATURN, COMET, popis algoritmu v panelu), usínání efektů v klidu | stabilita všech efektů v extrémech ✅, FREEZE drží ±0,5 dB ✅, ECHO 100 % + TO VOICES + GRAVITY 90 % 30 s ✅, audit 151/151 ✅, UBSan 0 ✅ |
 | **5** | MOTION (zdroje + matice), LEAD + ARP, host sync | audit parametrů 100 % |
 | **6** | kompletní UI podle mockupu, vizualizace GRAVITY, snímky | snímky všech stránek, gesta, škálování |
 | **7** | presety, manuál CS/EN (Artifact), README, test zakázaných názvů | všechny presety v úrovni, verification-loop READY, Windows přes CI |

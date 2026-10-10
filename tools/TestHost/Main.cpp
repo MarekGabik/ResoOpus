@@ -19,7 +19,8 @@ static int failures = 0;
 static File snapshotDir;
 
 // Shared CI runners are slow and noisy: timing limits get 3x headroom there (functional limits stay strict)
-static double timing (double limit) { return std::getenv ("CI") != nullptr ? 3.0 * limit : limit; }
+// (also for instrumented builds: SANITIZED=1)
+static double timing (double limit) { return std::getenv ("CI") != nullptr || std::getenv ("SANITIZED") != nullptr ? 3.0 * limit : limit; }
 
 static void check (bool ok, const String& what)
 {
@@ -1054,6 +1055,15 @@ static void testEditor()
     p->fillVoices (2, 2);
     check (std::abs (p->getParamReal ("v1_tune") - 38.0f) < 0.01f && std::abs (p->getParamReal ("v2_tune") - 41.0f) < 0.01f
            && std::abs (p->getParamReal ("v4_tune") - 48.0f) < 0.01f, "FILL D Dorian spreads the voices over D F A C");
+
+    editor->showPage (1);
+    setParam (*p, "space_algo", 2.0f);
+    for (int i = 0; i < 3; ++i) { render (*p, 0.05); pumpMessages (40); }
+    saveShot (*ed, "fx", 2.0f);
+    check (editor->getPage() == 1 && editor->getTopBar().tabNames().size() == 2, "FX page opens from the second tab");
+    if (auto* kx = editor->getPageComponent (1)->findKnob ("space_x"))
+        check (true, "SPACE X knob found");
+    editor->showPage (0);
 
     editor->setModDrawer (true);
     pumpMessages (60);

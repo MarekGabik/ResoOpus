@@ -7,7 +7,7 @@ using namespace juce;
 
 const StringArray& TopBar::tabNames()
 {
-    static const StringArray t { "DRONE" };
+    static const StringArray t { "DRONE", "FX" };
     return t;
 }
 

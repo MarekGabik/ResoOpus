@@ -690,3 +690,69 @@ void DronePage::refreshLive()
     }
     details[selected].chord->refresh();
 }
+
+//==============================================================================
+FxPage::FxPage (ResoOpusProcessor& p) : Page (p)
+{
+    const int rowH = 262, gap = 10, fw = 372;
+    auto* filter = panel ("FILTER", Palette::filter, { 0, 0, fw, rowH }, -1, "12 dB");
+    auto* mode = new LedRadio (proc, "flt_mode", "MODE", { "LOW PASS", "BAND PASS" });
+    owned.add (mode);
+    filter->setGrid ({ 1.0f, 1.0f, 1.0f }, {
+        knob ("flt_cutoff", "CUTOFF", Palette::filter, range ("20", "20k")),
+        knob ("flt_res", "RESONANCE", Palette::filter, range ("0", "10")),
+        knob ("flt_drive", "DRIVE", Palette::filter, range ("0", "10")),
+        mode,
+        knob ("flt_spread", "SPREAD", Palette::filter, range ("0", "100")),
+        nullptr });
+
+    auto* echoPanel = panel ("ECHO", Palette::mixer, { fw + gap, 0, width - fw - gap, rowH }, -1, "2 LINES");
+    auto* src = new LedRadio (proc, "echo_self", "MOD SOURCE", { "SELF", "LFO" });
+    owned.add (src);
+    echoPanel->setGrid ({ 1.0f, 1.0f, 1.0f, 1.0f }, {
+        knob ("echo_time1", "TIME 1", Palette::mixer, range ("5ms", "2s")),
+        knob ("echo_time2", "TIME 2", Palette::mixer, range ("5ms", "2s")),
+        knob ("echo_fb", "FEEDBACK", Palette::mixer, range ("0", "MAX")),
+        knob ("echo_mix", "MIX", Palette::mixer, range ("DRY", "WET")),
+        knob ("echo_mod", "MOD", Palette::mixer, range ("0", "100")),
+        src,
+        knob ("echo_voices", "TO VOICES", Palette::mixer, range ("0", "100")),
+        nullptr });
+
+    spacePanel = panel ("SPACE", Palette::fx2, { 0, rowH + gap, width, height - rowH - gap }, -1, "VOID");
+    auto* algo = new LedRadio (proc, "space_algo", "ALGORITHM", { "AURORA", "VOID", "RUNNER", "SATURN", "COMET" });
+    algo->setTooltip (Params::findDef ("space_algo")->tip);
+    owned.add (algo);
+    xyz[0] = knob ("space_x", "X", Palette::fx2, range ("0", "100"));
+    xyz[1] = knob ("space_y", "Y", Palette::fx2, range ("0", "100"));
+    xyz[2] = knob ("space_z", "Z", Palette::fx2, range ("0", "100"));
+    spacePanel->setGrid ({ 1.3f, 1.0f, 1.0f, 1.0f, 1.0f }, { algo, xyz[0], xyz[1], xyz[2], knob ("space_blend", "BLEND", Palette::fx2, range ("DRY", "WET")) });
+    for (auto* c : spacePanel->getChildren()) c->setTopLeftPosition (c->getX(), c->getY() - 28);
+    spaceInfo = new Label();
+    owned.add (spaceInfo);
+    spaceInfo->setFont (Fonts::regular (12.5f));
+    spaceInfo->setColour (Label::textColourId, Palette::textDim);
+    spaceInfo->setJustificationType (Justification::centred);
+    spaceInfo->setBounds (40, spacePanel->getHeight() - 64, spacePanel->getWidth() - 80, 36);
+    spacePanel->addAndMakeVisible (spaceInfo);
+    refreshLive();
+}
+
+void FxPage::refreshLive()
+{
+    Page::refreshLive();
+    const int a = roundToInt (proc.getParamReal ("space_algo"));
+    if (a == shownAlgo) return;
+    shownAlgo = a;
+    static const char* labels[5][3] = { { "OCT UP", "OCT DOWN", "DECAY" }, { "PRE-DELAY", "WOBBLE", "DECAY / FREEZE" },
+                                        { "FEEDBACK", "TIME", "PITCH" }, { "FREQUENCY", "STEPS", "ROOM" }, { "FEEDBACK", "TIME", "WOBBLE" } };
+    for (int i = 0; i < 3; ++i) xyz[i]->setLabel (labels[jlimit (0, 4, a)][i]);
+    spacePanel->setRightText (Params::findDef ("space_algo")->choices[jlimit (0, 4, a)].toUpperCase());
+    static const char* info[5] = {
+        "Shimmer: the reverb rises an octave (OCT UP) or falls one (OCT DOWN) as it decays. Angelic pads; DECAY for the length.",
+        "A huge dark space. PRE-DELAY moves it away, WOBBLE makes it drift; DECAY at the very top freezes what is sounding.",
+        "Repeats that rise or fall: PITCH sets the step per repeat (middle = none), FEEDBACK how many, TIME how far apart.",
+        "Metallic ring modulation: FREQUENCY of the ring, STEPS makes it jump to random notes, ROOM puts it in a small space.",
+        "A dirty, saturated delay that sings on its own at high FEEDBACK. WOBBLE bends it like worn tape." };
+    spaceInfo->setText (info[jlimit (0, 4, a)], dontSendNotification);
+}

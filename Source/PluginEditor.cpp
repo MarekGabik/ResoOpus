@@ -53,6 +53,7 @@ ResoOpusEditor::ResoOpusEditor (ResoOpusProcessor& p)
     content.addChildComponent (drawer);
 
     pages.add (new DronePage (p));
+    pages.add (new FxPage (p));
     for (auto* pg : pages)
     {
         stage.addChildComponent (pg);

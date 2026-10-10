@@ -90,6 +90,20 @@ private:
     bool dropHover = false;
 };
 
+// FX: FILTER, ECHO and SPACE. The labels of SPACE X / Y / Z follow the chosen algorithm.
+class FxPage : public Page
+{
+public:
+    explicit FxPage (ResoOpusProcessor&);
+    void refreshLive() override;
+
+private:
+    Knob* xyz[3] {};
+    ModulePanel* spacePanel = nullptr;
+    juce::Label* spaceInfo = nullptr;
+    int shownAlgo = -1;
+};
+
 class DronePage : public Page
 {
 public:

@@ -35,6 +35,7 @@ public:
 
     std::function<void (int slot)> onEditModulation;
     const juce::String& getParamID() const { return paramID; }
+    void setLabel (const juce::String& l) { if (l != label) { label = l; repaint(); } }
 
     void paint (juce::Graphics&) override;
     void mouseEnter (const juce::MouseEvent&) override;
