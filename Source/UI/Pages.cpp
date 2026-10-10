@@ -139,7 +139,7 @@ void GravityView::paint (Graphics& g)
 {
     const auto c = centre();
     const float R = 58.0f;
-    constexpr float a0 = -2.35619449f, sweep = 4.71238898f;   // -135 deg .. +135 deg
+    static constexpr float a0 = -2.35619449f, sweep = 4.71238898f;   // -135 deg .. +135 deg (static: lambdas use them without capture, MSVC)
     auto ang = [] (float v01) { return a0 + v01 * sweep; };
     auto at = [&c] (float r, float a) { return Point<float> (c.x + r * std::sin (a), c.y - r * std::cos (a)); };
     const Colour zoneCol[] = { Palette::zoneStill, Palette::zoneOrbit, Palette::zoneTurb, Palette::zoneCollapse };

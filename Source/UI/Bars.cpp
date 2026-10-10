@@ -340,14 +340,16 @@ void BottomBar::mouseMove (const MouseEvent& e)
 
 void BottomBar::mouseDown (const MouseEvent& e)
 {
-    auto choiceMenu = [this] (const char* id)
+    // MSVC: build the SafePointer outside the lambda (inside a lambda's init-capture it takes the lambda for this)
+    SafePointer<BottomBar> safe (this);
+    auto choiceMenu = [this, safe] (const char* id)
     {
         auto* d = Params::findDef (id);
         if (d == nullptr) return;
         PopupMenu m;
         const int cur = roundToInt (proc.getParamReal (id));
         for (int i = 0; i < d->choices.size(); ++i) m.addItem (i + 1, d->choices[i], true, cur == i);
-        m.showMenuAsync (PopupMenu::Options().withTargetComponent (this), [sp = SafePointer<BottomBar> (this), id] (int r)
+        m.showMenuAsync (PopupMenu::Options().withTargetComponent (this), [sp = safe, id] (int r)
         { if (sp && r > 0) { sp->proc.setParamReal (id, (float) (r - 1)); sp->refresh(); } });
     };
     switch (itemAt (e.position))
