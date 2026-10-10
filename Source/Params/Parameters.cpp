@@ -34,8 +34,8 @@ const std::vector<ParamDef>& Params::voiceDefs()
     static const std::vector<ParamDef> defs = []
     {
         std::vector<ParamDef> d;
-        d.push_back (C ("type", "Type", { "Choir", "Siren", "Pulsar" }, 0,
-                        "Choir: five saw oscillators tuned as a chord. Siren: sirens, birds and noise. Pulsar: a soft-to-sharp tone that reacts strongly to GRAVITY"));
+        d.push_back (C ("type", "Type", { "Off", "Choir", "Siren", "Pulsar" }, 1,
+                        "Off: the voice is silent. Choir: five saw oscillators tuned as a chord. Siren: sirens, birds, monsters and noise. Pulsar: one tone from soft to sharp that blooms with its envelope"));
         d.push_back (F ("tune", "Tune", 12.0f, 108.0f, 50.0f, Unit::Note,
                         "Pitch of the voice (the root of its chord). Free and microtonal; Shift-drag for cents, double-click to type a note like D2+12"));
         static const char* intNames[] = { "Osc 1", "Osc 2", "Osc 3", "Osc 4", "Osc 5" };
@@ -51,22 +51,23 @@ const std::vector<ParamDef>& Params::voiceDefs()
                         "Pulls the voice down: up to 50 % it transposes the whole chord down, beyond 50 % it sinks further and the oscillators start to pull on each other (growl, metallic overtones, crackle at the bottom)"));
         d.push_back (LogF ("attack", "Attack", 0.001f, 30.0f, 3.0f, Unit::Seconds, "How slowly the voice swells in (also when HOLD brings it in)"));
         d.push_back (LogF ("release", "Release", 0.001f, 30.0f, 6.0f, Unit::Seconds, "How long the voice fades out after you let go"));
-        d.push_back (F ("volume", "Volume", -60.0f, 6.0f, -3.0f, Unit::Decibels, "Level of the voice in the mix", 2.5f));
+        d.push_back (F ("volume", "Volume", -60.0f, 6.0f, -2.0f, Unit::Decibels, "Level of the voice in the mix", 2.5f));
         d.push_back (F ("pan", "Pan", -1.0f, 1.0f, 0.0f, Unit::Pan, "Position of the voice left / right"));
-        return d;
-    }();
-    return defs;
-}
-
-const std::vector<ParamDef>& Params::groupDefs()
-{
-    static const std::vector<ParamDef> defs = []
-    {
-        std::vector<ParamDef> d;
         d.push_back (F ("hold", "Hold", 0.0f, 100.0f, 0.0f, Unit::Percent,
-                        "Drone level of the four voices of this group without touching anything. Playing a voice makes it louder than HOLD"));
-        d.push_back (F ("pitch", "Pitch", -24.0f, 24.0f, 0.0f, Unit::Semitones,
-                        "Transposes the four voices of this group together; their intervals stay the same"));
+                        "Drone level of this voice without touching anything. Playing the voice makes it louder than HOLD"));
+        // SIREN
+        d.push_back (LogF ("siren_rate", "Siren Rate", 0.05f, 300.0f, 0.4f, Unit::Hz,
+                           "Speed of the siren's modulator: slow sweeps, warbles, buzzing (above ~30 Hz it becomes a new timbre)"));
+        d.push_back (F ("siren_fm", "Siren FM", 0.0f, 100.0f, 20.0f, Unit::Percent, "How far the modulator sweeps the pitch (up to +-3 octaves)"));
+        d.push_back (F ("siren_am", "Siren AM", 0.0f, 100.0f, 0.0f, Unit::Percent, "How much the modulator chops the tone into beeps"));
+        d.push_back (F ("siren_div", "Divider", 1.0f, 16.0f, 1.0f, Unit::Divider,
+                        "Adds a sub-harmonic of the tone (1:2 = octave below, 1:3, 1:5 ... growl and monsters)", 0.5f));
+        d.push_back (F ("siren_noise", "Noise", 0.0f, 100.0f, 0.0f, Unit::Percent, "White noise: wind, surf, static"));
+        d.push_back (F ("siren_wave", "Siren Wave", 0.0f, 100.0f, 0.0f, Unit::Percent, "Modulator shape: 0 = square (two-tone siren), 100 = triangle (wail)"));
+        // PULSAR
+        d.push_back (F ("sharp", "Sharp", 0.0f, 100.0f, 20.0f, Unit::Percent, "Shape of the tone: triangle (soft) through shark fin and saw to square (sharp)"));
+        d.push_back (F ("bloom", "Bloom", 0.0f, 100.0f, 40.0f, Unit::Percent,
+                        "The envelope bends the tone: it starts a little flat and dull and blooms into pitch and edge as it swells"));
         return d;
     }();
     return defs;
@@ -90,6 +91,7 @@ const std::vector<ParamDef>& Params::globalDefs()
         d.push_back (C ("snap_root", "Root", { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" }, 2, "Root note of the scale"));
         d.push_back (F ("a4", "Reference A", 415.0f, 466.0f, 440.0f, Unit::Hz, "Concert pitch of A (440 Hz standard, 432 and 415 for other tunings)"));
         d.push_back (F ("pb_range", "Pitch Bend Range", 0.0f, 24.0f, 2.0f, Unit::Semitones, "Pitch bend range in semitones (all voices)"));
+        d.push_back (F ("pitch", "Pitch", -24.0f, 24.0f, 0.0f, Unit::Semitones, "Transposes all four voices together; their intervals stay the same"));
         return d;
     }();
     return defs;
@@ -119,32 +121,28 @@ const std::vector<ParamDef>& Params::modSlotDefs()
 float Params::voiceDefault (int v, int i)
 {
     v = jlimit (0, numVoices - 1, v);
-    // Night-drone layout: low choirs on the outside of each group, sirens and pulsars in between
-    static const float type[] = { 0, 0, 1, 2, 2, 0, 0, 1 };
-    static const float tune[] = { 38, 45, 54, 57, 64, 50, 57, 73 };     // D1 A1 F#2 A2 E3 D2 A2 C#4
-    static const float pan[]  = { -0.3f, 0.25f, -0.6f, 0.0f, 0.0f, -0.25f, 0.3f, 0.6f };
-    static const int chord[]  = { 2, 1, 2, 2, 2, 4, 2, 2 };              // Fifths, Octaves, (Fifths), ..., Minor, Fifths
+    // two low choirs (fifths, octaves), a pulsar above them and a slow siren for the plates
+    static const float type[] = { 1, 1, 3, 2 };
+    static const float tune[] = { 38, 45, 50, 57 };          // D1 A1 D2 A2
+    static const float pan[]  = { -0.3f, 0.3f, -0.15f, 0.4f };
+    static const float hold[] = { 70, 55, 0, 0 };
+    static const int chord[]  = { 2, 1, 2, 2 };              // Fifths, Octaves
     switch (i)
     {
         case VP::type: return type[v];
         case VP::tune: return tune[v];
         case VP::pan:  return pan[v];
+        case VP::hold: return hold[v];
         case VP::int1: case VP::int2: case VP::int3: case VP::int4: case VP::int5:
             return chordIntervals (chord[v])[i - VP::int1];
         case VP::on4:  return v == 1 ? 0.0f : 1.0f;   // the octave choir is thinner
-        case VP::on5:  return (v == 0 || v == 6) ? 0.0f : 1.0f;
+        case VP::on5:  return v == 0 ? 0.0f : 1.0f;
+        case VP::siren_wave: return v == 3 ? 100.0f : voiceDefs()[(size_t) i].def;   // a slow wail
         default:       return voiceDefs()[(size_t) i].def;
     }
 }
 
-float Params::groupDefault (int g, int i)
-{
-    if (i == GRP::hold) return g == 0 ? 60.0f : 50.0f;   // plays on its own after loading
-    return groupDefs()[(size_t) i].def;
-}
-
 String Params::voiceID (int v, const String& suffix) { return "v" + String (v + 1) + "_" + suffix; }
-String Params::groupID (int g, const String& suffix) { return "g" + String (g + 1) + "_" + suffix; }
 String Params::modID (int slot, const String& suffix) { return "m" + String (slot + 1).paddedLeft ('0', 2) + "_" + suffix; }
 
 const ParamDef* Params::findDef (const String& id)
@@ -154,8 +152,7 @@ const ParamDef* Params::findDef (const String& id)
         for (auto& d : defs) if (s == d.id) return &d;
         return nullptr;
     };
-    if (id.length() > 3 && id[0] == 'v' && id[1] >= '1' && id[1] <= '8' && id[2] == '_') return find (voiceDefs(), id.substring (3));
-    if (id.length() > 3 && id[0] == 'g' && id[1] >= '1' && id[1] <= '2' && id[2] == '_') return find (groupDefs(), id.substring (3));
+    if (id.length() > 3 && id[0] == 'v' && id[1] >= '1' && id[1] <= '4' && id[2] == '_') return find (voiceDefs(), id.substring (3));
     if (id.length() > 4 && id[0] == 'm' && CharacterFunctions::isDigit (id[1]) && id[3] == '_') return find (modSlotDefs(), id.substring (4));
     return find (globalDefs(), id);
 }
@@ -249,12 +246,6 @@ AudioProcessorValueTreeState::ParameterLayout Params::createLayout()
             auto& d = voiceDefs()[i];
             addParam (list, d, voiceID (v, d.id), "V" + String (v + 1) + " " + d.name, voiceDefault (v, (int) i));
         }
-    for (int g = 0; g < numGroups; ++g)
-        for (size_t i = 0; i < groupDefs().size(); ++i)
-        {
-            auto& d = groupDefs()[i];
-            addParam (list, d, groupID (g, d.id), String (g == 0 ? "Group A " : "Group B ") + d.name, groupDefault (g, (int) i));
-        }
     for (auto& d : globalDefs())
         addParam (list, d, d.id, d.name, d.def);
     for (int s = 0; s < numModSlots; ++s)
@@ -317,7 +308,7 @@ String Params::format (const ParamDef& d, float v, bool withUnit)
         case Unit::Percent:   return String (roundToInt (v)) + u (" %");
         case Unit::Decibels:
             if (v <= d.min + 0.01f && d.min <= -59.0f) return "-inf" + u (" dB");
-            return String (v, 1) + u (" dB");
+            return String (std::abs (v) < 0.05f ? 0.0f : v, 1) + u (" dB");
         case Unit::Pan:
             if (String (d.id) == "pan")
             {
@@ -326,6 +317,7 @@ String Params::format (const ParamDef& d, float v, bool withUnit)
             }
             return (v > 0.0049f ? "+" : "") + String (roundToInt (v * 100.0f)) + u (" %");
         case Unit::Note:      return noteName (v, true);
+        case Unit::Divider:   return roundToInt (v) <= 1 ? String ("off") : "1:" + String (roundToInt (v));
         case Unit::Interval:
         {
             const int st = roundToInt (v);
@@ -408,6 +400,10 @@ float Params::parse (const ParamDef& d, const String& text, float fallback)
             return hasDigit ? clampV (num) : fallback;
         case Unit::Toggle:
             return lower == "on" || lower == "1" || lower == "true" ? 1.0f : 0.0f;
+        case Unit::Divider:
+            if (lower == "off") return 1.0f;
+            if (! hasDigit) return fallback;
+            return clampV (t.containsChar (':') ? t.fromLastOccurrenceOf (":", false, false).getDoubleValue() : num);
         case Unit::Tide:
         case Unit::Plain: case Unit::Scale10: case Unit::Semitones: case Unit::Percent:
             return hasDigit ? clampV (num) : fallback;
@@ -439,15 +435,10 @@ int Mod::destCode (const String& id)
         for (size_t i = 0; i < defs.size(); ++i) if (s == defs[i].id) return (int) i;
         return -1;
     };
-    if (id.length() > 3 && id[0] == 'v' && id[1] >= '1' && id[1] <= '8' && id[2] == '_')
+    if (id.length() > 3 && id[0] == 'v' && id[1] >= '1' && id[1] <= '4' && id[2] == '_')
     {
         const int i = find (Params::voiceDefs(), id.substring (3));
         return i < 0 ? 0 : (id[1] - '0') * blockSize + i;
-    }
-    if (id.length() > 3 && id[0] == 'g' && id[1] >= '1' && id[1] <= '2' && id[2] == '_')
-    {
-        const int i = find (Params::groupDefs(), id.substring (3));
-        return i < 0 ? 0 : (firstGroupBlock + id[1] - '1') * blockSize + i;
     }
     const int i = find (Params::globalDefs(), id);
     return i < 0 ? 0 : globalBlock * blockSize + i;
@@ -458,8 +449,6 @@ String Mod::destParamID (int code)
     const int block = code / blockSize, i = code % blockSize;
     if (block >= 1 && block <= Params::numVoices)
         return i < (int) Params::voiceDefs().size() ? Params::voiceID (block - 1, Params::voiceDefs()[(size_t) i].id) : String();
-    if (block >= firstGroupBlock && block < firstGroupBlock + Params::numGroups)
-        return i < (int) Params::groupDefs().size() ? Params::groupID (block - firstGroupBlock, Params::groupDefs()[(size_t) i].id) : String();
     if (block == globalBlock)
         return i < (int) Params::globalDefs().size() ? String (Params::globalDefs()[(size_t) i].id) : String();
     return {};
@@ -468,8 +457,6 @@ String Mod::destParamID (int code)
 String Mod::blockName (int block)
 {
     if (block >= 1 && block <= Params::numVoices) return "Voice " + String (block);
-    if (block == firstGroupBlock) return "Group A";
-    if (block == firstGroupBlock + 1) return "Group B";
     return "Global";
 }
 
@@ -489,9 +476,6 @@ Array<int> Mod::allDestinations()
     for (int v = 1; v <= Params::numVoices; ++v)
         for (size_t i = 0; i < Params::voiceDefs().size(); ++i)
             if (Params::voiceDefs()[i].kind == Kind::Float) a.add (v * blockSize + (int) i);
-    for (int g = 0; g < Params::numGroups; ++g)
-        for (size_t i = 0; i < Params::groupDefs().size(); ++i)
-            if (Params::groupDefs()[i].kind == Kind::Float) a.add ((firstGroupBlock + g) * blockSize + (int) i);
     for (size_t i = 0; i < Params::globalDefs().size(); ++i)
         if (Params::globalDefs()[i].kind == Kind::Float) a.add (globalBlock * blockSize + (int) i);
     return a;

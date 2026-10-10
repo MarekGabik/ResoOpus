@@ -12,7 +12,7 @@ který nás inspiroval. Tento dokument proto používá jen produktové názvy.
 ## 1. Shrnutí
 
 Drone syntezátor pro filmové, ambientní a experimentální plochy. Po vložení do Abletonu **hraje sám** (HOLD).
-**Osm ručně, mikrotonálně laděných hlasů** ve čtyřech párech a dvou skupinách. Hlasy mezi sebou spojuje
+**Čtyři ručně, mikrotonálně laděné hlasy** ve dvou párech (1·2 a 3·4). Hlasy mezi sebou spojuje
 **GRAVITY**: jeden velký knob vede od čistého ladění přes vzájemné přitahování hlasů (FM) až po kolaps do
 samooscilující smyčky. Stereo mix, dva agresivní filtry, dvoulinkový ECHO a prostorová sekce SPACE
 s pěti algoritmy. Volitelná melodická vrstva **LEAD** (dva VCO, glide, vibrato na tlak, arpeggiator).
@@ -50,13 +50,16 @@ Formáty VST3 (Win + Mac), AU (Mac), Standalone. Cíl: Ableton Live 11/12.
  MASTER (hlasitost, měkký limiter na −0,3 dBFS, měřič)
 ```
 
-### 3.1 Hlasy (8 slotů, výchozí 1·2·6·7 CHOIR, 3·8 SIREN, 4·5 PULSAR)
+### 3.1 Hlasy (4 sloty, výchozí 1·2 CHOIR, 3 PULSAR, 4 SIREN; TYPE OFF hlas vypne)
+
+> Změna 10. 10. (Marek): 8 → 4 hlasy. Pro široký drone stačí (4 × CHOIR = 20 pil), UI je klidnější a uvolněné
+> místo dostal panel MASTER. Skupiny zrušeny: HOLD je u každého hlasu, PITCH a FILL jsou globální (MASTER).
 
 | Typ | Zdroj | Ovladače | Charakter |
 |---|---|---|---|
 | **CHOIR** | 5 pilovitých oscilátorů **laděných relativně k TUNE hlasu** (OSC 1–5 = intervaly −24 až +36 st + centy) | TUNE (posune celý akord), **CHORD** (Unison / Octaves / Fifths / Major / Minor naplní intervaly jedním klikem), 5× interval se zap/vyp, **TIDE** | sborový akord v jednom hlasu. TIDE 0–50 % transpozice dolů, 50–100 % dál dolů + vzájemná FM pil („gravitace uvnitř hlasu“), dole sub-audio praskání |
-| **SIREN** | 2 Schmittovy oscilátory (pomalý modulátor + tónový C0–E7) + bílý šum | PITCH, RANGE, RATE (×1/×10), FM AMT, DIVIDER (dělič 1:1–1:16), přepínače FM / AM, NOISE | sirény, ptáci, „monstra“, lasery, vítr, příboj. Šum napájí S&H |
-| **PULSAR** | tónový generátor trojúhelník ↔ obdélník, obálka ovlivňuje výšku a tvar | TUNE, SHARP, BLOOM (vliv obálky na výšku/barvu) | jemný až ostrý tón, nejcitlivější na FM, „živý“ |
+| **SIREN** | modulátor (obdélník ↔ trojúhelník, 0,05–300 Hz) + band-limited obdélníkový tón + dělič + bílý šum | TUNE, FM (exponenciální, až ±3 okt), RATE, AM, DIVIDER (1:2–1:16 podtón), NOISE, WAVE | sirény, ptáci, „monstra“, lasery, vítr, příboj |
+| **PULSAR** | jeden tón trojúhelník → žraločí ploutev → pila → obdélník (ShapeOsc, BLEP/BLAMP) | TUNE, SHARP, BLOOM (obálka ohýbá výšku až o −60 centů a ubírá ostrost, dokud hlas nenaběhne) | jemný až ostrý tón, „živý“ |
 
 Hierarchie ovladačů (zjednodušeno 10. 10. – „méně je víc“):
 - **hlas:** v pásu skupiny jen TUNE a charakter (TIDE / DIVIDER / SHARP). V detailu vybraného hlasu: TYPE, CHORD,
@@ -194,7 +197,7 @@ Cíl ve verzi 1.0: ~40 presetů. Recepty v manuálu: ambient, dub techno, filmov
 |---|---|---|
 | **0** ✅ | rešerše, koncept, specifikace, **HTML mockup** | vzhled DRONE a název ResoOpus odsouhlaseny |
 | **1** ✅ (Mac) | projekt, CMake, CI, převzatá infrastruktura z ResoOG, parametry, 8 hlasů CHOIR s CHORD a TIDE, HOLD, PITCH, FILL, Plates/Keys, Touch, Snap, UI stránky DRONE, 5 presetů | universal ✅, `lipo` ✅, `auval` ✅, testy proti nainstalovanému VST3 ✅, audit 150/150 ✅; **CI Windows čeká na push** |
-| **2** | engine SIREN a PULSAR, BLOOM, ladění detailů podle poslechu v Live | aliasing podle tabulky, CPU, audit 100 % |
+| **2** ✅ (Mac) | 4 hlasy, TYPE OFF, MASTER (VOLUME, PITCH, FILL), engine SIREN a PULSAR, BLOOM, 7 presetů | universal ✅, auval ✅, testy + hostovaný VST3 ✅, audit 115/115 ✅, UBSan 0 ✅; aliasing SIREN 2× −93 dB |
 | **3** | GRAVITY, FM síť, FEEDBACK, DUST | stabilita 60 s ve všech zónách a SR, hlasitost ≤ 3 dB, bez skoků |
 | **4** | FILTER L/R, ECHO, SPACE (5 algoritmů) | stabilita při max FB, RT60, FREEZE, CPU |
 | **5** | MOTION (zdroje + matice), LEAD + ARP, host sync | audit parametrů 100 % |

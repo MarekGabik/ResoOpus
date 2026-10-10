@@ -21,6 +21,7 @@ enum class Unit
     Note,       // MIDI note number with cents ("D2 +4")
     Interval,   // semitones relative to the voice root ("+7 st", "+19 -8c")
     Tide,       // 0..100 %: transposition down, then pull (FM) between the oscillators
+    Divider,    // 1..16 sub-harmonic ("off", "1:3")
     Choice,
     Toggle
 };
@@ -41,24 +42,19 @@ struct ParamDef
 
 namespace Params
 {
-    constexpr int numVoices = 8;
-    constexpr int numGroups = 2;
-    constexpr int voicesPerGroup = 4;
+    constexpr int numVoices = 4;        // two pairs: 1-2 and 3-4
     constexpr int numOscs = 5;          // CHOIR oscillators per voice
     constexpr int numModSlots = 24;
 
-    const std::vector<ParamDef>& voiceDefs();    // prefixed "v1_" .. "v8_"
-    const std::vector<ParamDef>& groupDefs();    // prefixed "g1_" / "g2_"
+    const std::vector<ParamDef>& voiceDefs();    // prefixed "v1_" .. "v4_"
     const std::vector<ParamDef>& globalDefs();
     const std::vector<ParamDef>& modSlotDefs();  // prefixed "m01_" .. "m24_"
 
-    juce::String voiceID (int voice, const juce::String& suffix);   // voice 0..7 -> "v1_..."
-    juce::String groupID (int group, const juce::String& suffix);   // group 0/1 -> "g1_..."
+    juce::String voiceID (int voice, const juce::String& suffix);   // voice 0..3 -> "v1_..."
     juce::String modID (int slot, const juce::String& suffix);      // slot 0.. -> "m01_..."
 
-    // Factory default of a voice parameter can differ per voice (tuning, type, pan, chord)
+    // Factory default of a voice parameter can differ per voice (tuning, type, pan, chord, hold)
     float voiceDefault (int voice, int tableIndex);
-    float groupDefault (int group, int tableIndex);
 
     juce::AudioProcessorValueTreeState::ParameterLayout createLayout();
 
@@ -75,7 +71,7 @@ namespace Params
     const float* chordIntervals (int chord);   // 5 values
     int matchChord (const float* intervals);  // -1 = custom
 
-    // FILL: scales used to spread the four voices of a group
+    // FILL: scales used to spread the four voices
     const juce::StringArray& scaleNames();
     const juce::Array<int>& scaleSteps (int scale);   // semitone offsets within one octave
 
@@ -103,10 +99,9 @@ namespace Mod
     juce::Colour sourceColour (int src);
     bool isBipolar (int src);
 
-    // Destination codes: 0 = none, block * 200 + table index.
-    // Blocks 1..8 = voices, 9..10 = groups, 11 = global table.
+    // Destination codes: 0 = none, block * 200 + table index. Blocks 1..4 = voices, 5 = global table.
     constexpr int blockSize = 200;
-    constexpr int firstGroupBlock = 9, globalBlock = 11;
+    constexpr int globalBlock = 5;
     int destCode (const juce::String& fullParamID);
     juce::String destParamID (int code);
     juce::String destName (int code);
@@ -125,22 +120,19 @@ namespace VP
     enum : int
     {
         type = 0, tune, int1, int2, int3, int4, int5, on1, on2, on3, on4, on5,
-        tide, attack, release, volume, pan,
+        tide, attack, release, volume, pan, hold,
+        siren_rate, siren_fm, siren_am, siren_div, siren_noise, siren_wave,
+        sharp, bloom,
         count
     };
-    enum Type { Choir = 0, Siren, Pulsar };
-}
-
-namespace GRP
-{
-    enum : int { hold = 0, pitch, count };
+    enum Type { Off = 0, Choir, Siren, Pulsar };
 }
 
 namespace GP
 {
     enum : int
     {
-        master_vol = 0, oversampling, play_mode, touch, plates_base, snap, snap_scale, snap_root, a4, pb_range,
+        master_vol = 0, oversampling, play_mode, touch, plates_base, snap, snap_scale, snap_root, a4, pb_range, pitch,
         count
     };
     enum PlayMode { Plates = 0, Keys };

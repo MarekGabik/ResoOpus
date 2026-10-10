@@ -35,7 +35,7 @@ Font Fonts::mono (float size)
 //==============================================================================
 Colour Palette::voiceType (int t)
 {
-    return t == 1 ? siren : (t == 2 ? pulsar : choir);
+    return t == 1 ? choir : (t == 2 ? siren : (t == 3 ? pulsar : Colour (0xff6c6d76)));
 }
 
 namespace Icons

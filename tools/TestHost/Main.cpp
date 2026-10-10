@@ -142,12 +142,13 @@ static double peakFrequency (const AudioBuffer<float>& b, double sr, double lo, 
 static double cents (double f, double ref) { return 1200.0 * std::log2 (f / ref); }
 
 // Only voice 1 sounds, as one plain saw at full HOLD: a clean object for measurements
-static void soloVoice1 (ResoOpusProcessor& p, float tune)
+static void soloVoice1 (ResoOpusProcessor& p, float tune, int type = VP::Choir)
 {
-    setParam (p, "g1_hold", 100.0f);
-    setParam (p, "g2_hold", 0.0f);
-    for (int v = 1; v < 8; ++v) setParam (p, Params::voiceID (v, "volume"), -60.0f);
-    setParam (p, "v1_type", 0.0f);
+    for (int v = 1; v < Params::numVoices; ++v) setParam (p, Params::voiceID (v, "type"), (float) VP::Off);
+    setParam (p, "v1_hold", 100.0f);
+    setParam (p, "v1_type", (float) type);
+    setParam (p, "v1_siren_fm", 0.0f);
+    setParam (p, "v1_bloom", 0.0f);
     setParam (p, "v1_tune", tune);
     setParam (p, "v1_attack", 0.001f);
     setParam (p, "v1_volume", -6.0f);
@@ -160,15 +161,12 @@ static void testParameters()
 {
     std::cout << "Parameters" << std::endl;
     const StringArray voiceOrder { "type", "tune", "int1", "int2", "int3", "int4", "int5", "on1", "on2", "on3", "on4", "on5",
-                                   "tide", "attack", "release", "volume", "pan" };
+                                   "tide", "attack", "release", "volume", "pan", "hold",
+                                   "siren_rate", "siren_fm", "siren_am", "siren_div", "siren_noise", "siren_wave", "sharp", "bloom" };
     bool ok = (int) Params::voiceDefs().size() == VP::count && voiceOrder.size() == VP::count;
     for (int i = 0; i < voiceOrder.size() && ok; ++i) ok = voiceOrder[i] == Params::voiceDefs()[(size_t) i].id;
     check (ok, "voice table matches the VP index constants (" + String ((int) Params::voiceDefs().size()) + " per voice)");
-    const StringArray groupOrder { "hold", "pitch" };
-    ok = (int) Params::groupDefs().size() == GRP::count;
-    for (int i = 0; i < groupOrder.size() && ok; ++i) ok = groupOrder[i] == Params::groupDefs()[(size_t) i].id;
-    check (ok, "group table matches the GRP index constants");
-    const StringArray globalOrder { "master_vol", "oversampling", "play_mode", "touch", "plates_base", "snap", "snap_scale", "snap_root", "a4", "pb_range" };
+    const StringArray globalOrder { "master_vol", "oversampling", "play_mode", "touch", "plates_base", "snap", "snap_scale", "snap_root", "a4", "pb_range", "pitch" };
     ok = (int) Params::globalDefs().size() == GP::count;
     for (int i = 0; i < globalOrder.size() && ok; ++i) ok = globalOrder[i] == Params::globalDefs()[(size_t) i].id;
     check (ok, "global table matches the GP index constants (" + String ((int) Params::globalDefs().size()) + ")");
@@ -176,7 +174,7 @@ static void testParameters()
     ResoOpusProcessor p;
     StringArray ids;
     for (auto* prm : p.getParameters()) if (auto* wp = dynamic_cast<AudioProcessorParameterWithID*> (prm)) ids.addIfNotAlreadyThere (wp->paramID);
-    const int expected = Params::numVoices * VP::count + Params::numGroups * GRP::count + GP::count + Params::numModSlots * MP::count;
+    const int expected = Params::numVoices * VP::count + GP::count + Params::numModSlots * MP::count;
     check (p.getParameters().size() == expected && ids.size() == expected, String (expected) + " parameters with unique IDs");
     bool defsOk = true;
     for (auto& id : ids) defsOk = defsOk && Params::findDef (id) != nullptr;
@@ -193,7 +191,7 @@ static void testParameters()
            && Params::format (def ("v1_int2"), 7.0f) == "+7 st", "format: \"D2 +4\", \"+19 -8c\", \"+7 st\"");
     check (Params::format (def ("v1_tide"), 50.0f) == "-2.0 oct" && Params::format (def ("v1_tide"), 75.0f).startsWith ("PULL"),
            "TIDE shows octaves up to 50 % and PULL above (" + Params::format (def ("v1_tide"), 75.0f) + ")");
-    check (Mod::destParamID (Mod::destCode ("v3_tide")) == "v3_tide" && Mod::destParamID (Mod::destCode ("g2_hold")) == "g2_hold"
+    check (Mod::destParamID (Mod::destCode ("v3_tide")) == "v3_tide" && Mod::destParamID (Mod::destCode ("v4_hold")) == "v4_hold"
            && Mod::destParamID (Mod::destCode ("master_vol")) == "master_vol", "modulation destination codes round-trip");
     float iv[5];
     for (int i = 0; i < 5; ++i) iv[i] = Params::chordIntervals (3)[i];
@@ -210,7 +208,7 @@ static void testProductNames()
     {
         for (auto& d : defs) { texts.add (d.name); texts.add (d.tip); texts.addArray (d.choices); }
     };
-    addDefs (Params::voiceDefs()); addDefs (Params::groupDefs()); addDefs (Params::globalDefs()); addDefs (Params::modSlotDefs());
+    addDefs (Params::voiceDefs()); addDefs (Params::globalDefs()); addDefs (Params::modSlotDefs());
     texts.addArray (Params::chordNames()); texts.addArray (Params::scaleNames()); texts.addArray (Mod::sourceNames());
     for (auto& pr : factoryPresets()) { texts.add (pr.name); texts.add (pr.category); texts.add (pr.description); }
     String hits;
@@ -231,7 +229,8 @@ static void testDefaultPatch()
     const double pk = peakDb (out, (int) (5.0 * sr), out.getNumSamples());
     check (start < -40.0, "fades in instead of starting with a click (first 50 ms " + String (start, 1) + " dB)");
     check (pk > -14.0 && pk < -3.0, "drones on its own at a sensible level after 5 s (peak " + String (pk, 1) + " dBFS)");
-    check (p->liveLevel[0].load() > 0.5f && p->liveLevel[2].load() < 0.001f, "group A choir sounds, phase-2 voice types stay silent");
+    check (p->liveLevel[0].load() > 0.5f && p->liveLevel[1].load() > 0.4f && p->liveLevel[2].load() < 0.001f,
+           "the two choirs drone, voices 3-4 (HOLD 0) wait for their plates");
 }
 
 static void testTuning()
@@ -254,11 +253,11 @@ static void testTuning()
     soloVoice1 (*p, 57.0f);
     setParam (*p, "a4", 432.0f);
     setParam (*p, "v1_on1", 0.0f); setParam (*p, "v1_on2", 1.0f); setParam (*p, "v1_int2", 7.0f);
-    setParam (*p, "g1_pitch", -12.0f);
+    setParam (*p, "pitch", -12.0f);
     auto out = render (*p, 2.0);
     const double ref = 432.0 * std::pow (2.0, (57.0 + 7.0 - 12.0 - 69.0) / 12.0);
     const double f = peakFrequency (out, sr, ref * 0.8, ref * 1.25, (int) (0.4 * sr));
-    check (std::abs (cents (f, ref)) < 1.0, "interval +7, group PITCH -12 and A = 432 Hz combine exactly (" + String (cents (f, ref), 3) + " cents)");
+    check (std::abs (cents (f, ref)) < 1.0, "interval +7, PITCH -12 and A = 432 Hz combine exactly (" + String (cents (f, ref), 3) + " cents)");
 }
 
 static void testSnap()
@@ -353,25 +352,136 @@ static void testTide()
     check (pulled > still * 2, "above 50 % the oscillators pull on each other: " + String (still) + " -> " + String (pulled) + " spectral peaks");
 
     auto p = makeProc (sr);
-    for (int v = 0; v < 8; ++v) { setParam (*p, Params::voiceID (v, "type"), 0.0f); setParam (*p, Params::voiceID (v, "tide"), 100.0f); setParam (*p, Params::voiceID (v, "attack"), 0.01f); }
-    setParam (*p, "g1_hold", 100.0f); setParam (*p, "g2_hold", 100.0f);
+    for (int v = 0; v < Params::numVoices; ++v)
+    {
+        setParam (*p, Params::voiceID (v, "type"), (float) VP::Choir); setParam (*p, Params::voiceID (v, "tide"), 100.0f);
+        setParam (*p, Params::voiceID (v, "attack"), 0.01f); setParam (*p, Params::voiceID (v, "hold"), 100.0f);
+    }
     auto out = render (*p, 6.0);
-    check (allFinite (out) && peakDb (out) < 0.0, "all eight voices at TIDE 100 % for 6 s: finite, peak " + String (peakDb (out), 1) + " dBFS");
+    check (allFinite (out) && peakDb (out) < 0.0, "all four voices at TIDE 100 % for 6 s: finite, peak " + String (peakDb (out), 1) + " dBFS");
+}
+
+static void testSiren()
+{
+    std::cout << "SIREN" << std::endl;
+    const double sr = 48000.0;
+    {
+        auto p = makeProc (sr);
+        soloVoice1 (*p, 69.0f, VP::Siren);
+        auto out = render (*p, 2.0);
+        const double f = peakFrequency (out, sr, 300.0, 600.0, (int) (0.4 * sr));
+        check (std::abs (cents (f, 440.0)) < 1.0, "steady tone sits on TUNE (" + String (cents (f, 440.0), 2) + " cents)");
+    }
+    {
+        // square modulator at 0.5 Hz, FM 50 % = +-1.5 octaves: the pitch alternates between the two ends
+        auto p = makeProc (sr);
+        soloVoice1 (*p, 69.0f, VP::Siren);
+        setParam (*p, "v1_siren_fm", 50.0f);
+        setParam (*p, "v1_siren_rate", 0.5f);
+        setParam (*p, "v1_siren_wave", 0.0f);
+        auto out = render (*p, 2.0);
+        const double hi = 440.0 * std::pow (2.0, 1.5), lo = 440.0 * std::pow (2.0, -1.5);
+        const double fHi = peakFrequency (out, sr, hi * 0.8, hi * 1.25, (int) (0.1 * sr));
+        const double fLo = peakFrequency (out, sr, lo * 0.8, lo * 1.25, (int) (1.1 * sr));
+        check (std::abs (cents (fHi, hi)) < 5.0 && std::abs (cents (fLo, lo)) < 5.0,
+               "FM 50 %: two-tone siren jumps +-1.5 octaves (" + String (fHi, 1) + " / " + String (fLo, 1) + " Hz)");
+    }
+    {
+        auto p = makeProc (sr);
+        soloVoice1 (*p, 69.0f, VP::Siren);
+        setParam (*p, "v1_siren_div", 3.0f);
+        auto out = render (*p, 2.0);
+        const auto db = spectrum (out, (int) (0.4 * sr), 15);
+        const double binHz = sr / 32768.0;
+        auto at = [&] (double f) { double m = -300.0; for (int d = -3; d <= 3; ++d) m = std::max (m, db[(size_t) (std::lround (f / binHz) + d)]); return m; };
+        check (at (440.0 / 3.0) > at (440.0) - 12.0, "DIVIDER 1:3 adds a strong sub-harmonic at 147 Hz (" + String (at (440.0 / 3.0) - at (440.0), 1) + " dB vs the tone)");
+    }
+    {
+        auto p = makeProc (sr);
+        soloVoice1 (*p, 69.0f, VP::Siren);
+        setParam (*p, "v1_siren_am", 100.0f);
+        setParam (*p, "v1_siren_rate", 2.0f);
+        auto out = render (*p, 2.0);
+        const int q = (int) (0.25 * sr);   // half a modulator period
+        const double on = rmsDb (out, (int) (1.0 * sr) + q / 8, (int) (1.0 * sr) + q - q / 8);
+        const double off = rmsDb (out, (int) (1.0 * sr) + q + q / 8, (int) (1.0 * sr) + 2 * q - q / 8);
+        check (std::abs (on - off) > 30.0, "AM 100 %: the tone is chopped into beeps (" + String (std::abs (on - off), 1) + " dB on / off)");
+    }
+    {
+        auto p = makeProc (sr);
+        soloVoice1 (*p, 95.0f, VP::Siren);
+        auto out = render (*p, 1.2);
+        const auto db = spectrum (out, (int) (0.4 * sr), 15);
+        const double binHz = sr / 32768.0, f0 = 440.0 * std::pow (2.0, 26.0 / 12.0);
+        double worst = -300.0;
+        for (size_t i = (size_t) (100.0 / binHz); i < (size_t) (10000.0 / binHz); ++i)
+        {
+            const double h = i * binHz / f0;
+            if (std::abs (h - std::round (h)) * f0 < 6.0 * binHz) continue;
+            worst = std::max (worst, db[i]);
+        }
+        const double res = db[(size_t) std::lround (f0 / binHz)] - worst;
+        check (res > 80.0, "square tone at 1976 Hz, 2x: aliases " + String (res, 1) + " dB below (> 80)");
+    }
+}
+
+static void testPulsar()
+{
+    std::cout << "PULSAR" << std::endl;
+    const double sr = 48000.0;
+    auto third = [sr] (float sharp)
+    {
+        auto p = makeProc (sr);
+        soloVoice1 (*p, 57.0f, VP::Pulsar);
+        setParam (*p, "v1_sharp", sharp);
+        auto out = render (*p, 2.0);
+        const auto db = spectrum (out, (int) (0.4 * sr), 15);
+        const double binHz = sr / 32768.0;
+        auto at = [&] (double f) { double m = -300.0; for (int d = -3; d <= 3; ++d) m = std::max (m, db[(size_t) (std::lround (f / binHz) + d)]); return m; };
+        return at (660.0) - at (220.0);
+    };
+    const double soft = third (0.0f), sharp = third (100.0f);
+    check (soft < -17.0 && sharp > -11.0, "SHARP: triangle (3rd harmonic " + String (soft, 1) + " dB) to square (" + String (sharp, 1) + " dB)");
+    {
+        auto p = makeProc (sr);
+        soloVoice1 (*p, 69.0f, VP::Pulsar);
+        setParam (*p, "v1_hold", 0.0f);
+        setParam (*p, "v1_attack", 4.0f);
+        setParam (*p, "v1_bloom", 100.0f);
+        auto out = render (*p, 6.0, { { 0.0, MidiMessage::noteOn (1, 60, 1.0f) } });
+        const double early = peakFrequency (out, sr, 350.0, 500.0, (int) (0.3 * sr));
+        const double late = peakFrequency (out, sr, 350.0, 500.0, (int) (4.5 * sr));
+        check (cents (early, 440.0) < -15.0 && std::abs (cents (late, 440.0)) < 3.0,
+               "BLOOM: swells in flat (" + String (cents (early, 440.0), 1) + " c) and settles on pitch (" + String (cents (late, 440.0), 1) + " c)");
+    }
+    {
+        auto p = makeProc (sr);
+        soloVoice1 (*p, 69.0f, VP::Off);
+        auto out = render (*p, 2.0, note (60, 0.1, 1.5));
+        check (rmsDb (out) < -100.0, "TYPE OFF: the voice stays silent even with HOLD 100 % and its plate played");
+    }
 }
 
 static void testPlates()
 {
     std::cout << "Plates and touch" << std::endl;
-    auto silentGroups = [] (ResoOpusProcessor& p) { setParam (p, "g1_hold", 0.0f); setParam (p, "g2_hold", 0.0f);
-                                                    for (int v = 0; v < 8; ++v) { setParam (p, Params::voiceID (v, "type"), 0.0f); setParam (p, Params::voiceID (v, "attack"), 0.05f); } };
+    auto silentGroups = [] (ResoOpusProcessor& p)
+    {
+        for (int v = 0; v < Params::numVoices; ++v)
+        {
+            setParam (p, Params::voiceID (v, "type"), (float) VP::Choir);
+            setParam (p, Params::voiceID (v, "attack"), 0.05f);
+            setParam (p, Params::voiceID (v, "hold"), 0.0f);
+        }
+    };
     {
         auto p = makeProc();
         silentGroups (*p);
         render (*p, 1.0, { { 0.0, MidiMessage::noteOn (1, 60, 0.9f) }, { 0.0, MidiMessage::noteOn (1, 62, 0.9f) }, { 0.0, MidiMessage::noteOn (1, 61, 0.9f) } });
         bool others = true;
-        for (int v = 2; v < 8; ++v) others = others && p->liveLevel[v].load() < 0.001f;
+        for (int v = 2; v < Params::numVoices; ++v) others = others && p->liveLevel[v].load() < 0.001f;
         check (p->liveLevel[0].load() > 0.5f && p->liveLevel[1].load() > 0.5f && others, "C3 and D3 play voices 1 and 2; the black key C#3 plays nothing");
-        check (p->plateNote (7) == 72, "the eighth plate is C4");
+        check (p->plateNote (3) == 65, "the fourth plate is F3");
         render (*p, 3.0, { { 0.0, MidiMessage::noteOff (1, 60) } });
         check (p->liveLevel[0].load() < 0.2f && p->liveLevel[1].load() > 0.5f, "releasing C3 fades voice 1 only");
     }
@@ -391,7 +501,7 @@ static void testPlates()
     check (pressed > light + 6.0, "Aftertouch: pressing harder after the strike makes it louder (" + String (light, 1) + " -> " + String (pressed, 1) + " dB)");
     {
         auto p = makeProc();
-        setParam (*p, "g1_hold", 40.0f);
+        setParam (*p, "v1_hold", 40.0f);
         render (*p, 4.0);
         const float hold = p->liveLevel[0].load();
         render (*p, 2.0, { { 0.0, MidiMessage::noteOn (1, 60, 1.0f) } });
@@ -405,10 +515,13 @@ static void testKeys()
     const double sr = 48000.0;
     auto p = makeProc (sr);
     setParam (*p, "play_mode", 1.0f);
-    setParam (*p, "g1_hold", 0.0f); setParam (*p, "g2_hold", 0.0f);
-    for (int v = 0; v < 8; ++v)
+    for (int v = 0; v < Params::numVoices; ++v)
+    {
+        setParam (*p, Params::voiceID (v, "type"), (float) VP::Choir);
+        setParam (*p, Params::voiceID (v, "hold"), 0.0f);
+        setParam (*p, Params::voiceID (v, "attack"), 0.01f);
         for (int i = 2; i <= 5; ++i) setParam (*p, Params::voiceID (v, "on" + String (i)), 0.0f);
-    for (int v = 0; v < 8; ++v) setParam (*p, Params::voiceID (v, "attack"), 0.01f);
+    }
     setParam (*p, "v1_int1", 0.0f);
     auto out = render (*p, 2.0, { { 0.0, MidiMessage::noteOn (1, 64, 0.9f) } });
     const double ref = 440.0 * std::pow (2.0, (64.0 - 69.0) / 12.0);
@@ -416,7 +529,7 @@ static void testKeys()
     check (std::abs (cents (f, ref)) < 1.0, "a played E3 retunes a voice to E3 (" + String (cents (f, ref), 2) + " cents)");
     render (*p, 0.1, { { 0.0, MidiMessage::noteOn (1, 67, 0.9f) } });
     int gated = 0;
-    for (int v = 0; v < 8; ++v) if (p->liveGate[v].load()) ++gated;
+    for (int v = 0; v < Params::numVoices; ++v) if (p->liveGate[v].load()) ++gated;
     check (gated == 2, "a second key takes another voice (" + String (gated) + " voices held)");
 }
 
@@ -442,14 +555,17 @@ static void testRobustness()
         check (true, "zero-length block accepted");
     }
     auto p = makeProc();
-    for (int v = 0; v < 8; ++v)
+    for (int v = 0; v < Params::numVoices; ++v)
     {
-        setParam (*p, Params::voiceID (v, "type"), 0.0f);
         setParam (*p, Params::voiceID (v, "volume"), 6.0f);
         setParam (*p, Params::voiceID (v, "attack"), 0.001f);
         setParam (*p, Params::voiceID (v, "tide"), 70.0f);
+        setParam (*p, Params::voiceID (v, "hold"), 100.0f);
+        setParam (*p, Params::voiceID (v, "siren_fm"), 100.0f);
+        setParam (*p, Params::voiceID (v, "siren_noise"), 100.0f);
+        setParam (*p, Params::voiceID (v, "sharp"), 100.0f);
     }
-    setParam (*p, "g1_hold", 100.0f); setParam (*p, "g2_hold", 100.0f); setParam (*p, "master_vol", 12.0f);
+    setParam (*p, "master_vol", 12.0f);
     auto out = render (*p, 2.0);
     check (allFinite (out) && peakDb (out) <= -0.25, "everything at maximum is caught by the soft limiter (" + String (peakDb (out), 2) + " dBFS)");
 }
@@ -459,7 +575,7 @@ static void testState()
     std::cout << "State" << std::endl;
     auto a = makeProc();
     a->loadFactoryPreset (3);
-    setParam (*a, "v5_tune", 61.37f);
+    setParam (*a, "v4_tune", 61.37f);
     a->setPresetName ("My Drone");
     MemoryBlock mb;
     a->getStateInformation (mb);
@@ -520,14 +636,16 @@ static double cpuPercent (int os, bool allChoir, double seconds = 6.0)
 {
     auto p = makeProc (48000.0, 256);
     setParam (*p, "oversampling", (float) os);
-    if (allChoir)
-        for (int v = 0; v < 8; ++v)
+    for (int v = 0; v < Params::numVoices; ++v)
+    {
+        if (allChoir)
         {
-            setParam (*p, Params::voiceID (v, "type"), 0.0f);
+            setParam (*p, Params::voiceID (v, "type"), (float) VP::Choir);
             for (int i = 1; i <= 5; ++i) setParam (*p, Params::voiceID (v, "on" + String (i)), 1.0f);
             setParam (*p, Params::voiceID (v, "tide"), 60.0f);
         }
-    setParam (*p, "g1_hold", 80.0f); setParam (*p, "g2_hold", 80.0f);
+        setParam (*p, Params::voiceID (v, "hold"), 80.0f);
+    }
     render (*p, 0.5, {}, 256);
     double best = 1e9;
     for (int run = 0; run < 3; ++run)
@@ -544,11 +662,11 @@ static void testCpu()
     std::cout << "CPU (48 kHz, block 256, best of 3)" << std::endl;
     const double def = cpuPercent (1, false), full = cpuPercent (1, true), full4 = cpuPercent (2, true);
     check (def < timing (4.0), "default patch, 2x: " + String (def, 2) + " % of one core");
-    check (full < timing (8.0), "8 CHOIR voices x 5 saws with pull, 2x: " + String (full, 2) + " % of one core");
-    check (full4 < timing (15.0), "8 CHOIR voices x 5 saws with pull, 4x: " + String (full4, 2) + " % of one core");
+    check (full < timing (8.0), "4 CHOIR voices x 5 saws with pull, 2x: " + String (full, 2) + " % of one core");
+    check (full4 < timing (15.0), "4 CHOIR voices x 5 saws with pull, 4x: " + String (full4, 2) + " % of one core");
 
     auto p = makeProc (48000.0, 256);
-    setParam (*p, "g1_hold", 0.0f); setParam (*p, "g2_hold", 0.0f);
+    for (int v = 0; v < Params::numVoices; ++v) setParam (*p, Params::voiceID (v, "hold"), 0.0f);
     render (*p, 0.5, {}, 256);
     const double t0 = Time::getMillisecondCounterHiRes();
     render (*p, 10.0, {}, 256);
@@ -621,15 +739,18 @@ static void testEditor()
 
     page->selectVoice (2);
     pumpMessages (40);
-    saveShot (*ed, "drone-siren-selected", 2.0f);
+    saveShot (*ed, "drone-pulsar-selected", 2.0f);
     check (page->getSelectedVoice() == 2, "clicking a voice strip selects it for the detail panel");
+    page->selectVoice (3);
+    pumpMessages (40);
+    saveShot (*ed, "drone-siren-selected", 2.0f);
     page->selectVoice (0);
     p->applyChord (0, 3);
     check (std::abs (p->getParamReal ("v1_int2") - 4.0f) < 0.001f && std::abs (p->getParamReal ("v1_int5") - 16.0f) < 0.001f,
            "CHORD Major fills the intervals 0 4 7 12 16");
-    p->fillGroup (1, 2, 2);
-    check (std::abs (p->getParamReal ("v5_tune") - 50.0f) < 0.01f && std::abs (p->getParamReal ("v6_tune") - 53.0f) < 0.01f
-           && std::abs (p->getParamReal ("v8_tune") - 60.0f) < 0.01f, "FILL D Dorian spreads group B over D F A C");
+    p->fillVoices (2, 2);
+    check (std::abs (p->getParamReal ("v1_tune") - 38.0f) < 0.01f && std::abs (p->getParamReal ("v2_tune") - 41.0f) < 0.01f
+           && std::abs (p->getParamReal ("v4_tune") - 48.0f) < 0.01f, "FILL D Dorian spreads the voices over D F A C");
 
     editor->setModDrawer (true);
     pumpMessages (60);
@@ -688,10 +809,14 @@ int main (int argc, char* argv[])
         auto renderWith = [] (const String& id, int mode)
         {
             auto p = makeProc();
-            for (int v = 0; v < 8; ++v) setParam (*p, Params::voiceID (v, "type"), 0.0f);   // phase 1: only CHOIR has an engine
             setParam (*p, "v1_tune", 57.3f);       // off the grid so SNAP has something to do
+            // engine parameters only matter for their type: switch the voice to it
+            const int v = id.startsWith ("v") ? id[1] - '1' : -1;
+            if (v >= 0 && id.contains ("siren")) setParam (*p, Params::voiceID (v, "type"), (float) VP::Siren);
+            if (v >= 0 && (id.endsWith ("sharp") || id.endsWith ("bloom"))) setParam (*p, Params::voiceID (v, "type"), (float) VP::Pulsar);
+            if (v >= 0 && (id.contains ("_int") || id.contains ("_on") || id.endsWith ("tide"))) setParam (*p, Params::voiceID (v, "type"), (float) VP::Choir);
             setParam (*p, "snap", id.startsWith ("snap_") ? 2.0f : 0.0f);
-            for (int v = 0; v < 8; ++v) setParam (*p, Params::voiceID (v, "attack"), 0.3f);
+            for (int k = 0; k < Params::numVoices; ++k) setParam (*p, Params::voiceID (k, "attack"), 0.3f);
             if (id.contains ("_int"))   // an interval only matters when its oscillator is on
                 setParam (*p, id.replace ("_int", "_on"), 1.0f);
             if (id.isNotEmpty())
@@ -706,9 +831,9 @@ int main (int argc, char* argv[])
             }
             // all eight plates (so every RELEASE is heard), aftertouch and pitch bend
             std::vector<Ev> ev { { 0.4, MidiMessage::channelPressureChange (1, 90) }, { 0.5, MidiMessage::pitchWheel (1, 12000) } };
-            for (int k = 0; k < 8; ++k)
+            for (int k = 0; k < Params::numVoices; ++k)
             {
-                static const int whiteKeys[] = { 60, 62, 64, 65, 67, 69, 71, 72 };   // the default plates C3-C4
+                static const int whiteKeys[] = { 60, 62, 64, 65 };   // the default plates C3-F3
                 const int n = whiteKeys[k];
                 ev.push_back ({ 0.2, MidiMessage::noteOn (1, n, k % 2 ? 0.5f : 1.0f) });
                 ev.push_back ({ 1.4, MidiMessage::noteOff (1, n) });
@@ -723,8 +848,7 @@ int main (int argc, char* argv[])
             return rmsDb (d) - ref;
         };
         StringArray ids;
-        for (int v = 0; v < 8; ++v) for (auto& d : Params::voiceDefs()) ids.add (Params::voiceID (v, d.id));
-        for (int g = 0; g < 2; ++g) for (auto& d : Params::groupDefs()) ids.add (Params::groupID (g, d.id));
+        for (int v = 0; v < Params::numVoices; ++v) for (auto& d : Params::voiceDefs()) ids.add (Params::voiceID (v, d.id));
         for (auto& d : Params::globalDefs()) ids.add (d.id);
         const auto base = renderWith ({}, 0);
         int effective = 0;
@@ -740,7 +864,7 @@ int main (int argc, char* argv[])
     if (argc > 1 && String (argv[1]) == "--bench")
     {
         for (int os = 0; os < 3; ++os)
-            std::printf ("%dx: default %.2f %%, 8 choirs %.2f %%\n", 1 << os, cpuPercent (os, false), cpuPercent (os, true));
+            std::printf ("%dx: default %.2f %%, 4 choirs %.2f %%\n", 1 << os, cpuPercent (os, false), cpuPercent (os, true));
         return 0;
     }
     testParameters();
@@ -750,6 +874,8 @@ int main (int argc, char* argv[])
     testSnap();
     testAliasing();
     testTide();
+    testSiren();
+    testPulsar();
     testPlates();
     testKeys();
     testRobustness();

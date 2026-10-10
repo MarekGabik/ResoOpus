@@ -45,9 +45,9 @@ private:
     float bend = 0.0f, wheel = 0.0f, rangeDragStart = 0.0f;
     int rangeStartNote = 48;
     bool lit[numKeys] {};
-    int plates[8] {};
-    int types[8] {};
-    float levels[8] {};
+    int plates[4] {};
+    int types[4] {};
+    float levels[4] {};
     bool platesMode = true;
     int touchMode = 0;
 };

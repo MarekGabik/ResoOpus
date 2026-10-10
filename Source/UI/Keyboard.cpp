@@ -60,7 +60,7 @@ KeyboardPanel::Part KeyboardPanel::partAt (Point<float> p) const
 int KeyboardPanel::plateVoice (int midi) const
 {
     if (! platesMode) return -1;
-    for (int v = 0; v < 8; ++v) if (plates[v] == midi) return v;
+    for (int v = 0; v < Params::numVoices; ++v) if (plates[v] == midi) return v;
     return -1;
 }
 
@@ -70,7 +70,7 @@ void KeyboardPanel::refresh()
     const bool pm = roundToInt (proc.getParamReal ("play_mode")) == GP::Plates;
     const int tm = roundToInt (proc.getParamReal ("touch"));
     if (pm != platesMode || tm != touchMode) { platesMode = pm; touchMode = tm; changed = true; }
-    for (int v = 0; v < 8; ++v)
+    for (int v = 0; v < Params::numVoices; ++v)
     {
         const int pn = proc.plateNote (v);
         const int ty = roundToInt (proc.getParamReal (Params::voiceID (v, "type")));
@@ -82,7 +82,7 @@ void KeyboardPanel::refresh()
         const int n = startNote + i;
         bool on = proc.keyboardState.isNoteOnForChannels (0xffff, n);
         if (! platesMode)
-            for (int v = 0; v < 8; ++v)
+            for (int v = 0; v < Params::numVoices; ++v)
                 if (proc.liveGate[v].load() && std::abs (proc.liveRoot[v].load() - (float) n) < 0.5f) on = true;
         if (on != lit[i]) { lit[i] = on; changed = true; }
     }
@@ -202,7 +202,7 @@ void KeyboardPanel::mouseMove (const MouseEvent& e)
 {
     switch (partAt (e.position))
     {
-        case Part::PlayMode: setTooltip ("Plates: the white keys from C3 play voices 1-8 with their own tuning. Keys: a played note retunes the next voice"); break;
+        case Part::PlayMode: setTooltip ("Plates: the white keys C3-F3 play voices 1-4 with their own tuning. Keys: a played note retunes the next voice"); break;
         case Part::TouchSrc: setTooltip ("What makes a played voice louder than HOLD: velocity, aftertouch or both"); break;
         case Part::Keys:     setTooltip ("Strike lower on a key for more velocity; drag for glissando"); break;
         default:             setTooltip ({}); break;

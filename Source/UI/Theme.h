@@ -51,6 +51,7 @@ namespace Palette
     inline const juce::Colour lead        { 0xffa5e844 };
     inline const juce::Colour group       { 0xffc9cad1 };
     inline const juce::Colour gravity     { 0xff4aa8ff };
+    inline const juce::Colour master      { 0xffe6e6ea };
     inline const juce::Colour zoneStill   { 0xff5ee0c8 };
     inline const juce::Colour zoneOrbit   { 0xff4aa8ff };
     inline const juce::Colour zoneTurb    { 0xffff9a4d };

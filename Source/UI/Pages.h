@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Widgets.h"
+#include "Params/Parameters.h"
 
 class ResoOpusProcessor;
 
@@ -64,8 +65,8 @@ public:
 
 private:
     ResoOpusProcessor& proc;
-    float levels[8] {};
-    int types[8] {};
+    float levels[Params::numVoices] {};
+    int types[Params::numVoices] {};
     double phase = 0.0, lastTime = 0.0;
 };
 
@@ -95,7 +96,7 @@ private:
         juce::Colour colour;
     };
 
-    // One voice strip: light plate header ("CHOIR  1"), TUNE, character knob, volume bar. Click to select.
+    // One voice strip: light plate header ("CHOIR  1"), TUNE + character knob, HOLD + PAN, volume bar. Click to select.
     struct Column : public ModulePanel
     {
         Column (DronePage& o, int v) : ModulePanel ("CHOIR", Palette::choir, -1, juce::String (v + 1)), owner (o), voice (v) {}
@@ -103,37 +104,27 @@ private:
         void paintOverChildren (juce::Graphics&) override;
         DronePage& owner;
         int voice;
-        Knob* tune = nullptr;
-        Knob* tide = nullptr;
+        Knob* character[4] {};   // per type: -, TIDE, FM, SHARP
+        juce::Array<juce::Component*> controls;
         VolBar* vol = nullptr;
         int type = -1;
-        float level = 0.0f;
         bool selected = false;
     };
 
     struct Detail
     {
-        juce::Array<juce::Component*> choirOnly, all;
-        juce::Component* type = nullptr;
+        juce::Array<juce::Component*> all, byType[4];   // byType[0] = common to every type that sounds
         LedRadio* chord = nullptr;
     };
 
-    struct GroupPanel : public ModulePanel
-    {
-        GroupPanel (DronePage& o, int g, const juce::String& t) : ModulePanel (t, Palette::group, -1, "FILL"), owner (o), group (g) {}
-        void mouseDown (const juce::MouseEvent&) override;
-        DronePage& owner;
-        int group;
-    };
-
-    void showFillMenu (int group, juce::Component* target);
     int voiceType (int v) const;
+    void showFillMenu (juce::Component* target);
 
-    Column* columns[8] {};
-    Detail details[8];
+    Column* columns[Params::numVoices] {};
+    Detail details[Params::numVoices];
     ModulePanel* detailPanel = nullptr;
     GravityView* gravity = nullptr;
-    juce::Label* phaseNote = nullptr;
+    juce::Label* offNote = nullptr;
     int selected = 0;
-    int shownType[8] { -1, -1, -1, -1, -1, -1, -1, -1 };
+    int shownType[Params::numVoices] { -1, -1, -1, -1 };
 };

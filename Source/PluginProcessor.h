@@ -53,7 +53,7 @@ public:
 
     // Voice helpers (message thread)
     void applyChord (int voice, int chord);              // CHORD: fills the five intervals of a CHOIR voice
-    void fillGroup (int group, int scale, int root);     // FILL: spreads the four voices of a group over a scale
+    void fillVoices (int scale, int root);               // FILL: spreads the four voices over a scale
     int plateNote (int voice) const;                     // MIDI note of the plate that plays this voice
 
     // Modulation helpers (message thread)
@@ -94,14 +94,12 @@ private:
     double snapNote (double midi) const;
 
     std::atomic<float>* voiceRaw[Params::numVoices][VP::count] {};
-    std::atomic<float>* groupRaw[Params::numGroups][GRP::count] {};
     std::atomic<float>* globalRaw[GP::count] {};
     std::atomic<float>* modRaw[Params::numModSlots][MP::count] {};
     juce::RangedAudioParameter* voiceParam[Params::numVoices][VP::count] {};
-    juce::RangedAudioParameter* groupParam[Params::numGroups][GRP::count] {};
     juce::RangedAudioParameter* globalParam[GP::count] {};
 
-    dsp::ChoirVoice choir[Params::numVoices];
+    dsp::Voice voices[Params::numVoices];
     dsp::VoiceSettings settings[Params::numVoices];
     std::unique_ptr<juce::dsp::Oversampling<float>> oversamplers[2];   // 2x, 4x
     int osIndex = 1;
@@ -114,7 +112,8 @@ private:
     float modOut[Params::numModSlots] {};
     float modSum[Mod::maxDestCode + 1] {};
     bool modTouched[Mod::maxDestCode + 1] {};
-    float curV[Params::numVoices][VP::count] {}, curGrp[Params::numGroups][GRP::count] {}, curG[GP::count] {};
+    float curV[Params::numVoices][VP::count] {}, curG[GP::count] {};
+    int lastType[Params::numVoices] { -1, -1, -1, -1 };
 
     // touch state per voice
     struct Touch

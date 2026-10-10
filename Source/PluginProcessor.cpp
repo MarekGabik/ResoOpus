@@ -31,13 +31,6 @@ ResoOpusProcessor::ResoOpusProcessor()
             voiceParam[v][i] = apvts.getParameter (id);
             jassert (voiceRaw[v][i] != nullptr);
         }
-    for (int g = 0; g < Params::numGroups; ++g)
-        for (int i = 0; i < GRP::count; ++i)
-        {
-            const auto id = Params::groupID (g, Params::groupDefs()[(size_t) i].id);
-            groupRaw[g][i] = apvts.getRawParameterValue (id);
-            groupParam[g][i] = apvts.getParameter (id);
-        }
     for (int i = 0; i < GP::count; ++i)
     {
         globalRaw[i] = apvts.getRawParameterValue (Params::globalDefs()[(size_t) i].id);
@@ -82,7 +75,7 @@ void ResoOpusProcessor::prepareToPlay (double sampleRate, int)
 
     osIndex = jlimit (0, 2, (int) globalRaw[GP::oversampling]->load());
     for (int v = 0; v < Params::numVoices; ++v)
-        choir[v].prepare (sr * (1 << osIndex), 0x51ed2701u + (uint32_t) v * 7919u);
+        voices[v].prepare (sr * (1 << osIndex), 0x51ed2701u + (uint32_t) v * 7919u);
     matrix.reset();
     keyboardState.reset();
     for (auto& t : touch) t = Touch();
@@ -93,7 +86,7 @@ void ResoOpusProcessor::prepareToPlay (double sampleRate, int)
 void ResoOpusProcessor::setOversampling (int index)
 {
     osIndex = index;
-    for (auto& c : choir) c.setSampleRate (sr * (1 << osIndex));
+    for (auto& c : voices) c.setSampleRate (sr * (1 << osIndex));
     for (auto& o : oversamplers) if (o) o->reset();
     pendingLatency = computeLatency();
     triggerAsyncUpdate();
@@ -149,12 +142,12 @@ void ResoOpusProcessor::noteOn (int note, float vel)
     }
     else
     {
-        // KEYS: the next free CHOIR voice takes the note (round robin), else the oldest one
+        // KEYS: the next free voice that is not OFF takes the note (round robin), else the next one
         for (int pass = 0; pass < 2 && v < 0; ++pass)
             for (int k = 0; k < Params::numVoices; ++k)
             {
                 const int c = (keysNext + k) % Params::numVoices;
-                if ((int) voiceRaw[c][VP::type]->load() != VP::Choir) continue;
+                if ((int) voiceRaw[c][VP::type]->load() == VP::Off) continue;
                 if (pass == 0 && touch[c].gate) continue;
                 v = c;
                 break;
@@ -216,7 +209,7 @@ void ResoOpusProcessor::handleMidi (const MidiMessage& m)
         else if (cc == 120 || cc == 123)
         {
             releaseAll();
-            if (cc == 120) for (auto& c : choir) c.reset();
+            if (cc == 120) for (auto& c : voices) c.reset();
         }
     }
 }
@@ -253,7 +246,7 @@ void ResoOpusProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& mi
 
     if (resetRequest.exchange (false))
     {
-        for (auto& c : choir) c.reset();
+        for (auto& c : voices) c.reset();
         for (auto& d : dc) d.reset();
         for (auto& o : oversamplers) if (o) o->reset();
         releaseAll();
@@ -291,7 +284,7 @@ void ResoOpusProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& mi
     meterPeak = std::max (meterPeak.load() - 0.5f, Decibels::gainToDecibels (pk, -100.0f));
     for (int v = 0; v < Params::numVoices; ++v)
     {
-        liveLevel[v] = choir[v].getLevel();
+        liveLevel[v] = voices[v].getLevel();
         liveGate[v] = touch[v].gate;
         liveRoot[v] = (float) settings[v].rootMidi;
     }
@@ -335,8 +328,6 @@ void ResoOpusProcessor::processChunk (AudioBuffer<float>& out, int start, int le
     // 3. modulated parameter values
     for (int v = 0; v < Params::numVoices; ++v)
         for (int i = 0; i < VP::count; ++i) curV[v][i] = voiceRaw[v][i]->load();
-    for (int g = 0; g < Params::numGroups; ++g)
-        for (int i = 0; i < GRP::count; ++i) curGrp[g][i] = groupRaw[g][i]->load();
     for (int i = 0; i < GP::count; ++i) curG[i] = globalRaw[i]->load();
 
     for (int s = 0; s < Params::numModSlots; ++s)
@@ -356,8 +347,6 @@ void ResoOpusProcessor::processChunk (AudioBuffer<float>& out, int start, int le
         RangedAudioParameter* prm = nullptr;
         float* target = nullptr;
         if (block >= 1 && block <= Params::numVoices && idx < VP::count) { prm = voiceParam[block - 1][idx]; target = &curV[block - 1][idx]; }
-        else if (block >= Mod::firstGroupBlock && block < Mod::firstGroupBlock + Params::numGroups && idx < GRP::count)
-        { prm = groupParam[block - Mod::firstGroupBlock][idx]; target = &curGrp[block - Mod::firstGroupBlock][idx]; }
         else if (block == Mod::globalBlock && idx < GP::count) { prm = globalParam[idx]; target = &curG[idx]; }
         if (prm == nullptr) continue;
         const float norm = jlimit (0.0f, 1.0f, prm->convertTo0to1 (*target) + modSum[d]);
@@ -373,13 +362,22 @@ void ResoOpusProcessor::processChunk (AudioBuffer<float>& out, int start, int le
         auto& s = settings[v];
         auto& t = touch[v];
         const float* p = curV[v];
-        const int g = v / Params::voicesPerGroup;
-        if (! t.gate && t.keyRoot >= 0.0 && choir[v].isSilent()) t.keyRoot = -1.0;   // KEYS: back to TUNE after the release
+        if (! t.gate && t.keyRoot >= 0.0 && voices[v].isSilent()) t.keyRoot = -1.0;   // KEYS: back to TUNE after the release
 
         s.type = (int) p[VP::type];
-        const double base = (t.keyRoot >= 0.0 ? t.keyRoot : (double) p[VP::tune]) + (double) curGrp[g][GRP::pitch];
-        s.rootMidi = snapNote (base) + bend + (double) Params::tideSemitones (p[VP::tide] / 100.0f);
-        s.pull = Params::tidePull (p[VP::tide] / 100.0f);
+        if (s.type != lastType[v]) { if (lastType[v] >= 0 && voices[v].isSilent()) voices[v].reset(); lastType[v] = s.type; }
+        const bool choir = s.type == VP::Choir;
+        const double base = (t.keyRoot >= 0.0 ? t.keyRoot : (double) p[VP::tune]) + (double) curG[GP::pitch];
+        s.rootMidi = snapNote (base) + bend + (choir ? (double) Params::tideSemitones (p[VP::tide] / 100.0f) : 0.0);
+        s.pull = choir ? Params::tidePull (p[VP::tide] / 100.0f) : 0.0f;
+        s.sirenRate = p[VP::siren_rate];
+        s.sirenFm = p[VP::siren_fm] / 100.0f;
+        s.sirenAm = p[VP::siren_am] / 100.0f;
+        s.sirenDiv = p[VP::siren_div];
+        s.sirenNoise = p[VP::siren_noise] / 100.0f;
+        s.sirenWave = p[VP::siren_wave] / 100.0f;
+        s.sharp = p[VP::sharp] / 100.0f;
+        s.bloom = p[VP::bloom] / 100.0f;
         for (int i = 0; i < Params::numOscs; ++i)
         {
             s.intervals[i] = p[VP::int1 + i];
@@ -387,7 +385,7 @@ void ResoOpusProcessor::processChunk (AudioBuffer<float>& out, int start, int le
         }
         s.a4 = curG[GP::a4];
 
-        const float hold = curGrp[g][GRP::hold] / 100.0f;
+        const float hold = p[VP::hold] / 100.0f;
         float level = 0.0f;
         if (t.gate)
         {
@@ -417,10 +415,7 @@ void ResoOpusProcessor::processChunk (AudioBuffer<float>& out, int start, int le
         std::fill (L, L + count, 0.0f);
         std::fill (R, R + count, 0.0f);
         for (int v = 0; v < Params::numVoices; ++v)
-            if (settings[v].type == VP::Choir)
-                choir[v].render (settings[v], L, R, count);
-            else
-                choir[v].reset();   // SIREN and PULSAR engines arrive in phase 2
+            voices[v].render (settings[v], L, R, count);
     };
     if (osIndex == 0)
         renderVoices (outL, outR, len);
@@ -478,16 +473,16 @@ void ResoOpusProcessor::applyChord (int voice, int chord)
         setParamReal (Params::voiceID (voice, "int" + String (i + 1)), iv[i]);
 }
 
-void ResoOpusProcessor::fillGroup (int group, int scale, int root)
+void ResoOpusProcessor::fillVoices (int scale, int root)
 {
-    // degrees 1-3-5-7 of the scale from the root; group A starts at C1, group B one octave higher
+    // degrees 1-3-5-7 of the scale from the root, starting at C1 + root
     const auto& steps = Params::scaleSteps (scale);
-    const int baseNote = (group == 0 ? 36 : 48) + root;
-    for (int k = 0; k < Params::voicesPerGroup; ++k)
+    const int baseNote = 36 + root;
+    for (int k = 0; k < Params::numVoices; ++k)
     {
         const int degree = k * 2;
         const int note = baseNote + steps[degree % steps.size()] + 12 * (degree / steps.size());
-        setParamReal (Params::voiceID (group * Params::voicesPerGroup + k, "tune"), (float) note);
+        setParamReal (Params::voiceID (k, "tune"), (float) note);
     }
     setParamReal ("snap_scale", (float) scale);
     setParamReal ("snap_root", (float) root);

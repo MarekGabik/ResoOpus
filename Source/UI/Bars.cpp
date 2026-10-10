@@ -293,7 +293,7 @@ void TopBar::showHelpMenu()
         size.addItem (100 + s, String (s) + " %", true, cur == s);
     m.addSubMenu ("Window size", size);
     m.addSeparator();
-    m.addSectionHeader ("Plates: the white keys from C3 play voices 1-8; HOLD keeps them droning");
+    m.addSectionHeader ("Plates: the white keys C3-F3 play voices 1-4; HOLD keeps them droning");
     m.addSectionHeader ("Knobs: drag, Shift = fine, double-click = type (D2+12, 3 s, L 30), Cmd-click = default");
     m.addSectionHeader ("Keys: 9 modulation panel, Cmd+Z undo");
     m.addSeparator();
@@ -360,7 +360,7 @@ void BottomBar::paint (Graphics& g)
 
     const bool plates = roundToInt (proc.getParamReal ("play_mode")) == GP::Plates;
     g.setColour (Palette::text);
-    g.drawText (plates ? "Plates " + KeyboardNames::range (proc.plateNote (0), proc.plateNote (7)) : String ("Keys"), area (Play), Justification::centredLeft, false);
+    g.drawText (plates ? "Plates " + KeyboardNames::range (proc.plateNote (0), proc.plateNote (Params::numVoices - 1)) : String ("Keys"), area (Play), Justification::centredLeft, false);
     g.setColour (Palette::textDim);
     g.drawText ("Touch - " + choiceText (proc, "touch"), area (TouchSrc), Justification::centredLeft, false);
     const int snap = roundToInt (proc.getParamReal ("snap"));

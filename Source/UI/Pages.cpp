@@ -106,7 +106,7 @@ void LedDot::mouseDown (const MouseEvent&) { attachment->setValueAsCompleteGestu
 void GravityView::refresh()
 {
     bool any = false, changed = false;
-    for (int v = 0; v < 8; ++v)
+    for (int v = 0; v < Params::numVoices; ++v)
     {
         const float l = proc.liveLevel[v].load();
         const int t = roundToInt (proc.getParamReal (Params::voiceID (v, "type")));
@@ -135,13 +135,13 @@ void GravityView::paint (Graphics& g)
     g.setFont (Fonts::regular (11.0f));
     g.drawText ("knob arrives in phase 3", Rectangle<float> (200.0f, 16.0f).withCentre (c.translated (0.0f, 10.0f)), Justification::centred, false);
 
-    for (int v = 0; v < 8; ++v)
+    for (int v = 0; v < Params::numVoices; ++v)
     {
-        const double a = phase + v * MathConstants<double>::twoPi / 8.0;
+        const double a = phase + v * MathConstants<double>::twoPi / (double) Params::numVoices;
         const Point<float> p (c.x + R * (float) std::cos (a), c.y + R * (float) std::sin (a));
         const auto col = Palette::voiceType (types[v]);
         const float lv = jlimit (0.0f, 1.0f, levels[v] * 1.4f);
-        const float r = 4.0f + 2.0f * lv;
+        const float r = 5.0f + 2.5f * lv;
         if (lv > 0.02f)
         {
             g.setColour (col.withAlpha (0.25f * lv));
@@ -163,7 +163,7 @@ Knob::Style range (String lo, String hi, bool bipolar = false, bool small = fals
     s.lo = lo; s.hi = hi; s.bipolar = bipolar; s.small = small;
     return s;
 }
-Knob::Style smallStyle()
+[[maybe_unused]] Knob::Style smallStyle()
 {
     Knob::Style s;
     s.small = true;
@@ -175,71 +175,77 @@ int DronePage::voiceType (int v) const { return roundToInt (proc.getParamReal (P
 
 DronePage::DronePage (ResoOpusProcessor& p) : Page (p)
 {
-    const int gw = 422, gh = 352, gap = 10;
+    const int gw = 422, gh = 352, gap = 10, sw = (gw - 6) / 2;
 
-    // GROUP A / B: HOLD and PITCH, below them the four voice strips of the group
-    const int groupH = 112, stripY = groupH + gap, stripH = gh - stripY;
-    for (int g = 0; g < 2; ++g)
+    // voice strips: pair 1-2 left of GRAVITY, pair 3-4 right of it
+    for (int v = 0; v < Params::numVoices; ++v)
     {
-        const int gx = g == 0 ? 0 : width - gw;
-        auto* gp = new GroupPanel (*this, g, String (g == 0 ? "GROUP A" : "GROUP B") + String (CharPointer_UTF8 (" \xc2\xb7 ")) + (g == 0 ? "1-4" : "5-8"));
-        owned.add (gp);
-        gp->setBounds (gx, 0, gw, groupH);
-        addAndMakeVisible (gp);
-
-        auto* hold = knob (Params::groupID (g, "hold"), "HOLD", Palette::group, smallStyle());
-        auto* pitch = knob (Params::groupID (g, "pitch"), "PITCH", Palette::group, smallStyle());
-        gp->addAndMakeVisible (hold);
-        gp->addAndMakeVisible (pitch);
-        hold->setTopLeftPosition (gw / 2 - 96, ModulePanel::headerHeight + 2);
-        pitch->setTopLeftPosition (gw / 2 + 16, ModulePanel::headerHeight + 2);
-
-        const int sw = (gw - 3 * 6) / 4;
-        for (int k = 0; k < 4; ++k)
-        {
-            const int v = g * 4 + k;
-            auto* col = new Column (*this, v);
-            owned.add (col);
-            col->setBounds (gx + k * (sw + 6), stripY, sw, stripH);
-            addAndMakeVisible (col);
-            col->tune = knob (Params::voiceID (v, "tune"), "TUNE", Palette::voiceType (voiceType (v)), smallStyle());
-            col->tide = knob (Params::voiceID (v, "tide"), "TIDE", Palette::choir, smallStyle());
-            col->vol = new VolBar (proc, v);
-            owned.add (col->vol);
-            col->addAndMakeVisible (col->tune);
-            col->addAndMakeVisible (col->tide);
-            col->addAndMakeVisible (col->vol);
-            col->tune->setTopLeftPosition ((sw - col->tune->getWidth()) / 2, ModulePanel::headerHeight + 6);
-            col->tide->setTopLeftPosition ((sw - col->tide->getWidth()) / 2, ModulePanel::headerHeight + 92);
-            col->vol->setBounds (8, stripH - 34, sw - 16, 28);
-            columns[v] = col;
-        }
+        const int x = v < 2 ? v * (sw + 6) : width - gw + (v - 2) * (sw + 6);
+        auto* col = new Column (*this, v);
+        owned.add (col);
+        col->setBounds (x, 0, sw, gh);
+        addAndMakeVisible (col);
+        const String V = Params::voiceID (v, "");
+        auto put = [col] (Component* c, int cx, int y) { col->addAndMakeVisible (c); c->setTopLeftPosition (cx - c->getWidth() / 2, y); col->controls.add (c); };
+        const int c1 = sw / 4 + 2, c2 = sw * 3 / 4 - 2;
+        put (knob (V + "tune", "TUNE", Palette::voiceType (voiceType (v)), range ("C0", "C8")), c1, 46);
+        col->character[1] = knob (V + "tide", "TIDE", Palette::choir, range ("0", "MAX"));
+        col->character[2] = knob (V + "siren_fm", "FM", Palette::siren, range ("0", "100"));
+        col->character[3] = knob (V + "sharp", "SHARP", Palette::pulsar, range ("SOFT", "SHARP"));
+        for (int t = 1; t < 4; ++t) put (col->character[t], c2, 46);
+        put (knob (V + "hold", "HOLD", Palette::group, range ("0", "100")), c1, 182);
+        put (knob (V + "pan", "PAN", Palette::group, range ("L", "R", true)), c2, 182);
+        col->vol = new VolBar (proc, v);
+        owned.add (col->vol);
+        col->addAndMakeVisible (col->vol);
+        col->vol->setBounds (12, gh - 44, sw - 24, 28);
+        col->controls.add (col->vol);
+        columns[v] = col;
     }
 
-    // GRAVITY (phase 1: orbit of the voices)
+    // GRAVITY (phase 1-2: orbit of the voices)
     auto* gpanel = panel ("GRAVITY", Palette::gravity, { gw + gap, 0, width - 2 * (gw + gap), gh });
     gravity = new GravityView (proc);
     owned.add (gravity);
     gravity->setBounds (0, ModulePanel::headerHeight + 2, gpanel->getWidth(), gh - ModulePanel::headerHeight - 2);
     gpanel->addAndMakeVisible (gravity);
 
+    // MASTER: transpose all, output volume, FILL
+    const int mw = 300, dh = height - gh - gap;
+    auto* master = panel ("MASTER", Palette::master, { width - mw, gh + gap, mw, dh });
+    auto* pitch = knob ("pitch", "PITCH", Palette::master, range ("-24", "+24", true));
+    auto* vol = knob ("master_vol", "VOLUME", Palette::master, range ("-inf", "+12"));
+    master->addAndMakeVisible (pitch);
+    master->addAndMakeVisible (vol);
+    pitch->setTopLeftPosition (14, 50);
+    vol->setTopLeftPosition (106, 50);
+    auto* fill = new SelectorPill ("FILL", [] { return String ("Scale..."); }, [this] (SelectorPill& pill) { showFillMenu (&pill); });
+    fill->setTooltip ("FILL: spreads the four voices over a scale (degrees 1-3-5-7), then fine-tune them by ear");
+    owned.add (fill);
+    fill->setSize (84, 44);
+    master->addAndMakeVisible (fill);
+    fill->setTopLeftPosition (204, 76);
+
     // detail of the selected voice
-    detailPanel = panel ("VOICE 1", Palette::choir, { 0, gh + gap, width, height - gh - gap });
-    for (int v = 0; v < 8; ++v)
+    detailPanel = panel ("VOICE 1", Palette::choir, { 0, gh + gap, width - mw - gap, dh });
+    for (int v = 0; v < Params::numVoices; ++v)
     {
         auto& d = details[v];
-        auto add = [&d, this] (Component* c, int x, int y, bool choirOnly)
+        auto add = [&d, this] (Component* c, int x, int y, int type)
         {
             detailPanel->addChildComponent (c);
             c->setTopLeftPosition (x, y);
             d.all.add (c);
-            if (choirOnly) d.choirOnly.add (c);
+            d.byType[type].add (c);
         };
         const String V = Params::voiceID (v, "");
-        d.type = new LedRadio (proc, V + "type", "TYPE", { "CHOIR", "SIREN", "PULSAR" });
-        owned.add (d.type);
-        add (d.type, 16, 40, false);
+        auto* type = new LedRadio (proc, V + "type", "TYPE", { "OFF", "CHOIR", "SIREN", "PULSAR" });
+        owned.add (type);
+        detailPanel->addChildComponent (type);
+        type->setTopLeftPosition (16, 36);
+        d.all.add (type);
 
+        // CHOIR: chord and the five intervals
         d.chord = new LedRadio ("CHORD", { "UNISON", "OCTAVES", "FIFTHS", "MAJOR", "MINOR" },
             [this, v]
             {
@@ -250,55 +256,64 @@ DronePage::DronePage (ResoOpusProcessor& p) : Page (p)
             [this, v] (int c) { proc.applyChord (v, c); });
         d.chord->setTooltip ("Fills the five oscillator intervals with a chord in one click; fine-tune them afterwards by ear");
         owned.add (d.chord);
-        add (d.chord, 136, 40, true);
-
+        add (d.chord, 134, 36, VP::Choir);
         for (int i = 0; i < 5; ++i)
         {
             auto* k = knob (V + "int" + String (i + 1), "OSC " + String (i + 1), Palette::choir, smallStyle());
-            add (k, 264 + i * 80, 60, true);
+            add (k, 250 + i * 76, 52, VP::Choir);
             auto* led = new LedDot (proc, V + "on" + String (i + 1));
             owned.add (led);
-            add (led, 264 + i * 80 + 12, 60, true);
+            add (led, 250 + i * 76 + 12, 52, VP::Choir);
         }
+        // SIREN
+        const char* sirenIds[] = { "siren_rate", "siren_am", "siren_div", "siren_noise", "siren_wave" };
+        const char* sirenNames[] = { "RATE", "AM", "DIVIDER", "NOISE", "WAVE" };
+        const char* sirenLo[] = { ".05", "0", "OFF", "0", "SQR" };
+        const char* sirenHi[] = { "300", "100", "1:16", "100", "TRI" };
+        for (int i = 0; i < 5; ++i)
+            add (knob (V + sirenIds[i], sirenNames[i], Palette::siren, range (sirenLo[i], sirenHi[i])), 134 + i * 100, 44, VP::Siren);
+        // PULSAR
+        add (knob (V + "sharp", "SHARP", Palette::pulsar, range ("SOFT", "SHARP")), 134, 44, VP::Pulsar);
+        add (knob (V + "bloom", "BLOOM", Palette::pulsar, range ("0", "100")), 234, 44, VP::Pulsar);
+
+        // envelope: every type that sounds
         auto* div = new Component();
         owned.add (div);
         div->setSize (1, 110);
-        add (div, 674, 46, false);
-
-        const int x0 = 688, dx = 94, y = 53;
-        add (knob (V + "tide", "TIDE", Palette::choir, range ("0", "MAX")), x0, y, true);
-        add (knob (V + "attack", "ATTACK", Palette::choir, range ("1ms", "30s")), x0 + dx, y, false);
-        add (knob (V + "release", "RELEASE", Palette::choir, range ("1ms", "30s")), x0 + 2 * dx, y, false);
-        add (knob (V + "volume", "VOLUME", Palette::choir, range ("-inf", "+6")), x0 + 3 * dx, y, false);
-        add (knob (V + "pan", "PAN", Palette::choir, range ("L", "R", true)), x0 + 4 * dx, y, false);
+        for (int t : { VP::Choir, VP::Siren, VP::Pulsar }) d.byType[t].add (div);
+        detailPanel->addChildComponent (div);
+        div->setTopLeftPosition (646, 40);
+        d.all.add (div);
+        for (auto* k : { knob (V + "attack", "ATTACK", Palette::group, range ("1ms", "30s")), knob (V + "release", "RELEASE", Palette::group, range ("1ms", "30s")) })
+        {
+            detailPanel->addChildComponent (k);
+            d.all.add (k);
+            for (int t : { VP::Choir, VP::Siren, VP::Pulsar }) d.byType[t].add (k);
+        }
+        d.all[d.all.size() - 2]->setTopLeftPosition (656, 44);
+        d.all[d.all.size() - 1]->setTopLeftPosition (752, 44);
     }
 
-    phaseNote = new Label ({}, "This voice type gets its engine in phase 2. TUNE, envelope, VOLUME and PAN already work.");
-    owned.add (phaseNote);
-    phaseNote->setFont (Fonts::regular (12.5f));
-    phaseNote->setColour (Label::textColourId, Palette::textDim);
-    phaseNote->setJustificationType (Justification::centred);
-    phaseNote->setBounds (264, 70, 400, 60);
-    detailPanel->addChildComponent (phaseNote);
+    offNote = new Label ({}, "This voice is off. Pick CHOIR, SIREN or PULSAR to switch it on.");
+    owned.add (offNote);
+    offNote->setFont (Fonts::regular (12.5f));
+    offNote->setColour (Label::textColourId, Palette::textDim);
+    offNote->setJustificationType (Justification::centred);
+    offNote->setBounds (150, 60, 600, 50);
+    detailPanel->addChildComponent (offNote);
 
     selectVoice ((int) proc.uiState.getProperty ("selVoice", 0));
 }
 
 void DronePage::selectVoice (int v)
 {
-    selected = jlimit (0, 7, v);
+    selected = jlimit (0, Params::numVoices - 1, v);
     proc.uiState.setProperty ("selVoice", selected, nullptr);
-    for (int i = 0; i < 8; ++i) shownType[i] = -1;   // force a layout refresh
+    for (auto& t : shownType) t = -1;   // force a layout refresh
     refreshLive();
 }
 
-void DronePage::GroupPanel::mouseDown (const MouseEvent& e)
-{
-    if (e.y < ModulePanel::headerHeight && e.x > getWidth() - 140)
-        owner.showFillMenu (group, this);
-}
-
-void DronePage::showFillMenu (int group, Component* target)
+void DronePage::showFillMenu (Component* target)
 {
     PopupMenu m, roots;
     const int curRoot = roundToInt (proc.getParamReal ("snap_root"));
@@ -307,10 +322,10 @@ void DronePage::showFillMenu (int group, Component* target)
     for (int r = 0; r < 12; ++r) roots.addItem (200 + r, Params::findDef ("snap_root")->choices[r], true, r == curRoot);
     m.addSeparator();
     m.addSubMenu ("Root: " + Params::findDef ("snap_root")->choices[curRoot], roots);
-    m.showMenuAsync (PopupMenu::Options().withTargetComponent (target), [this, group] (int r)
+    m.showMenuAsync (PopupMenu::Options().withTargetComponent (target), [this] (int r)
     {
         if (r >= 200) proc.setParamReal ("snap_root", (float) (r - 200));
-        else if (r >= 100) proc.fillGroup (group, r - 100, roundToInt (proc.getParamReal ("snap_root")));
+        else if (r >= 100) proc.fillVoices (r - 100, roundToInt (proc.getParamReal ("snap_root")));
     });
 }
 
@@ -324,12 +339,6 @@ void DronePage::Column::paintOverChildren (Graphics& g)
         g.setColour (col);
         g.drawRoundedRectangle (getLocalBounds().toFloat().reduced (1.0f), 8.0f, 1.6f);
     }
-    if (type != VP::Choir)
-    {
-        g.setColour (Palette::textFaint);
-        g.setFont (Fonts::regular (10.5f));
-        g.drawFittedText ("engine in\nphase 2", Rectangle<int> (0, ModulePanel::headerHeight + 104, getWidth(), 40), Justification::centred, 2);
-    }
 }
 
 //==============================================================================
@@ -337,7 +346,7 @@ DronePage::VolBar::VolBar (ResoOpusProcessor& p, int v) : proc (p)
 {
     vol = proc.param (Params::voiceID (v, "volume"));
     pan = proc.param (Params::voiceID (v, "pan"));
-    setTooltip ("Volume of this voice: drag left / right (Shift = fine), double-click = default. PAN is in the voice detail below");
+    setTooltip ("Volume of this voice: drag left / right (Shift = fine), double-click = default");
     setMouseCursor (MouseCursor::LeftRightResizeCursor);
 }
 
@@ -361,8 +370,7 @@ void DronePage::VolBar::paint (Graphics& g)
     g.drawText ("VOL", 0, 0, 40, 12, Justification::centredLeft, false);
     g.setColour (Palette::textDim);
     g.setFont (Fonts::mono (10.0f));
-    const int pp = roundToInt (shownPan * 100.0f);
-    g.drawText (pp == 0 ? String ("C") : (pp < 0 ? "L " + String (-pp) : "R " + String (pp)), 0, 0, (int) w, 12, Justification::centredRight, false);
+    g.drawText (Params::format (*Params::findDef ("v1_volume"), vol->convertFrom0to1 (shownVol)), 0, 0, (int) w, 12, Justification::centredRight, false);
     g.setColour (Colour (0xff24252b));
     g.fillRoundedRectangle (0.0f, 16.0f, w, 5.0f, 2.5f);
     g.setColour (colour.withAlpha (0.85f));
@@ -402,7 +410,7 @@ void DronePage::VolBar::mouseDoubleClick (const MouseEvent&)
 void DronePage::refreshLive()
 {
     Page::refreshLive();
-    for (int v = 0; v < 8; ++v)
+    for (int v = 0; v < Params::numVoices; ++v)
     {
         auto* c = columns[v];
         const int t = voiceType (v);
@@ -414,29 +422,32 @@ void DronePage::refreshLive()
             const auto col = Palette::voiceType (t);
             c->setTitleAndColour (Params::findDef ("v1_type")->choices[t].toUpperCase(), col);
             c->vol->colour = col;
-            c->tide->setVisible (t == VP::Choir);
+            for (int k = 1; k < 4; ++k) c->character[k]->setVisible (k == t || (t == VP::Off && k == VP::Choir));
+            for (auto* ctl : c->controls) ctl->setAlpha (t == VP::Off ? 0.35f : 1.0f);
+            for (int k = 1; k < 4; ++k) c->character[k]->setAlpha (t == VP::Off ? 0.35f : 1.0f);
             c->repaint();
         }
-        c->setLiveValue (jlimit (0.0f, 1.0f, lv * 1.5f));
+        c->setLiveValue (t == VP::Off ? 0.0f : jlimit (0.0f, 1.0f, lv * 1.5f));
         c->vol->refresh (lv);
     }
     gravity->refresh();
 
-    // detail: only the selected voice, choir-only controls depend on the type
+    // detail: only the selected voice; the type decides which controls show
     const int t = voiceType (selected);
     if (shownType[selected] != t)
     {
-        for (int v = 0; v < 8; ++v)
+        for (int v = 0; v < Params::numVoices; ++v)
         {
             for (auto* c : details[v].all) c->setVisible (false);
             shownType[v] = -1;
         }
-        for (auto* c : details[selected].all)
-            c->setVisible (t == VP::Choir || ! details[selected].choirOnly.contains (c));
-        phaseNote->setVisible (t != VP::Choir);
+        auto& d = details[selected];
+        d.all[0]->setVisible (true);   // TYPE
+        for (auto* c : d.byType[t]) c->setVisible (true);
+        offNote->setVisible (t == VP::Off);
         shownType[selected] = t;
-        const auto col = Palette::voiceType (t);
-        detailPanel->setTitleAndColour ("VOICE " + String (selected + 1) + String (CharPointer_UTF8 (" \xc2\xb7 ")) + Params::findDef ("v1_type")->choices[t].toUpperCase(), col);
+        detailPanel->setTitleAndColour ("VOICE " + String (selected + 1) + String (CharPointer_UTF8 (" \xc2\xb7 ")) + Params::findDef ("v1_type")->choices[t].toUpperCase(),
+                                        Palette::voiceType (t));
     }
     details[selected].chord->refresh();
 }
