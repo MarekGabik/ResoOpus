@@ -23,6 +23,7 @@ enum class Unit
     Tide,       // 0..100 %: transposition down, then pull (FM) between the oscillators
     Divider,    // 1..16 sub-harmonic ("off", "1:3")
     Gravity,    // 0..100 % with its zone ("ORBIT 42 %")
+    Wave,       // continuous oscillator shape 0..4
     Choice,
     Toggle
 };
@@ -156,6 +157,10 @@ namespace GP
         flt_cutoff, flt_res, flt_drive, flt_mode, flt_spread,
         echo_time1, echo_time2, echo_fb, echo_mix, echo_mod, echo_self, echo_voices,
         space_algo, space_x, space_y, space_z, space_blend,
+        lead_on, lead_wave, lead_octave, lead_osc2, lead_mix, lead_sync, lead_sub,
+        lead_attack, lead_decay, lead_sustain, lead_release,
+        lead_glide, lead_vib, lead_vib_rate, lead_vib_delay, lead_touch_vib, lead_level, lead_pan,
+        arp_on, arp_mode, arp_rate, arp_octaves, arp_latch,
         count
     };
     enum PlayMode { Plates = 0, Keys };

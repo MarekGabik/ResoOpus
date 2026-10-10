@@ -129,6 +129,31 @@ const std::vector<ParamDef>& Params::globalDefs()
         d.push_back (F ("space_y", "Space Y", 0.0f, 100.0f, 30.0f, Unit::Percent, "Second control of the SPACE algorithm (see its label)"));
         d.push_back (F ("space_z", "Space Z", 0.0f, 100.0f, 55.0f, Unit::Percent, "Third control of the SPACE algorithm (see its label)"));
         d.push_back (F ("space_blend", "Space Blend", 0.0f, 100.0f, 30.0f, Unit::Percent, "Dry / SPACE"));
+        // LEAD
+        d.push_back (B ("lead_on", "Lead", false,
+                        "The melodic LEAD layer. When on, every key except the four plates plays it (in KEYS mode all keys play it)"));
+        d.push_back (F ("lead_wave", "Lead Wave", 0.0f, 4.0f, 3.0f, Unit::Wave, "Sine - triangle - shark fin - saw - square, morphs in between"));
+        d.push_back (C ("lead_octave", "Lead Octave", { "-2", "-1", "0", "+1", "+2" }, 2, "Octave of the lead"));
+        d.push_back (F ("lead_osc2", "Osc 2", -12.0f, 12.0f, 0.07f, Unit::Interval, "Interval of the second oscillator (a few cents = chorus, 7 = fifth)"));
+        d.push_back (F ("lead_mix", "Osc 2 Level", 0.0f, 100.0f, 50.0f, Unit::Percent, "Level of the second oscillator"));
+        d.push_back (B ("lead_sync", "Sync", false, "Hard sync: OSC 2 restarts with every cycle of OSC 1. Set OSC 2 a few semitones up for the classic sync tear"));
+        d.push_back (F ("lead_sub", "Sub", 0.0f, 100.0f, 0.0f, Unit::Percent, "A sine one octave below"));
+        d.push_back (LogF ("lead_attack", "Lead Attack", 0.001f, 10.0f, 0.01f, Unit::Seconds, "Lead envelope attack"));
+        d.push_back (LogF ("lead_decay", "Lead Decay", 0.001f, 30.0f, 0.6f, Unit::Seconds, "Lead envelope decay"));
+        d.push_back (F ("lead_sustain", "Lead Sustain", 0.0f, 100.0f, 70.0f, Unit::Percent, "Lead envelope sustain level"));
+        d.push_back (LogF ("lead_release", "Lead Release", 0.001f, 30.0f, 0.8f, Unit::Seconds, "Lead envelope release"));
+        d.push_back (F ("lead_glide", "Glide", 0.0f, 2.0f, 0.08f, Unit::Seconds, "Time the pitch slides between overlapping notes", 0.4f));
+        d.push_back (F ("lead_vib", "Vibrato", 0.0f, 100.0f, 15.0f, Unit::Percent, "Vibrato depth (100 % = one semitone)"));
+        d.push_back (LogF ("lead_vib_rate", "Vibrato Rate", 0.5f, 12.0f, 5.2f, Unit::Hz, "Vibrato speed"));
+        d.push_back (F ("lead_vib_delay", "Vibrato Delay", 0.0f, 3.0f, 0.5f, Unit::Seconds, "The vibrato fades in over this time after each new note", 0.5f));
+        d.push_back (F ("lead_touch_vib", "Touch Vibrato", 0.0f, 100.0f, 40.0f, Unit::Percent, "Extra vibrato from pressing harder (aftertouch)"));
+        d.push_back (F ("lead_level", "Lead Volume", -60.0f, 6.0f, -3.0f, Unit::Decibels, "Level of the lead in the mix", 2.5f));
+        d.push_back (F ("lead_pan", "Lead Pan", -1.0f, 1.0f, 0.0f, Unit::Pan, "Position of the lead left / right"));
+        d.push_back (B ("arp_on", "Arp", false, "Arpeggiator: plays the held lead keys one after another, locked to the song tempo"));
+        d.push_back (C ("arp_mode", "Arp Direction", { "Up", "Down", "Ping-Pong", "Random" }, 0, "Order of the arpeggio"));
+        d.push_back (C ("arp_rate", "Arp Rate", { "1/4", "1/8", "1/8 T", "1/16", "1/16 T", "1/32" }, 3, "Note length of the arpeggio (song tempo)"));
+        d.push_back (C ("arp_octaves", "Arp Octaves", { "1", "2", "3", "4" }, 0, "How many octaves the arpeggio climbs"));
+        d.push_back (B ("arp_latch", "Latch", false, "Keeps the arpeggio running after you let go of the keys"));
         return d;
     }();
     return defs;
@@ -361,6 +386,15 @@ String Params::format (const ParamDef& d, float v, bool withUnit)
             return (v > 0.0049f ? "+" : "") + String (roundToInt (v * 100.0f)) + u (" %");
         case Unit::Note:      return noteName (v, true);
         case Unit::Divider:   return roundToInt (v) <= 1 ? String ("off") : "1:" + String (roundToInt (v));
+        case Unit::Wave:
+        {
+            static const char* names[] = { "Sine", "Triangle", "Shark", "Saw", "Square" };
+            const int i = jlimit (0, 4, (int) std::floor (v + 0.0001f));
+            const float f = v - (float) i;
+            if (f < 0.04f || i == 4) return names[i];
+            if (f > 0.96f) return names[i + 1];
+            return String (names[i]) + ">" + names[i + 1];
+        }
         case Unit::Gravity:   return withUnit ? gravityZone (v / 100.0f) + " " + String (roundToInt (v)) + " %" : String (roundToInt (v));
         case Unit::Interval:
         {
@@ -449,6 +483,7 @@ float Params::parse (const ParamDef& d, const String& text, float fallback)
             if (! hasDigit) return fallback;
             return clampV (t.containsChar (':') ? t.fromLastOccurrenceOf (":", false, false).getDoubleValue() : num);
         case Unit::Gravity:
+        case Unit::Wave:
         case Unit::Tide:
         case Unit::Plain: case Unit::Scale10: case Unit::Semitones: case Unit::Percent:
             return hasDigit ? clampV (num) : fallback;

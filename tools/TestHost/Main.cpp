@@ -175,7 +175,10 @@ static void testParameters()
     const StringArray globalOrder { "master_vol", "oversampling", "play_mode", "touch", "plates_base", "snap", "snap_scale", "snap_root", "a4", "pb_range", "pitch",
                                     "gravity", "gravity_path", "dust", "flt_cutoff", "flt_res", "flt_drive", "flt_mode", "flt_spread",
                                     "echo_time1", "echo_time2", "echo_fb", "echo_mix", "echo_mod", "echo_self", "echo_voices",
-                                    "space_algo", "space_x", "space_y", "space_z", "space_blend" };
+                                    "space_algo", "space_x", "space_y", "space_z", "space_blend",
+                                    "lead_on", "lead_wave", "lead_octave", "lead_osc2", "lead_mix", "lead_sync", "lead_sub",
+                                    "lead_attack", "lead_decay", "lead_sustain", "lead_release", "lead_glide", "lead_vib", "lead_vib_rate",
+                                    "lead_vib_delay", "lead_touch_vib", "lead_level", "lead_pan", "arp_on", "arp_mode", "arp_rate", "arp_octaves", "arp_latch" };
     ok = (int) Params::globalDefs().size() == GP::count;
     for (int i = 0; i < globalOrder.size() && ok; ++i) ok = globalOrder[i] == Params::globalDefs()[(size_t) i].id;
     check (ok, "global table matches the GP index constants (" + String ((int) Params::globalDefs().size()) + ")");
@@ -739,6 +742,99 @@ static void testEffects()
     }
 }
 
+static void leadPatch (ResoOpusProcessor& p)
+{
+    for (int v = 0; v < Params::numVoices; ++v) setParam (p, Params::voiceID (v, "type"), (float) VP::Off);
+    setParam (p, "lead_on", 1.0f);
+    setParam (p, "lead_vib", 0.0f); setParam (p, "lead_touch_vib", 0.0f); setParam (p, "lead_mix", 0.0f);
+    setParam (p, "lead_attack", 0.002f); setParam (p, "lead_sustain", 100.0f); setParam (p, "lead_glide", 0.0f);
+    setParam (p, "space_blend", 0.0f); setParam (p, "echo_mix", 0.0f); setParam (p, "dust", 0.0f); setParam (p, "gravity", 0.0f);
+}
+
+static void testLead()
+{
+    std::cout << "LEAD and ARP" << std::endl;
+    const double sr = 48000.0;
+    {
+        auto p = makeProc (sr);
+        leadPatch (*p);
+        setParam (*p, "lead_on", 0.0f);
+        auto out = render (*p, 1.0, note (69, 0.0, 0.9));
+        check (rmsDb (out) < -100.0, "LEAD off: keys outside the plates stay silent");
+    }
+    {
+        auto p = makeProc (sr);
+        leadPatch (*p);
+        auto out = render (*p, 2.0, note (69, 0.0, 1.9));
+        const double f = peakFrequency (out, sr, 350.0, 550.0, (int) (0.3 * sr));
+        check (std::abs (cents (f, 440.0)) < 1.0, "A3 plays 440 Hz (" + String (cents (f, 440.0), 3) + " cents)");
+    }
+    {
+        auto p = makeProc (sr);
+        leadPatch (*p);
+        setParam (*p, "lead_glide", 0.5f);
+        render (*p, 0.3, { { 0.0, MidiMessage::noteOn (1, 57, 0.8f) } });
+        render (*p, 0.12, { { 0.0, MidiMessage::noteOn (1, 69, 0.8f) } });
+        const float mid = p->liveLead.load();
+        render (*p, 1.5);
+        check (mid > 58.0f && mid < 68.0f && std::abs (p->liveLead.load() - 69.0f) < 0.05f,
+               "GLIDE: legato note slides (" + String (mid, 2) + " after 120 ms) and lands on A3");
+        render (*p, 1.5, { { 0.0, MidiMessage::noteOff (1, 69) } });
+        check (std::abs (p->liveLead.load() - 57.0f) < 0.05f, "letting go of A3 glides back to the still held A2 (" + String (p->liveLead.load(), 2) + ")");
+    }
+    {
+        auto p = makeProc (sr);
+        leadPatch (*p);
+        setParam (*p, "lead_release", 0.2f);
+        auto out = render (*p, 1.5, note (69, 0.0, 0.5));
+        check (rmsDb (out, (int) (0.2 * sr), (int) (0.4 * sr)) > -40.0 && rmsDb (out, (int) (1.2 * sr), (int) (1.5 * sr)) < -80.0,
+               "RELEASE 200 ms: the note fades to silence after the key");
+    }
+    {
+        // ARP at 120 BPM, 1/16 = 125 ms: C3 E3 G3 up
+        auto p = makeProc (sr);
+        leadPatch (*p);
+        setParam (*p, "plates_base", 84.0f);   // plates out of the way
+        setParam (*p, "arp_on", 1.0f); setParam (*p, "arp_rate", 3.0f); setParam (*p, "arp_mode", 0.0f);
+        render (*p, 0.01, { { 0.0, MidiMessage::noteOn (1, 48, 0.8f) }, { 0.0, MidiMessage::noteOn (1, 52, 0.8f) }, { 0.0, MidiMessage::noteOn (1, 55, 0.8f) } });
+        String seq;
+        int ok = 0;
+        const int expect[] = { 48, 52, 55, 48, 52, 55 };
+        for (int i = 0; i < 6; ++i)
+        {
+            render (*p, i == 0 ? 0.03 : 0.125);
+            const int n = roundToInt (p->liveLead.load());
+            seq << n << " ";
+            if (n == expect[i]) ++ok;
+        }
+        check (ok == 6, "ARP 1/16 at 120 BPM steps up C-E-G every 125 ms (" + seq.trim() + ")");
+    }
+    {
+        auto p = makeProc (sr);
+        leadPatch (*p);
+        setParam (*p, "v1_type", (float) VP::Choir);
+        setParam (*p, "v1_hold", 0.0f);
+        render (*p, 0.5, { { 0.0, MidiMessage::noteOn (1, 60, 0.9f) }, { 0.0, MidiMessage::noteOn (1, 72, 0.9f) } });
+        check (p->liveLevel[0].load() > 0.1f && p->liveLead.load() > 71.5f, "with LEAD on, the plate C3 still plays voice 1 and C4 plays the lead");
+    }
+    {
+        auto p = makeProc (sr);
+        leadPatch (*p);
+        auto out = render (*p, 1.2, note (95, 0.0, 1.19));
+        const auto db = spectrum (out, (int) (0.4 * sr), 15);
+        const double binHz = sr / 32768.0, f0 = 440.0 * std::pow (2.0, 26.0 / 12.0);
+        double worst = -300.0;
+        for (size_t i = (size_t) (100.0 / binHz); i < (size_t) (10000.0 / binHz); ++i)
+        {
+            const double h = i * binHz / f0;
+            if (std::abs (h - std::round (h)) * f0 < 6.0 * binHz) continue;
+            worst = std::max (worst, db[i]);
+        }
+        const double res = db[(size_t) std::lround (f0 / binHz)] - worst;
+        check (res > 85.0, "lead saw at 1976 Hz, 2x: aliases " + String (res, 1) + " dB below (> 85)");
+    }
+}
+
 static void testPlates()
 {
     std::cout << "Plates and touch" << std::endl;
@@ -1129,6 +1225,10 @@ int main (int argc, char* argv[])
             if (id.startsWith ("echo_") && id != "echo_mix") setParam (*p, "echo_mix", 50.0f);
             if (id == "echo_self") setParam (*p, "echo_mod", 60.0f);
             if (id == "echo_voices") setParam (*p, "gravity", 0.0f);
+            if ((id.startsWith ("lead_") || id.startsWith ("arp_")) && id != "lead_on") setParam (*p, "lead_on", 1.0f);
+            if (id.startsWith ("arp_") && id != "arp_on") setParam (*p, "arp_on", 1.0f);
+            if (id == "arp_latch") setParam (*p, "arp_rate", 0.0f);
+            if (id == "lead_sync") setParam (*p, "lead_osc2", 5.0f);
             // engine parameters only matter for their type: switch the voice to it
             const int v = id.startsWith ("v") ? id[1] - '1' : -1;
             if (v >= 0 && id.contains ("siren")) setParam (*p, Params::voiceID (v, "type"), (float) VP::Siren);
@@ -1159,6 +1259,9 @@ int main (int argc, char* argv[])
                 ev.push_back ({ 0.2, MidiMessage::noteOn (1, n, k % 2 ? 0.5f : 1.0f) });
                 ev.push_back ({ 1.4, MidiMessage::noteOff (1, n) });
             }
+            // two keys outside the plates for the LEAD (overlapping: glide; legato release: back to the first)
+            ev.push_back ({ 0.25, MidiMessage::noteOn (1, 69, 0.9f) }); ev.push_back ({ 0.6, MidiMessage::noteOn (1, 76, 0.6f) });
+            ev.push_back ({ 0.9, MidiMessage::noteOff (1, 76) }); ev.push_back ({ 1.2, MidiMessage::noteOff (1, 69) });
             return render (*p, 2.4, ev);
         };
         auto diffDb = [] (const AudioBuffer<float>& base, const AudioBuffer<float>& b)
@@ -1200,6 +1303,7 @@ int main (int argc, char* argv[])
     testGravity();
     testDust();
     testEffects();
+    testLead();
     testPlates();
     testTouchAboveHold();
     testKeys();

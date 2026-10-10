@@ -80,6 +80,7 @@ public:
     std::atomic<float> liveRoot[Params::numVoices];      // sounding root (MIDI note), for the keyboard in KEYS mode
     std::atomic<float> meterPeak { -100.0f };
     std::atomic<float> liveGravity { 0.0f };             // GRAVITY after modulation, 0..1
+    std::atomic<float> liveLead { -1.0f };               // sounding LEAD pitch (MIDI), -1 = silent
     std::atomic<float> cpuLoad { 0.0f };
 
     static constexpr int chunkSize = 32;
@@ -128,6 +129,19 @@ private:
     float echoPrev[chunkSize] {};             // last chunk's echo, fed into the voices (TO VOICES)
     int echoPrevLen = 0;
     float toVoices = 0.0f;
+
+    // LEAD and ARP
+    void leadNoteOn (int note, float vel);
+    void leadNoteOff (int note);
+    void runArp (int len);
+    ::dsp::LeadVoice lead;
+    ::dsp::LeadSettings leadSettings;
+    int leadHeld[16] {}; float leadVel[16] {}; int leadNum = 0;
+    int arpNotes[16] {}; int arpNum = 0;        // the pattern (held or latched keys, ascending)
+    double arpPos = 0.0, hostBpm = 120.0;
+    int arpStep = 0, arpDir = 1;
+    bool arpGate = false, arpWasOn = false;
+    ::dsp::Rng arpRng;
 
     ModMatrix matrix;
     ModMatrix::Slot slots[Params::numModSlots];

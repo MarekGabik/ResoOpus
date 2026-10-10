@@ -322,4 +322,92 @@ private:
     bool primed = false, active = false;
     Ramp inc[5], pullR, gL, gR;
 };
+
+//==============================================================================
+// LEAD: a monophonic melodic voice. Two oscillators with a continuous shape (sine - triangle - shark fin - saw -
+// square), OSC 2 at an interval (or detuned) and optionally hard-synced to OSC 1, a sine sub one octave below,
+// ADSR envelope, glide, vibrato that fades in after a delay and deepens with key pressure.
+struct LeadSettings
+{
+    double a4 = 440.0;
+    float wave = 3.0f, octave = 0.0f;      // wave 0..4, octave -2..+2
+    float osc2 = 0.07f, mix = 0.5f, sub = 0.0f;   // semitones, 0..1, 0..1
+    bool sync = false;
+    float attack = 0.01f, decay = 0.4f, sustain = 0.7f, release = 0.4f;
+    float glide = 0.0f;                    // seconds
+    float vibrato = 0.0f, vibRate = 5.0f, vibDelay = 0.4f, touchVib = 0.0f, pressure = 0.0f;   // 0..1, Hz, s, 0..1, 0..1
+    float gainL = 0.5f, gainR = 0.5f;
+};
+
+class LeadVoice
+{
+public:
+    void prepare (double fs)
+    {
+        sr = fs;
+        env.setSampleRate (fs);
+        env.hardReset();
+        o1.reset (0.0); o2.reset (0.31); osub.reset (0.0);
+        pitch = target = 60.0; vibPhase = 0.0; sinceOn = 0.0; velocity = 0.0f;
+    }
+    void setSampleRate (double fs) { sr = fs; env.setSampleRate (fs); }
+    void reset() { env.hardReset(); }
+
+    void noteOn (double midi, float vel, bool legato)
+    {
+        target = midi;
+        velocity = vel;
+        if (! legato || ! env.isActive())
+        {
+            if (! env.isActive()) pitch = midi;   // first note starts on its own pitch (no glide from silence)
+            env.noteOn (false);
+            sinceOn = 0.0;
+        }
+    }
+    void noteOff() { env.noteOff(); }
+    bool isActive() const { return env.isActive(); }
+    double getPitch() const { return pitch; }
+
+    void begin (const LeadSettings& settings, int n)
+    {
+        s = settings;
+        env.set (0.0f, s.attack, 0.0f, s.decay, s.sustain, s.release);
+        glideC = s.glide <= 0.0005f ? 1.0 : 1.0 - std::exp (-4.6 / (s.glide * sr));
+        const float amp = 0.32f * (0.4f + 0.6f * velocity);
+        if (primed) { gL.set (s.gainL * amp, n); gR.set (s.gainR * amp, n); } else { gL.reset (s.gainL * amp); gR.reset (s.gainR * amp); primed = true; }
+        o1.setShape (s.wave, 0.5f);
+        o2.setShape (s.wave, 0.5f);
+        osub.setShape (0.0f, 0.5f);
+    }
+
+    void tick (float& L, float& R)
+    {
+        if (! env.isActive()) { gL.next(); gR.next(); return; }
+        pitch += glideC * (target - pitch);
+        sinceOn += 1.0 / sr;
+        vibPhase += s.vibRate / sr;
+        vibPhase -= std::floor (vibPhase);
+        const double fadeIn = s.vibDelay <= 0.001f ? 1.0 : std::min (1.0, sinceOn / (double) s.vibDelay);
+        const double vibSemis = ((double) s.vibrato * fadeIn + (double) (s.touchVib * s.pressure)) * std::sin (twoPi * vibPhase);
+        const double m = pitch + 12.0 * (double) s.octave + vibSemis;
+        auto dt = [this] (double midi) { return std::min (0.45, s.a4 * std::exp2 ((midi - 69.0) / 12.0) / sr); };
+        bool wrapped = false; double wrapX = 0.0;
+        const float x1 = o1.tick (dt (m), wrapped, wrapX);
+        const float x2 = s.sync && wrapped ? o2.tickSynced (dt (m + s.osc2), wrapX, 0.0) : o2.tick (dt (m + s.osc2), w2, x2w);
+        float x = x1 * (1.0f - 0.5f * s.mix) + x2 * s.mix * 0.8f;
+        if (s.sub > 0.0005f) x += 0.7f * s.sub * osub.tick (dt (m - 12.0), w2, x2w);
+        const float e = env.next();
+        L += x * gL.next() * e;
+        R += x * gR.next() * e;
+    }
+
+private:
+    double sr = 96000.0, pitch = 60.0, target = 60.0, glideC = 1.0, vibPhase = 0.0, sinceOn = 0.0, x2w = 0.0;
+    bool w2 = false, primed = false;
+    float velocity = 0.0f;
+    LeadSettings s;
+    ShapeOsc o1, o2, osub;
+    Envelope env;
+    Ramp gL, gR;
+};
 }
