@@ -5,6 +5,7 @@
 #include <juce_dsp/juce_dsp.h>
 #include "Params/Parameters.h"
 #include "DSP/Voices.h"
+#include "DSP/Effects.h"
 #include "DSP/ModMatrix.h"
 #include "State/StateHistory.h"
 
@@ -109,12 +110,24 @@ private:
 
     // GRAVITY network and DUST
     void renderVoices (float* L, float* R, int count);
+    void applyFilter (float* L, float* R, int count);
     dsp::Ramp devRamp, ringRamp, fbRamp, dustRamp;
     bool networkPrimed = false;
     float voiceMod[Params::numVoices] {};   // each voice as a modulator (previous sample)
     float lastMono = 0.0f;                  // the instrument's output, fed back in TURBULENCE and COLLAPSE
     dsp::RandomGen drift[Params::numVoices];
     dsp::ColouredNoise hiss[2];
+
+    // effects
+    dsp::GrowlFilter filters[2];
+    dsp::Ramp cutoffRamp[2], resRamp, driveRamp;
+    bool filterPrimed = false;
+    dsp::Echo echo;
+    dsp::Space space;
+    dsp::Rng fxRng;
+    float echoPrev[chunkSize] {};             // last chunk's echo, fed into the voices (TO VOICES)
+    int echoPrevLen = 0;
+    float toVoices = 0.0f;
 
     ModMatrix matrix;
     ModMatrix::Slot slots[Params::numModSlots];

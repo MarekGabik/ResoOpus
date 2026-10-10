@@ -105,6 +105,30 @@ const std::vector<ParamDef>& Params::globalDefs()
                         "Who pulls on whom. Auto: pairs (1-2, 3-4) up to the middle, then one ring of all four. Pairs or Ring: fixed"));
         d.push_back (F ("dust", "Dust", 0.0f, 100.0f, 20.0f, Unit::Percent,
                         "The analog life: slow drift of the tuning, voices leaking into each other and a breath of background noise. 0 = clean digital"));
+        // FILTER
+        d.push_back (LogF ("flt_cutoff", "Cutoff", 20.0f, 20000.0f, 20000.0f, Unit::Hz, "Filter cutoff (left and right, see SPREAD)"));
+        d.push_back (F ("flt_res", "Resonance", 0.0f, 10.0f, 0.0f, Unit::Scale10, "Filter resonance; near 10 it sings on its own and keeps the lows"));
+        d.push_back (F ("flt_drive", "Drive", 0.0f, 10.0f, 0.0f, Unit::Scale10, "Drives the filter into its dirty, growling saturation"));
+        d.push_back (C ("flt_mode", "Filter Mode", { "Low Pass", "Band Pass" }, 0, "Low pass: darker. Band pass: thin, vocal"));
+        d.push_back (F ("flt_spread", "Spread", 0.0f, 100.0f, 10.0f, Unit::Percent, "Detunes the left and right filters against each other: a wider stereo image"));
+        // ECHO
+        d.push_back (LogF ("echo_time1", "Echo Time 1", 0.005f, 2.0f, 0.34f, Unit::Seconds, "Delay time of the left line"));
+        d.push_back (LogF ("echo_time2", "Echo Time 2", 0.005f, 2.0f, 0.52f, Unit::Seconds, "Delay time of the right line"));
+        d.push_back (F ("echo_fb", "Echo Feedback", 0.0f, 100.0f, 35.0f, Unit::Percent,
+                        "Repeats; above ~55 % the echo starts to sing on its own (standing waves you can play with TIME)"));
+        d.push_back (F ("echo_mix", "Echo Mix", 0.0f, 100.0f, 0.0f, Unit::Percent, "Dry / echo"));
+        d.push_back (F ("echo_mod", "Echo Mod", 0.0f, 100.0f, 10.0f, Unit::Percent, "How much the delay times wobble (from the source below)"));
+        d.push_back (C ("echo_self", "Echo Mod Source", { "Self", "LFO" }, 0,
+                        "Self: the echo modulates its own time (resonances turn unstable). LFO: a slow sine"));
+        d.push_back (F ("echo_voices", "Echo To Voices", 0.0f, 100.0f, 0.0f, Unit::Percent,
+                        "Feeds the echo back into the voices as frequency modulation (works with GRAVITY: the whole instrument becomes one loop)"));
+        // SPACE
+        d.push_back (C ("space_algo", "Space", { "Aurora", "Void", "Runner", "Saturn", "Comet" }, 1,
+                        "Aurora: shimmer. Void: huge dark space, freeze. Runner: rising / falling repeats. Saturn: metallic ring. Comet: dirty singing delay"));
+        d.push_back (F ("space_x", "Space X", 0.0f, 100.0f, 30.0f, Unit::Percent, "First control of the SPACE algorithm (see its label)"));
+        d.push_back (F ("space_y", "Space Y", 0.0f, 100.0f, 30.0f, Unit::Percent, "Second control of the SPACE algorithm (see its label)"));
+        d.push_back (F ("space_z", "Space Z", 0.0f, 100.0f, 55.0f, Unit::Percent, "Third control of the SPACE algorithm (see its label)"));
+        d.push_back (F ("space_blend", "Space Blend", 0.0f, 100.0f, 30.0f, Unit::Percent, "Dry / SPACE"));
         return d;
     }();
     return defs;

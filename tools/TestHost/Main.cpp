@@ -151,6 +151,8 @@ static void soloVoice1 (ResoOpusProcessor& p, float tune, int type = VP::Choir)
     setParam (p, "v1_bloom", 0.0f);
     setParam (p, "gravity", 0.0f);
     setParam (p, "dust", 0.0f);
+    setParam (p, "space_blend", 0.0f);
+    setParam (p, "echo_mix", 0.0f);
     setParam (p, "v1_tune", tune);
     setParam (p, "v1_attack", 0.001f);
     setParam (p, "v1_volume", -6.0f);
@@ -170,7 +172,9 @@ static void testParameters()
     for (int i = 0; i < voiceOrder.size() && ok; ++i) ok = voiceOrder[i] == Params::voiceDefs()[(size_t) i].id;
     check (ok, "voice table matches the VP index constants (" + String ((int) Params::voiceDefs().size()) + " per voice)");
     const StringArray globalOrder { "master_vol", "oversampling", "play_mode", "touch", "plates_base", "snap", "snap_scale", "snap_root", "a4", "pb_range", "pitch",
-                                    "gravity", "gravity_path", "dust" };
+                                    "gravity", "gravity_path", "dust", "flt_cutoff", "flt_res", "flt_drive", "flt_mode", "flt_spread",
+                                    "echo_time1", "echo_time2", "echo_fb", "echo_mix", "echo_mod", "echo_self", "echo_voices",
+                                    "space_algo", "space_x", "space_y", "space_z", "space_blend" };
     ok = (int) Params::globalDefs().size() == GP::count;
     for (int i = 0; i < globalOrder.size() && ok; ++i) ok = globalOrder[i] == Params::globalDefs()[(size_t) i].id;
     check (ok, "global table matches the GP index constants (" + String ((int) Params::globalDefs().size()) + ")");
@@ -483,6 +487,8 @@ static void gravityPatch (ResoOpusProcessor& p, float gravity, int path = 0, flo
     setParam (p, "gravity", gravity);
     setParam (p, "gravity_path", (float) path);
     setParam (p, "dust", dust);
+    setParam (p, "space_blend", 0.0f);
+    setParam (p, "echo_mix", 0.0f);
 }
 
 // Share of the energy (dB) that is NOT on the harmonics of f1 or f2: rises when the voices modulate each other
@@ -618,6 +624,118 @@ static void testDust()
         lo = std::min (lo, cents (f, 440.0)); hi = std::max (hi, cents (f, 440.0));
     }
     check (hi - lo > 1.0 && std::max (std::abs (lo), std::abs (hi)) < 12.0, "DUST 100: the tuning drifts slowly (" + String (lo, 1) + " .. " + String (hi, 1) + " cents)");
+}
+
+// A short plucked voice (no HOLD, fast envelope) for effect measurements, everything else dry
+static void dryPluck (ResoOpusProcessor& p)
+{
+    soloVoice1 (p, 57.0f);
+    setParam (p, "v1_hold", 0.0f);
+    setParam (p, "v1_attack", 0.002f);
+    setParam (p, "v1_release", 0.03f);
+    setParam (p, "space_blend", 0.0f);
+    setParam (p, "echo_mix", 0.0f);
+}
+
+static void testEffects()
+{
+    std::cout << "FILTER, ECHO, SPACE" << std::endl;
+    const double sr = 48000.0;
+    auto harmonicDb = [sr] (float cutoff, float res, int mode, double f)
+    {
+        auto p = makeProc (sr);
+        soloVoice1 (*p, 45.0f);   // 110 Hz saw
+        setParam (*p, "space_blend", 0.0f);
+        setParam (*p, "flt_cutoff", cutoff); setParam (*p, "flt_res", res); setParam (*p, "flt_mode", (float) mode);
+        auto out = render (*p, 2.0);
+        const auto db = spectrum (out, (int) (0.5 * sr), 15);
+        const double binHz = sr / 32768.0;
+        double m = -300.0;
+        for (int d = -3; d <= 3; ++d) m = std::max (m, db[(size_t) (std::lround (f / binHz) + d)]);
+        return m;
+    };
+    const double open = harmonicDb (20000.0f, 0.0f, 0, 3080.0), closed = harmonicDb (500.0f, 0.0f, 0, 3080.0);
+    check (open - closed > 24.0, "FILTER low pass at 500 Hz takes the 28th harmonic (3 kHz) down " + String (open - closed, 1) + " dB (> 24)");
+    const double lowOpen = harmonicDb (20000.0f, 0.0f, 0, 110.0), lowBp = harmonicDb (2000.0f, 0.0f, 1, 110.0);
+    check (lowOpen - lowBp > 12.0, "FILTER band pass at 2 kHz thins the 110 Hz fundamental by " + String (lowOpen - lowBp, 1) + " dB");
+    {
+        auto p = makeProc (sr);
+        soloVoice1 (*p, 45.0f);
+        setParam (*p, "flt_cutoff", 800.0f); setParam (*p, "flt_res", 10.0f); setParam (*p, "flt_drive", 10.0f);
+        auto out = render (*p, 10.0);
+        check (allFinite (out) && peakDb (out) < 0.0, "FILTER resonance and drive at maximum for 10 s: finite, peak " + String (peakDb (out), 1) + " dBFS");
+    }
+    {
+        // ECHO: a 30 ms pluck comes back after TIME 1 on the left
+        auto p = makeProc (sr);
+        dryPluck (*p);
+        setParam (*p, "echo_time1", 0.25f); setParam (*p, "echo_time2", 0.4f); setParam (*p, "echo_mix", 50.0f);
+        setParam (*p, "echo_fb", 20.0f); setParam (*p, "echo_mod", 0.0f);
+        auto out = render (*p, 1.0, note (60, 0.0, 0.03));
+        auto win = [&out, sr] (double t) { float m = 0.0f; for (int i = (int) (t * sr); i < (int) ((t + 0.03) * sr); ++i) m = std::max (m, std::abs (out.getSample (0, i))); return 20.0 * std::log10 (m + 1e-9); };
+        check (win (0.25) > win (0.15) + 30.0, "ECHO: the pluck repeats after TIME 1 = 250 ms (" + String (win (0.15), 1) + " -> " + String (win (0.25), 1) + " dB)");
+    }
+    {
+        auto p = makeProc (sr);
+        for (int v = 0; v < Params::numVoices; ++v) setParam (*p, Params::voiceID (v, "hold"), 100.0f);
+        setParam (*p, "echo_fb", 100.0f); setParam (*p, "echo_mix", 100.0f); setParam (*p, "echo_mod", 100.0f); setParam (*p, "echo_voices", 100.0f);
+        setParam (*p, "gravity", 90.0f);
+        auto out = render (*p, 30.0);
+        check (allFinite (out) && peakDb (out) < 0.0, "ECHO feedback 100 %, TO VOICES 100 %, GRAVITY 90 % for 30 s: finite, peak " + String (peakDb (out), 1) + " dBFS");
+    }
+    // SPACE: each algorithm at its extremes stays finite and bounded; reverbs keep sounding after the dry stops
+    static const char* names[] = { "AURORA", "VOID", "RUNNER", "SATURN", "COMET" };
+    for (int a = 0; a < 5; ++a)
+    {
+        bool ok = true;
+        double worst = -200.0;
+        for (float xyz : { 0.0f, 100.0f })
+        {
+            auto p = makeProc (sr);
+            for (int v = 0; v < Params::numVoices; ++v) setParam (*p, Params::voiceID (v, "hold"), 100.0f);
+            setParam (*p, "space_algo", (float) a); setParam (*p, "space_blend", 100.0f);
+            setParam (*p, "space_x", xyz); setParam (*p, "space_y", xyz); setParam (*p, "space_z", xyz);
+            auto out = render (*p, 15.0);
+            ok = ok && allFinite (out);
+            worst = std::max (worst, peakDb (out));
+        }
+        check (ok && worst < 0.0, String ("SPACE ") + names[a] + " at the extremes for 15 s: finite, peak " + String (worst, 1) + " dBFS");
+    }
+    auto tailDb = [sr] (int algo, float z)
+    {
+        auto p = makeProc (sr);
+        dryPluck (*p);
+        setParam (*p, "space_algo", (float) algo); setParam (*p, "space_blend", 100.0f); setParam (*p, "space_z", z);
+        setParam (*p, "space_x", 0.0f); setParam (*p, "space_y", 0.0f);
+        auto out = render (*p, 4.0, note (60, 0.0, 0.3));
+        return rmsDb (out, (int) (2.5 * sr), (int) (3.0 * sr));
+    };
+    const double shortTail = tailDb (1, 10.0f), longTail = tailDb (1, 80.0f);
+    check (longTail > shortTail + 15.0, "VOID: Z lengthens the tail (2.5 s after: " + String (shortTail, 1) + " -> " + String (longTail, 1) + " dB)");
+    {
+        auto p = makeProc (sr);
+        dryPluck (*p);
+        setParam (*p, "space_algo", 1.0f); setParam (*p, "space_blend", 100.0f); setParam (*p, "space_z", 80.0f);
+        render (*p, 1.0, note (60, 0.0, 0.5));
+        setParam (*p, "space_z", 100.0f);   // freeze what is in the room now
+        auto out = render (*p, 8.0);
+        const double a = rmsDb (out, (int) (2.0 * sr), (int) (3.0 * sr)), b = rmsDb (out, (int) (7.0 * sr), (int) (8.0 * sr));
+        check (std::abs (a - b) < 1.5 && a > -60.0, "VOID FREEZE (Z 100 %) holds the sound (" + String (a, 1) + " / " + String (b, 1) + " dB, 5 s apart)");
+    }
+    {
+        // RUNNER: repeats pitched up an octave (Z 100 %)
+        auto p = makeProc (sr);
+        soloVoice1 (*p, 57.0f);
+        setParam (*p, "v1_release", 0.01f);
+        setParam (*p, "space_algo", 2.0f); setParam (*p, "space_blend", 100.0f);
+        setParam (*p, "space_x", 70.0f); setParam (*p, "space_y", 40.0f); setParam (*p, "space_z", 100.0f);
+        setParam (*p, "echo_mix", 0.0f);
+        auto out = render (*p, 2.5, {});
+        setParam (*p, "v1_hold", 0.0f);
+        auto tail = render (*p, 1.5, {});
+        const double f = peakFrequency (tail, sr, 300.0, 600.0, (int) (0.3 * sr));
+        check (std::abs (cents (f, 440.0)) < 100.0, "RUNNER Z 100 %: repeats rise an octave (220 Hz -> " + String (f, 1) + " Hz, grain sidebands included)");
+    }
 }
 
 static void testPlates()
@@ -996,6 +1114,11 @@ int main (int argc, char* argv[])
             auto p = makeProc();
             setParam (*p, "v1_tune", 57.3f);       // off the grid so SNAP has something to do
             if (id == "gravity_path") setParam (*p, "gravity", 60.0f);
+            if (id.startsWith ("flt_") && id != "flt_cutoff") setParam (*p, "flt_cutoff", 900.0f);
+            if (id == "flt_mode" || id == "flt_drive") setParam (*p, "flt_res", 5.0f);
+            if (id.startsWith ("echo_") && id != "echo_mix") setParam (*p, "echo_mix", 50.0f);
+            if (id == "echo_self") setParam (*p, "echo_mod", 60.0f);
+            if (id == "echo_voices") setParam (*p, "gravity", 0.0f);
             // engine parameters only matter for their type: switch the voice to it
             const int v = id.startsWith ("v") ? id[1] - '1' : -1;
             if (v >= 0 && id.contains ("siren")) setParam (*p, Params::voiceID (v, "type"), (float) VP::Siren);
@@ -1066,6 +1189,7 @@ int main (int argc, char* argv[])
     testPulsar();
     testGravity();
     testDust();
+    testEffects();
     testPlates();
     testTouchAboveHold();
     testKeys();

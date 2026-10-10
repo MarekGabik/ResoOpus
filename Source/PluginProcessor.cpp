@@ -80,6 +80,11 @@ void ResoOpusProcessor::prepareToPlay (double sampleRate, int)
         drift[v].seed (0x9e37u + (uint32_t) v * 104729u);
         voiceMod[v] = 0.0f;
     }
+    echo.prepare (sr);
+    space.prepare (sr);
+    for (auto& f : filters) f.reset();
+    filterPrimed = false;
+    echoPrevLen = 0;
     hiss[0].seed (0x1234567u); hiss[1].seed (0x7654321u);
     hiss[0].reset(); hiss[1].reset();
     lastMono = 0.0f;
@@ -257,6 +262,10 @@ void ResoOpusProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& mi
         for (auto& c : voices) c.reset();
         for (auto& m : voiceMod) m = 0.0f;
         lastMono = 0.0f;
+        for (auto& f : filters) f.reset();
+        echo.reset();
+        space.reset();
+        echoPrevLen = 0;
         for (auto& d : dc) d.reset();
         for (auto& o : oversamplers) if (o) o->reset();
         releaseAll();
@@ -441,21 +450,52 @@ void ResoOpusProcessor::processChunk (AudioBuffer<float>& out, int start, int le
         set (fbRamp, Params::gravityFeedback (gravity));
         set (dustRamp, 6.0f * dust);   // Hz of leakage between the voices
         networkPrimed = true;
+        toVoices = curG[GP::echo_voices] / 100.0f;
+
+        // filter coefficients at the oversampled rate (left / right spread apart)
+        const double osRate = sr * (1 << osIndex);
+        const float spread = 0.25f * curG[GP::flt_spread] / 100.0f;
+        for (int c = 0; c < 2; ++c)
+        {
+            const double fc = std::min (0.45 * osRate, (double) curG[GP::flt_cutoff] * (c == 0 ? 1.0 - spread : 1.0 + spread));
+            const float g = (float) std::tan (MathConstants<double>::pi * fc / osRate);
+            if (filterPrimed) cutoffRamp[c].set (g, count); else cutoffRamp[c].reset (g);
+        }
+        if (filterPrimed) { resRamp.set (curG[GP::flt_res] / 10.0f, count); driveRamp.set (curG[GP::flt_drive] / 10.0f, count); }
+        else { resRamp.reset (curG[GP::flt_res] / 10.0f); driveRamp.reset (curG[GP::flt_drive] / 10.0f); }
+        filterPrimed = true;
     }
     if (osIndex == 0)
+    {
         renderVoices (outL, outR, len);
+        applyFilter (outL, outR, len);
+    }
     else
     {
         auto& os = *oversamplers[osIndex - 1];
         juce::dsp::AudioBlock<const float> zin (zeros.getArrayOfReadPointers(), 2, (size_t) len);
         auto up = os.processSamplesUp (zin);
         renderVoices (up.getChannelPointer (0), up.getChannelPointer (1), (int) up.getNumSamples());
+        applyFilter (up.getChannelPointer (0), up.getChannelPointer (1), (int) up.getNumSamples());
         float* chans[2] = { outL, outR };
         juce::dsp::AudioBlock<float> down (chans, 2, (size_t) len);
         os.processSamplesDown (down);
     }
 
-    // 6. output
+    // 6. effects at the base rate: DC blocker, ECHO, SPACE
+    for (int i = 0; i < len; ++i) { outL[i] = dc[0].process (outL[i]); outR[i] = dc[1].process (outR[i]); }
+    {
+        ::dsp::Echo::Settings es;
+        es.time1 = curG[GP::echo_time1]; es.time2 = curG[GP::echo_time2];
+        es.feedback = curG[GP::echo_fb] / 100.0f; es.mix = curG[GP::echo_mix] / 100.0f;
+        es.mod = curG[GP::echo_mod] / 100.0f; es.self = (int) curG[GP::echo_self] == 0; es.dust = dust;
+        echo.process (outL, outR, len, es, fxRng, echoPrev);   // the echo is remembered for the voices (one chunk late)
+        echoPrevLen = len;
+        space.process (outL, outR, len, (int) curG[GP::space_algo], curG[GP::space_x] / 100.0f, curG[GP::space_y] / 100.0f,
+                       curG[GP::space_z] / 100.0f, curG[GP::space_blend] / 100.0f, dust, fxRng);
+    }
+
+    // 7. output
     const float master = curG[GP::master_vol] <= -59.9f ? 0.0f : Decibels::decibelsToGain (curG[GP::master_vol]);
     const float silentTargetNow = silentTarget.load (std::memory_order_relaxed);
     const float silentStep = (float) (1.0 / (0.006 * sr));
@@ -465,8 +505,8 @@ void ResoOpusProcessor::processChunk (AudioBuffer<float>& out, int start, int le
         else if (silentGain > silentTargetNow) silentGain = std::max (silentTargetNow, silentGain - silentStep);
         const float g = master * silentGain;
         const float breath = dust * 0.002f;   // background noise, up to -54 dBFS
-        float l = (dc[0].process (outL[i]) + breath * hiss[0].process (-0.5f)) * g;
-        float r = (dc[1].process (outR[i]) + breath * hiss[1].process (-0.5f)) * g;
+        float l = (outL[i] + breath * hiss[0].process (-0.5f)) * g;
+        float r = (outR[i] + breath * hiss[1].process (-0.5f)) * g;
         if (! std::isfinite (l)) l = 0.0f;
         if (! std::isfinite (r)) r = 0.0f;
         outL[i] = softLimit (l);
@@ -493,7 +533,8 @@ void ResoOpusProcessor::renderVoices (float* L, float* R, int count)
     for (int k = 0; k < count; ++k)
     {
         const float dev = devRamp.next(), ring = ringRamp.next(), dustDev = dustRamp.next();
-        const float fb = fbRamp.next() * lastMono;
+        const float echoIn = echoPrevLen > 0 ? toVoices * 2.0f * echoPrev[std::min (echoPrevLen - 1, k >> osIndex)] : 0.0f;
+        const float fb = fbRamp.next() * lastMono + echoIn;
         const float total = voiceMod[0] + voiceMod[1] + voiceMod[2] + voiceMod[3];
         float now[Params::numVoices];
         for (int v = 0; v < Params::numVoices; ++v)
@@ -505,6 +546,17 @@ void ResoOpusProcessor::renderVoices (float* L, float* R, int count)
         }
         for (int v = 0; v < Params::numVoices; ++v) voiceMod[v] = now[v];
         lastMono = jlimit (-1.5f, 1.5f, (L[k] + R[k]) * 1.2f);
+    }
+}
+
+void ResoOpusProcessor::applyFilter (float* L, float* R, int count)
+{
+    const bool bp = (int) curG[GP::flt_mode] == 1;
+    for (int k = 0; k < count; ++k)
+    {
+        const float gl = cutoffRamp[0].next(), gr = cutoffRamp[1].next(), res = resRamp.next(), drive = driveRamp.next();
+        L[k] = filters[0].process (L[k], gl, res, drive, bp);
+        R[k] = filters[1].process (R[k], gr, res, drive, bp);
     }
 }
 

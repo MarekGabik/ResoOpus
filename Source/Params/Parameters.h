@@ -153,6 +153,9 @@ namespace GP
     {
         master_vol = 0, oversampling, play_mode, touch, plates_base, snap, snap_scale, snap_root, a4, pb_range, pitch,
         gravity, gravity_path, dust,
+        flt_cutoff, flt_res, flt_drive, flt_mode, flt_spread,
+        echo_time1, echo_time2, echo_fb, echo_mix, echo_mod, echo_self, echo_voices,
+        space_algo, space_x, space_y, space_z, space_blend,
         count
     };
     enum PlayMode { Plates = 0, Keys };
