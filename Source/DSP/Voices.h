@@ -95,6 +95,9 @@ struct VoiceSettings
     // PULSAR
     float sharp = 0.0f;           // 0 triangle .. 1 square (through shark fin and saw)
     float bloom = 0.0f;           // 0..1: the envelope bends pitch and brightness
+    float twin = 7.0f;            // semitones of the second tone
+    float twinMix = 0.0f, sub = 0.0f;      // 0..1
+    float vibrato = 0.0f;         // 0..1 = 0..50 cents
 };
 
 // One voice: the three engines share the envelope, gain and pan; the type picks the engine.
@@ -112,6 +115,9 @@ public:
         tone.reset (r.next01());
         sub.reset (r.next01());
         pulsar.reset (r.next01());
+        twinOsc.reset (r.next01());
+        subOsc.reset (r.next01());
+        vibRate = 4.4 + 0.45 * (double) (seed % 7u) / 6.0 * 4.0;   // every voice its own speed (4.4-6.2 Hz)
         reset();
     }
 
@@ -243,19 +249,37 @@ private:
         ramp (inc[0], (float) s.rootMidi, n);
         ramp (inc[1], s.sharp, n);
         ramp (inc[2], s.bloom, n);
+        ramp (inc[3], s.twinMix, n);
+        ramp (inc[4], s.sub, n);
+        ramp (pullR, s.vibrato * 0.5f, n);   // semitones of vibrato depth
         ramp (gL, s.gainL * 0.42f, n);
         ramp (gR, s.gainR * 0.42f, n);
         primed = true;
+        const double vibInc = vibRate / sr;
         for (int k = 0; k < n; ++k)
         {
             const float root = inc[0].next(), sharp = inc[1].next(), bloom = inc[2].next();
+            const float mix = inc[3].next(), subLvl = inc[4].next(), vib = pullR.next();
             const float amp = nextLevel (target, aC, rC);
             const float lv = std::sqrt (amp);
-            // up to 60 cents flat and a third less edge while the voice is quiet
-            const double midi = (double) root - (double) (bloom * (1.0f - lv) * 0.6f);
-            pulsar.setShape (1.0f + 3.0f * std::min (1.0f, sharp * (1.0f - 0.33f * bloom * (1.0f - lv))), 0.5f);
+            vibPhase += vibInc;
+            vibPhase -= std::floor (vibPhase);
+            // up to 60 cents flat and a third less edge while the voice is quiet; plus the voice's own vibrato
+            const double midi = (double) root - (double) (bloom * (1.0f - lv) * 0.6f) + (double) vib * std::sin (twoPi * vibPhase);
+            const float shape = 1.0f + 3.0f * std::min (1.0f, sharp * (1.0f - 0.33f * bloom * (1.0f - lv)));
+            pulsar.setShape (shape, 0.5f);
             bool w; double wx;
-            const float x = pulsar.tick (hzToDt (midi, s.a4), w, wx);
+            float x = pulsar.tick (hzToDt (midi, s.a4), w, wx) * (1.0f - 0.4f * mix);
+            if (mix > 0.0005f)
+            {
+                twinOsc.setShape (shape, 0.5f);
+                x += 0.7f * mix * twinOsc.tick (hzToDt (midi + (double) s.twin, s.a4), w, wx);
+            }
+            if (subLvl > 0.0005f)
+            {
+                subOsc.setShape (0.5f, 0.5f);   // between sine and triangle: soft
+                x += 0.8f * subLvl * subOsc.tick (hzToDt (midi - 12.0, s.a4), w, wx);
+            }
             L[k] += x * gL.next() * amp;
             R[k] += x * gR.next() * amp;
         }
@@ -264,7 +288,8 @@ private:
     double sr = 96000.0;
     BlepSaw saws[5];
     BlepSquare tone, sub;
-    ShapeOsc pulsar;
+    ShapeOsc pulsar, twinOsc, subOsc;
+    double vibRate = 5.0, vibPhase = 0.0;
     Rng rng;
     float last[5] {};
     float level = 0.0f, modSmooth = 0.0f;

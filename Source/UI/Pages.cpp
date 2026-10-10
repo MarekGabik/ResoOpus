@@ -188,18 +188,23 @@ DronePage::DronePage (ResoOpusProcessor& p) : Page (p)
         const String V = Params::voiceID (v, "");
         auto put = [col] (Component* c, int cx, int y) { col->addAndMakeVisible (c); c->setTopLeftPosition (cx - c->getWidth() / 2, y); col->controls.add (c); };
         const int c1 = sw / 4 + 2, c2 = sw * 3 / 4 - 2;
-        put (knob (V + "tune", "TUNE", Palette::voiceType (voiceType (v)), range ("C0", "C8")), c1, 46);
+        put (knob (V + "tune", "TUNE", Palette::voiceType (voiceType (v)), range ("C0", "C8")), c1, 34);
         col->character[1] = knob (V + "tide", "TIDE", Palette::choir, range ("0", "MAX"));
         col->character[2] = knob (V + "siren_fm", "FM", Palette::siren, range ("0", "100"));
         col->character[3] = knob (V + "sharp", "SHARP", Palette::pulsar, range ("SOFT", "SHARP"));
-        for (int t = 1; t < 4; ++t) put (col->character[t], c2, 46);
-        put (knob (V + "hold", "HOLD", Palette::group, range ("0", "100")), c1, 182);
-        put (knob (V + "pan", "PAN", Palette::group, range ("L", "R", true)), c2, 182);
+        for (int t = 1; t < 4; ++t) put (col->character[t], c2, 34);
+        put (knob (V + "hold", "HOLD", Palette::group, range ("0", "100")), c1, 146);
+        put (knob (V + "pan", "PAN", Palette::group, range ("L", "R", true)), c2, 146);
         col->vol = new VolBar (proc, v);
         owned.add (col->vol);
         col->addAndMakeVisible (col->vol);
         col->vol->setBounds (12, gh - 44, sw - 24, 28);
         col->controls.add (col->vol);
+        col->trace = new LevelTrace();
+        owned.add (col->trace);
+        col->addAndMakeVisible (col->trace);
+        col->trace->setBounds (12, 252, sw - 24, 48);
+        col->controls.add (col->trace);
         columns[v] = col;
     }
 
@@ -273,8 +278,12 @@ DronePage::DronePage (ResoOpusProcessor& p) : Page (p)
         for (int i = 0; i < 5; ++i)
             add (knob (V + sirenIds[i], sirenNames[i], Palette::siren, range (sirenLo[i], sirenHi[i])), 134 + i * 100, 44, VP::Siren);
         // PULSAR
-        add (knob (V + "sharp", "SHARP", Palette::pulsar, range ("SOFT", "SHARP")), 134, 44, VP::Pulsar);
-        add (knob (V + "bloom", "BLOOM", Palette::pulsar, range ("0", "100")), 234, 44, VP::Pulsar);
+        const char* pulsarIds[] = { "bloom", "twin", "twin_mix", "sub", "vibrato" };
+        const char* pulsarNames[] = { "BLOOM", "TWIN", "BLEND", "SUB", "VIBRATO" };
+        const char* pulsarLo[] = { "0", "-12", "0", "0", "0" };
+        const char* pulsarHi[] = { "100", "+24", "100", "100", "50c" };
+        for (int i = 0; i < 5; ++i)
+            add (knob (V + pulsarIds[i], pulsarNames[i], Palette::pulsar, range (pulsarLo[i], pulsarHi[i])), 134 + i * 100, 44, VP::Pulsar);
 
         // envelope: every type that sounds
         auto* div = new Component();
@@ -407,6 +416,47 @@ void DronePage::VolBar::mouseDoubleClick (const MouseEvent&)
     vol->endChangeGesture();
 }
 
+void DronePage::LevelTrace::push (float level, float h)
+{
+    // repaint only while something changes (no redraw for a silent, steady voice)
+    const float prev = history[(head + size - 1) % size];
+    const bool nowFlat = std::abs (level - prev) < 0.002f && std::abs (h - hold) < 0.002f;
+    history[head] = level;
+    head = (head + 1) % size;
+    hold = h;
+    if (! (nowFlat && flat)) repaint();
+    flat = nowFlat;
+}
+
+void DronePage::LevelTrace::paint (Graphics& g)
+{
+    const auto r = getLocalBounds().toFloat();
+    g.setColour (Colour (0xff111216));
+    g.fillRoundedRectangle (r, 4.0f);
+    auto y = [&r] (float v) { return r.getBottom() - 3.0f - jlimit (0.0f, 1.0f, v) * (r.getHeight() - 6.0f); };
+    Path line, fill;
+    for (int i = 0; i < size; ++i)
+    {
+        const float x = r.getX() + r.getWidth() * (float) i / (float) (size - 1);
+        const float v = y (history[(head + i) % size]);
+        if (i == 0) { line.startNewSubPath (x, v); fill.startNewSubPath (x, r.getBottom()); fill.lineTo (x, v); }
+        else { line.lineTo (x, v); fill.lineTo (x, v); }
+    }
+    fill.lineTo (r.getRight(), r.getBottom());
+    fill.closeSubPath();
+    g.setGradientFill (ColourGradient (colour.withAlpha (0.28f), 0.0f, r.getY(), colour.withAlpha (0.02f), 0.0f, r.getBottom(), false));
+    g.fillPath (fill);
+    g.setColour (colour);
+    g.strokePath (line, PathStrokeType (1.4f));
+    if (hold > 0.001f)
+    {
+        const float hy = y (hold);
+        const float dashes[] = { 3.0f, 3.0f };
+        g.setColour (Palette::label.withAlpha (0.55f));
+        g.drawDashedLine (Line<float> (r.getX() + 2.0f, hy, r.getRight() - 2.0f, hy), dashes, 2, 1.0f);
+    }
+}
+
 void DronePage::refreshLive()
 {
     Page::refreshLive();
@@ -429,6 +479,8 @@ void DronePage::refreshLive()
         }
         c->setLiveValue (t == VP::Off ? 0.0f : jlimit (0.0f, 1.0f, lv * 1.5f));
         c->vol->refresh (lv);
+        c->trace->colour = Palette::voiceType (t);
+        c->trace->push (t == VP::Off ? 0.0f : lv, t == VP::Off ? 0.0f : proc.getParamReal (Params::voiceID (v, "hold")) / 100.0f);
     }
     gravity->refresh();
 

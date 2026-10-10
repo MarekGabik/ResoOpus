@@ -68,6 +68,12 @@ const std::vector<ParamDef>& Params::voiceDefs()
         d.push_back (F ("sharp", "Sharp", 0.0f, 100.0f, 20.0f, Unit::Percent, "Shape of the tone: triangle (soft) through shark fin and saw to square (sharp)"));
         d.push_back (F ("bloom", "Bloom", 0.0f, 100.0f, 40.0f, Unit::Percent,
                         "The envelope bends the tone: it starts a little flat and dull and blooms into pitch and edge as it swells"));
+        d.push_back (F ("twin", "Twin", -12.0f, 24.0f, 7.0f, Unit::Interval,
+                        "Interval of a second pulsar tone above the first (a few cents off unison = slow beating, 7 = fifth)"));
+        d.push_back (F ("twin_mix", "Blend", 0.0f, 100.0f, 0.0f, Unit::Percent, "How much of the twin tone you hear"));
+        d.push_back (F ("sub", "Sub", 0.0f, 100.0f, 0.0f, Unit::Percent, "A soft tone one octave below"));
+        d.push_back (F ("vibrato", "Vibrato", 0.0f, 100.0f, 0.0f, Unit::Percent,
+                        "Pitch vibrato up to 50 cents; every voice has its own slightly different speed, so they never wobble together"));
         return d;
     }();
     return defs;

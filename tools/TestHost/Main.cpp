@@ -162,7 +162,8 @@ static void testParameters()
     std::cout << "Parameters" << std::endl;
     const StringArray voiceOrder { "type", "tune", "int1", "int2", "int3", "int4", "int5", "on1", "on2", "on3", "on4", "on5",
                                    "tide", "attack", "release", "volume", "pan", "hold",
-                                   "siren_rate", "siren_fm", "siren_am", "siren_div", "siren_noise", "siren_wave", "sharp", "bloom" };
+                                   "siren_rate", "siren_fm", "siren_am", "siren_div", "siren_noise", "siren_wave", "sharp", "bloom",
+                                   "twin", "twin_mix", "sub", "vibrato" };
     bool ok = (int) Params::voiceDefs().size() == VP::count && voiceOrder.size() == VP::count;
     for (int i = 0; i < voiceOrder.size() && ok; ++i) ok = voiceOrder[i] == Params::voiceDefs()[(size_t) i].id;
     check (ok, "voice table matches the VP index constants (" + String ((int) Params::voiceDefs().size()) + " per voice)");
@@ -509,6 +510,19 @@ static void testPlates()
     }
 }
 
+static void testTouchAboveHold()
+{
+    std::cout << "Touch above a high HOLD" << std::endl;
+    auto p = makeProc();
+    setParam (*p, "v1_hold", 70.0f);
+    setParam (*p, "v1_attack", 0.2f);
+    for (int v = 1; v < Params::numVoices; ++v) setParam (*p, Params::voiceID (v, "type"), (float) VP::Off);
+    auto a = render (*p, 3.0);
+    auto b = render (*p, 2.0, { { 0.0, MidiMessage::noteOn (1, 60, 0.6f) } });
+    const double rise = rmsDb (b, 48000, b.getNumSamples()) - rmsDb (a, 96000, a.getNumSamples());
+    check (rise > 4.0, "a medium plate strike on a voice at HOLD 70 % still swells it by " + String (rise, 1) + " dB (> 4)");
+}
+
 static void testKeys()
 {
     std::cout << "Keys mode" << std::endl;
@@ -813,7 +827,9 @@ int main (int argc, char* argv[])
             // engine parameters only matter for their type: switch the voice to it
             const int v = id.startsWith ("v") ? id[1] - '1' : -1;
             if (v >= 0 && id.contains ("siren")) setParam (*p, Params::voiceID (v, "type"), (float) VP::Siren);
-            if (v >= 0 && (id.endsWith ("sharp") || id.endsWith ("bloom"))) setParam (*p, Params::voiceID (v, "type"), (float) VP::Pulsar);
+            if (v >= 0 && (id.endsWith ("sharp") || id.endsWith ("bloom") || id.endsWith ("twin") || id.endsWith ("twin_mix")
+                           || id.endsWith ("_sub") || id.endsWith ("vibrato"))) setParam (*p, Params::voiceID (v, "type"), (float) VP::Pulsar);
+            if (id.endsWith ("_twin")) setParam (*p, id + "_mix", 60.0f);
             if (v >= 0 && (id.contains ("_int") || id.contains ("_on") || id.endsWith ("tide"))) setParam (*p, Params::voiceID (v, "type"), (float) VP::Choir);
             setParam (*p, "snap", id.startsWith ("snap_") ? 2.0f : 0.0f);
             for (int k = 0; k < Params::numVoices; ++k) setParam (*p, Params::voiceID (k, "attack"), 0.3f);
@@ -877,6 +893,7 @@ int main (int argc, char* argv[])
     testSiren();
     testPulsar();
     testPlates();
+    testTouchAboveHold();
     testKeys();
     testRobustness();
     testState();

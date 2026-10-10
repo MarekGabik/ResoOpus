@@ -122,7 +122,7 @@ namespace VP
         type = 0, tune, int1, int2, int3, int4, int5, on1, on2, on3, on4, on5,
         tide, attack, release, volume, pan, hold,
         siren_rate, siren_fm, siren_am, siren_div, siren_noise, siren_wave,
-        sharp, bloom,
+        sharp, bloom, twin, twin_mix, sub, vibrato,
         count
     };
     enum Type { Off = 0, Choir, Siren, Pulsar };

@@ -378,6 +378,10 @@ void ResoOpusProcessor::processChunk (AudioBuffer<float>& out, int start, int le
         s.sirenWave = p[VP::siren_wave] / 100.0f;
         s.sharp = p[VP::sharp] / 100.0f;
         s.bloom = p[VP::bloom] / 100.0f;
+        s.twin = p[VP::twin];
+        s.twinMix = p[VP::twin_mix] / 100.0f;
+        s.sub = p[VP::sub] / 100.0f;
+        s.vibrato = p[VP::vibrato] / 100.0f;
         for (int i = 0; i < Params::numOscs; ++i)
         {
             s.intervals[i] = p[VP::int1 + i];
@@ -397,7 +401,8 @@ void ResoOpusProcessor::processChunk (AudioBuffer<float>& out, int start, int le
                 default:                  level = 0.35f + 0.65f * t.velocity; break;
             }
         }
-        s.target = std::max (hold, level);
+        // a touch always adds on top of HOLD (a share of the remaining headroom), so the plate swell is audible
+        s.target = t.gate ? hold + (1.0f - hold) * level : hold;
         // a light touch swells in slower (like a finger barely on a sensor)
         s.attack = p[VP::attack] * (t.gate ? 1.6f - 0.6f * level : 1.0f);
         s.release = p[VP::release];

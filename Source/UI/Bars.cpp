@@ -32,18 +32,19 @@ Rectangle<float> TopBar::area (int item) const
         for (int i = 0; i < item; ++i) x += tabW (i) + 4.0f;
         return { x, 0.0f, tabW (item), h };
     }
-    const float cx = getWidth() * 0.5f + 220.0f;
-    const float x0 = area (Tab0 + numTabs - 1).getRight() + 16.0f;
+    // preset browser in the middle, edit tools (undo, redo, A/B, Copy) on the right next to Mod and Help
+    const float cx = getWidth() * 0.5f;
+    const float w = (float) getWidth();
     switch (item)
     {
-        case Undo: return { x0, 8.0f, 20.0f, 20.0f };
-        case Redo: return { x0 + 26.0f, 8.0f, 20.0f, 20.0f };
-        case AB:   return { x0 + 58.0f, 6.0f, 32.0f, 24.0f };
-        case Copy: return { x0 + 94.0f, 6.0f, 38.0f, 24.0f };
-        case Prev: return { cx - 140.0f - 24.0f, 6.0f, 20.0f, 24.0f };
-        case Name: return { cx - 140.0f, 6.0f, 210.0f, 24.0f };
-        case Next: return { cx + 74.0f, 6.0f, 20.0f, 24.0f };
-        case Mod:  return { (float) getWidth() - 142.0f, 6.0f, 42.0f, 24.0f };
+        case Prev: return { cx - 105.0f - 26.0f, 6.0f, 20.0f, 24.0f };
+        case Name: return { cx - 105.0f, 6.0f, 210.0f, 24.0f };
+        case Next: return { cx + 105.0f + 6.0f, 6.0f, 20.0f, 24.0f };
+        case Undo: return { w - 284.0f, 8.0f, 20.0f, 20.0f };
+        case Redo: return { w - 258.0f, 8.0f, 20.0f, 20.0f };
+        case AB:   return { w - 226.0f, 6.0f, 32.0f, 24.0f };
+        case Copy: return { w - 190.0f, 6.0f, 38.0f, 24.0f };
+        case Mod:  return { w - 142.0f, 6.0f, 42.0f, 24.0f };
         case Help: return { (float) getWidth() - 94.0f, 6.0f, 40.0f, 24.0f };
         default:   return {};
     }

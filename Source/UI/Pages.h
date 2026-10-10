@@ -96,6 +96,20 @@ private:
         juce::Colour colour;
     };
 
+    // Level of a voice over the last ~8 s (what ATTACK, RELEASE and HOLD do), HOLD as a dashed line
+    struct LevelTrace : public juce::Component, public juce::SettableTooltipClient
+    {
+        LevelTrace() { setTooltip ("Level of this voice over the last 8 seconds: the rise is ATTACK, the fall is RELEASE, the dashed line is HOLD"); }
+        void push (float level, float hold);
+        void paint (juce::Graphics&) override;
+        static constexpr int size = 240;
+        float history[size] {};
+        int head = 0;
+        float hold = 0.0f;
+        bool flat = false;
+        juce::Colour colour;
+    };
+
     // One voice strip: light plate header ("CHOIR  1"), TUNE + character knob, HOLD + PAN, volume bar. Click to select.
     struct Column : public ModulePanel
     {
@@ -107,6 +121,7 @@ private:
         Knob* character[4] {};   // per type: -, TIDE, FM, SHARP
         juce::Array<juce::Component*> controls;
         VolBar* vol = nullptr;
+        LevelTrace* trace = nullptr;
         int type = -1;
         bool selected = false;
     };
