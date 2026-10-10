@@ -125,7 +125,8 @@ private:
     dsp::ColouredNoise hiss[2];
 
     // effects
-    dsp::GrowlFilter filters[2];
+    dsp::AnalogFilter filters[2];
+    int filterModel = 0;
     dsp::Ramp cutoffRamp[2], resRamp, driveRamp;
     bool filterPrimed = false;
     dsp::Echo echo;

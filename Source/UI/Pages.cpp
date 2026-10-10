@@ -698,16 +698,19 @@ FxPage::FxPage (ResoOpusProcessor& p) : Page (p)
     const int fxH = 236, gap = 10, g6 = 6;
 
     // FX row: FILTER, ECHO, SPACE
-    auto* filter = panel ("FILTER", Palette::filter, { 0, 0, 300, fxH }, -1, "12 dB");
+    filterPanel = panel ("FILTER", Palette::filter, { 0, 0, 340, fxH }, -1, "GROWL 12 dB");
+    auto* model = new LedRadio (proc, "flt_model", "MODEL", { "GROWL", "LADDER", "DIODE", "SCREAM", "SILK" });
+    model->setTooltip (Params::findDef ("flt_model")->tip);
+    owned.add (model);
     auto* mode = new LedRadio (proc, "flt_mode", "MODE", { "LOW PASS", "BAND PASS", "HIGH PASS" });
     owned.add (mode);
-    filter->setGrid ({ 1.3f, 1.0f, 1.0f }, {
+    filterPanel->setGrid ({ 1.0f, 1.15f, 1.0f }, {
         knob ("flt_cutoff", "CUTOFF", Palette::filter, sm ("20", "20k")),
         knob ("flt_res", "RESONANCE", Palette::filter, sm ("0", "10")),
         knob ("flt_drive", "DRIVE", Palette::filter, sm ("0", "10")),
-        mode, knob ("flt_spread", "SPREAD", Palette::filter, sm ("0", "100")), nullptr });
+        model, mode, knob ("flt_spread", "SPREAD", Palette::filter, sm ("0", "100")) });
 
-    auto* echoPanel = panel ("ECHO", Palette::mixer, { 300 + gap, 0, 470, fxH }, -1, "2 LINES");
+    auto* echoPanel = panel ("ECHO", Palette::mixer, { 340 + gap, 0, 430, fxH }, -1, "2 LINES");
     auto* src = new LedRadio (proc, "echo_self", "MOD SOURCE", { "SELF", "LFO" });
     owned.add (src);
     echoPanel->setGrid ({ 1.0f, 1.0f, 1.0f, 1.0f }, {
@@ -775,6 +778,13 @@ void FxPage::refreshLive()
     const bool leadOn = proc.getParamReal ("lead_on") > 0.5f;
     for (auto* p : leadPanels)
         if (std::abs (p->getAlpha() - (leadOn ? 1.0f : 0.45f)) > 0.01f) p->setAlpha (leadOn ? 1.0f : 0.45f);
+    const int fm = roundToInt (proc.getParamReal ("flt_model"));
+    if (fm != shownModel)
+    {
+        shownModel = fm;
+        static const char* slopes[] = { "GROWL 12 dB", "LADDER 24 dB", "DIODE 24 dB", "SCREAM 12 dB", "SILK 12 dB" };
+        filterPanel->setRightText (slopes[jlimit (0, 4, fm)]);
+    }
     const int a = roundToInt (proc.getParamReal ("space_algo"));
     if (a == shownAlgo) return;
     shownAlgo = a;

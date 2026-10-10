@@ -100,9 +100,10 @@ public:
 private:
     Knob* xyz[3] {};
     ModulePanel* spacePanel = nullptr;
+    ModulePanel* filterPanel = nullptr;
     juce::Label* spaceInfo = nullptr;
     juce::Array<ModulePanel*> leadPanels;
-    int shownAlgo = -1;
+    int shownAlgo = -1, shownModel = -1;
 };
 
 class DronePage : public Page

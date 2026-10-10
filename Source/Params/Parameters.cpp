@@ -155,6 +155,10 @@ const std::vector<ParamDef>& Params::globalDefs()
         d.push_back (C ("arp_rate", "Arp Rate", { "1/4", "1/8", "1/8 T", "1/16", "1/16 T", "1/32" }, 3, "Note length of the arpeggio (song tempo)"));
         d.push_back (C ("arp_octaves", "Arp Octaves", { "1", "2", "3", "4" }, 0, "How many octaves the arpeggio climbs"));
         d.push_back (B ("arp_latch", "Latch", false, "Keeps the arpeggio running after you let go of the keys"));
+        // appended later (parameter IDs stay in their order)
+        d.push_back (C ("flt_model", "Filter Model", { "Growl", "Ladder", "Diode", "Scream", "Silk" }, 0,
+                        "Character of the filter. Growl: dirty 12 dB that growls. Ladder: round 24 dB transistor ladder that sings. "
+                        "Diode: rubbery squelch, bites more than it rings. Scream: harsh 12 dB, screeches when pushed. Silk: clean and smooth"));
         return d;
     }();
     return defs;

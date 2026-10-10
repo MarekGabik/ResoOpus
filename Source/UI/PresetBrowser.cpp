@@ -321,14 +321,15 @@ void PresetBrowser::showOptionsMenu (int presetIndex, Point<int> screenPos)
     SafePointer<PresetBrowser> safe (this);
     const auto key = p.key();
     m.showMenuAsync (PopupMenu::Options().withTargetScreenArea (Rectangle<int> (1, 1).withPosition (screenPos)),
-                     [safe, presetIndex, key, isDefault] (int r)
+                     [safe, key, isDefault] (int r)
     {
         if (safe == nullptr) return;
         auto& st = *safe->settings;
         if (r == 1) st.setDefaultPreset (isDefault ? String() : key);
         if (r == 2) st.setFavourite (key, ! st.isFavourite (key));
-        if (r == 3) safe->showEditInfoDialog (presetIndex);
-        if (r == 4) safe->confirmDelete (presetIndex);
+        // look the preset up again: the list may have been rescanned while the menu was open
+        if (r == 3) safe->showEditInfoDialog (safe->presets.indexOf (key));
+        if (r == 4) safe->confirmDelete (safe->presets.indexOf (key));
     });
 }
 
@@ -388,11 +389,11 @@ void PresetBrowser::showEditInfoDialog (int presetIndex)
 
     SafePointer<PresetBrowser> safe (this);
     const auto key = p.key();
-    w->enterModalState (true, ModalCallbackFunction::create ([safe, w, asDefault, asFav, presetIndex, key] (int result)
+    w->enterModalState (true, ModalCallbackFunction::create ([safe, w, asDefault, asFav, key] (int result)
     {
         std::unique_ptr<ToggleButton> d (asDefault), f (asFav);
         if (safe == nullptr || result != 1) return;
-        safe->presets.updateInfo (presetIndex, w->getComboBoxComponent ("category")->getText(), w->getTextEditorContents ("description"));
+        safe->presets.updateInfo (safe->presets.indexOf (key), w->getComboBoxComponent ("category")->getText(), w->getTextEditorContents ("description"));
         auto& st = *safe->settings;
         if (d->getToggleState()) st.setDefaultPreset (key);
         else if (st.getDefaultPreset() == key) st.setDefaultPreset ({});

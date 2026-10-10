@@ -91,7 +91,7 @@ void ResoOpusProcessor::prepareToPlay (double sampleRate, int)
     lead.prepare (sr * (1 << osIndex));
     leadNum = arpNum = 0;
     arpPos = 0.0; arpGate = false;
-    for (auto& f : filters) f.reset();
+    for (auto& f : filters) { f.prepare (sr * (1 << osIndex)); f.reset(); }
     filterPrimed = false;
     echoPrevLen = 0;
     hiss[0].seed (0x1234567u); hiss[1].seed (0x7654321u);
@@ -110,6 +110,7 @@ void ResoOpusProcessor::setOversampling (int index)
     osIndex = index;
     for (auto& c : voices) c.setSampleRate (sr * (1 << osIndex));
     lead.setSampleRate (sr * (1 << osIndex));
+    for (auto& f : filters) f.prepare (sr * (1 << osIndex));
     for (auto& o : oversamplers) if (o) o->reset();
     pendingLatency = computeLatency();
     triggerAsyncUpdate();
@@ -675,11 +676,13 @@ void ResoOpusProcessor::runArp (int len)
 void ResoOpusProcessor::applyFilter (float* L, float* R, int count)
 {
     const int mode = (int) curG[GP::flt_mode];
+    const int model = (int) curG[GP::flt_model];
+    if (model != filterModel) { filterModel = model; for (auto& f : filters) f.reset(); }   // each model keeps its own state
     for (int k = 0; k < count; ++k)
     {
         const float gl = cutoffRamp[0].next(), gr = cutoffRamp[1].next(), res = resRamp.next(), drive = driveRamp.next();
-        L[k] = filters[0].process (L[k], gl, res, drive, mode);
-        R[k] = filters[1].process (R[k], gr, res, drive, mode);
+        L[k] = filters[0].process (L[k], gl, res, drive, mode, model);
+        R[k] = filters[1].process (R[k], gr, res, drive, mode, model);
     }
 }
 

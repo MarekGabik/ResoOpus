@@ -119,7 +119,9 @@ static std::vector<double> spectrum (const AudioBuffer<float>& b, int start, int
     {
         const double w = 0.35875 - 0.48829 * std::cos (2 * MathConstants<double>::pi * i / N) + 0.14128 * std::cos (4 * MathConstants<double>::pi * i / N)
                          - 0.01168 * std::cos (6 * MathConstants<double>::pi * i / N);
-        data[(size_t) i] = (float) ((b.getSample (0, start + i) + b.getSample (1, start + i)) * 0.5 * w);
+        // past the end of the render counts as silence (never read outside the buffer)
+        const float x = start + i < b.getNumSamples() ? (b.getSample (0, start + i) + b.getSample (1, start + i)) * 0.5f : 0.0f;
+        data[(size_t) i] = (float) (x * w);
     }
     fft.performFrequencyOnlyForwardTransform (data.data());
     std::vector<double> db ((size_t) N / 2);
@@ -130,7 +132,8 @@ static std::vector<double> spectrum (const AudioBuffer<float>& b, int start, int
 // Frequency of the strongest peak between lo and hi Hz (parabolic interpolation on the dB spectrum)
 static double peakFrequency (const AudioBuffer<float>& b, double sr, double lo, double hi, int start)
 {
-    const int order = 16;
+    int order = 16;   // the window has to fit into the render
+    while (order > 12 && start + (1 << order) > b.getNumSamples()) --order;
     const auto db = spectrum (b, start, order);
     const double binHz = sr / (double) (1 << order);
     size_t best = (size_t) (lo / binHz);
@@ -178,7 +181,7 @@ static void testParameters()
                                     "space_algo", "space_x", "space_y", "space_z", "space_blend",
                                     "lead_on", "lead_wave", "lead_octave", "lead_osc2", "lead_mix", "lead_sync", "lead_sub",
                                     "lead_attack", "lead_decay", "lead_sustain", "lead_release", "lead_glide", "lead_vib", "lead_vib_rate",
-                                    "lead_vib_delay", "lead_touch_vib", "lead_level", "lead_pan", "arp_on", "arp_mode", "arp_rate", "arp_octaves", "arp_latch" };
+                                    "lead_vib_delay", "lead_touch_vib", "lead_level", "lead_pan", "arp_on", "arp_mode", "arp_rate", "arp_octaves", "arp_latch", "flt_model" };
     ok = (int) Params::globalDefs().size() == GP::count;
     for (int i = 0; i < globalOrder.size() && ok; ++i) ok = globalOrder[i] == Params::globalDefs()[(size_t) i].id;
     check (ok, "global table matches the GP index constants (" + String ((int) Params::globalDefs().size()) + ")");
@@ -645,12 +648,13 @@ static void testEffects()
 {
     std::cout << "FILTER, ECHO, SPACE" << std::endl;
     const double sr = 48000.0;
-    auto harmonicDb = [sr] (float cutoff, float res, int mode, double f)
+    auto harmonicDb = [sr] (float cutoff, float res, int mode, double f, int model = 0)
     {
         auto p = makeProc (sr);
         soloVoice1 (*p, 45.0f);   // 110 Hz saw
         setParam (*p, "space_blend", 0.0f);
         setParam (*p, "flt_cutoff", cutoff); setParam (*p, "flt_res", res); setParam (*p, "flt_mode", (float) mode);
+        setParam (*p, "flt_model", (float) model);
         auto out = render (*p, 2.0);
         const auto db = spectrum (out, (int) (0.5 * sr), 15);
         const double binHz = sr / 32768.0;
@@ -671,6 +675,32 @@ static void testEffects()
         setParam (*p, "flt_cutoff", 800.0f); setParam (*p, "flt_res", 10.0f); setParam (*p, "flt_drive", 10.0f);
         auto out = render (*p, 10.0);
         check (allFinite (out) && peakDb (out) < 0.0, "FILTER resonance and drive at maximum for 10 s: finite, peak " + String (peakDb (out), 1) + " dBFS");
+    }
+    {
+        // the five models: every mode filters, extremes stay finite, BAND PASS keeps its level at full resonance
+        static const char* models[] = { "GROWL", "LADDER", "DIODE", "SCREAM", "SILK" };
+        auto rmsWith = [sr] (int model, int mode, float cutoff, float res, float drive)
+        {
+            auto p = makeProc (sr);
+            setParam (*p, "space_blend", 0.0f);
+            setParam (*p, "flt_model", (float) model); setParam (*p, "flt_mode", (float) mode);
+            setParam (*p, "flt_cutoff", cutoff); setParam (*p, "flt_res", res); setParam (*p, "flt_drive", drive);
+            auto out = render (*p, 4.0);
+            return std::make_pair (rmsDb (out, (int) (2.0 * sr)), allFinite (out) && peakDb (out) < 0.0);
+        };
+        for (int m = 0; m < 5; ++m)
+        {
+            const double lo = harmonicDb (500.0f, 0.0f, 0, 3080.0, m);
+            const double hpLow = harmonicDb (2500.0f, 0.0f, 2, 110.0, m);
+            const auto bp0 = rmsWith (m, 1, 1000.0f, 0.0f, 0.0f), bp10 = rmsWith (m, 1, 1000.0f, 10.0f, 0.0f);
+            bool stable = true;
+            for (int mode = 0; mode < 3; ++mode)
+                for (float fc : { 20.0f, 20000.0f })
+                    stable = stable && rmsWith (m, mode, fc, 10.0f, 10.0f).second;
+            check (open - lo > 20.0 && lowOpen - hpLow > 18.0 && bp10.first > bp0.first - 4.0 && stable,
+                   String (models[m]) + ": low pass -" + String (roundToInt (open - lo)) + " dB at 3 kHz, high pass -" + String (roundToInt (lowOpen - hpLow))
+                   + " dB at 110 Hz, band pass at full resonance " + String (bp10.first - bp0.first, 1) + " dB, extremes finite");
+        }
     }
     {
         // ECHO: a 30 ms pluck comes back after TIME 1 on the left
@@ -1099,7 +1129,7 @@ static void testPresets()
         auto d = makeProc();
         if (const int di = d->presets->indexOf (c->presets->getCurrentKey()); di >= 0) d->presets->load (di, false);
         check (overwritten && std::abs (d->getParamReal ("dust") - 63.0f) < 0.01f, "Save overwrites the current user preset");
-        const bool removed = c->presets->remove (ci);
+        const bool removed = c->presets->remove (c->presets->indexOf (b->presets->getCurrentKey()));
         check (removed && c->presets->indexOf (b->presets->getCurrentKey()) < 0, "Delete removes the user preset file");
 
         // next / previous wraps around the list
@@ -1340,6 +1370,26 @@ int main (int argc, char* argv[])
     {
         snapshotDir = root.getChildFile ("snapshots");
         snapshotDir.createDirectory();
+    }
+    if (argc > 1 && String (argv[1]) == "--repeat")
+    {
+        // diagnostics: the same SIREN FM render many times; any difference means non-deterministic audio
+        double first = 0.0;
+        for (int i = 0; i < 300; ++i)
+        {
+            auto p = makeProc (48000.0);
+            soloVoice1 (*p, 69.0f, VP::Siren);
+            setParam (*p, "v1_siren_fm", 50.0f);
+            setParam (*p, "v1_siren_rate", 0.5f);
+            setParam (*p, "v1_siren_wave", 0.0f);
+            auto out = render (*p, 2.0);
+            double sum = 0.0;
+            for (int k = 0; k < out.getNumSamples(); ++k) sum += std::abs (out.getSample (0, k));
+            if (i == 0) first = sum;
+            if (sum != first || ! std::isfinite (sum)) std::cout << "run " << i << ": " << sum << " vs " << first << std::endl;
+        }
+        std::cout << "done" << std::endl;
+        return 0;
     }
     if (argc > 1 && String (argv[1]) == "--audit")
     {
