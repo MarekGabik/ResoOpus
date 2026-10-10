@@ -1,0 +1,500 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ResoOpus Manual</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="page">
+  <nav class="toc" aria-label="Contents">
+    <div class="lang" aria-label="Language"><a href="index.html" hreflang="cs" lang="cs">CS</a><span aria-current="page">EN</span></div>
+    <p>Contents</p>
+    <ol>
+      <li><a href="#principle">How it works</a></li>
+      <li><a href="#start">Quick start</a></li>
+      <li><a href="#voices">Voices</a></li>
+      <li><a href="#types">CHOIR · SIREN · PULSAR</a></li>
+      <li><a href="#gravity">GRAVITY</a></li>
+      <li><a href="#master">MASTER and DUST</a></li>
+      <li><a href="#fx">FILTER · ECHO · SPACE</a></li>
+      <li><a href="#lead">LEAD and ARP</a></li>
+      <li><a href="#modulation">Modulation</a></li>
+      <li><a href="#playing">Playing and bars</a></li>
+      <li><a href="#browser">Preset browser</a></li>
+      <li class="genre sep"><a href="#blade">Neon and rain</a></li>
+      <li class="genre"><a href="#dune">Desert and spice</a></li>
+      <li class="genre"><a href="#calm">Clean calm drone</a></li>
+      <li class="genre"><a href="#organ">Cosmic organ</a></li>
+      <li class="genre"><a href="#contact">First contact</a></li>
+      <li class="genre"><a href="#synthwave">Synthwave arpeggio</a></li>
+      <li class="genre"><a href="#dread">Creeping dread</a></li>
+      <li class="genre"><a href="#zone">The zone</a></li>
+      <li class="genre"><a href="#ship">Deep space</a></li>
+      <li class="genre"><a href="#meditation">Meditation</a></li>
+      <li class="sep"><a href="#presets">Factory presets</a></li>
+      <li><a href="#measurements">Measurements</a></li>
+      <li><a href="#trouble">Troubleshooting</a></li>
+      <li><a href="#keys">Mouse and keys</a></li>
+      <li><a href="#install">Installation and files</a></li>
+    </ol>
+  </nav>
+
+  <main>
+  <div class="doc">
+    <header class="hero">
+      <div class="hero-top">
+        <p class="eyebrow">User manual · version 0.1.0</p>
+        <div class="lang" aria-label="Language"><a href="index.html" hreflang="cs" lang="cs">CS</a><span aria-current="page">EN</span></div>
+      </div>
+      <h1>Reso<span class="q">Opus</span></h1>
+      <p class="lede">A drone synthesizer for cinematic, ambient and experimental soundscapes. Four hand-tuned, microtonal voices in two pairs play as soon as the plugin is on a track. In the centre sits the big GRAVITY knob, which leads from pure tuning to chaos. Add a filter with five characters, an echo, a space and a melodic LEAD layer with an arpeggiator.</p>
+      <div class="meta">
+        <span>VST3 · Windows / macOS</span><span>AU · macOS</span><span>instrument · drone + mono lead</span><span>Ableton Live 11 / 12</span><span>4 voices · 24 modulations · 42 presets</span>
+      </div>
+    </header>
+
+    <figure class="shot"><img src="img/overview.jpg" alt="DRONE page with the Monastery preset" width="2400" height="1552"><figcaption>The <strong>DRONE</strong> page with the <strong>Monastery</strong> preset. At the top the four voices with GRAVITY in the middle, below them the selected voice's detail and MASTER, at the bottom the keyboard with numbered "plates". Colour tells the voice type: CHOIR cyan, SIREN pink, PULSAR violet.</figcaption></figure>
+
+    <h2 id="principle"><span class="num">01</span>How it works</h2>
+    <p>ResoOpus is an instrument that plays by itself. Every voice has a <strong>HOLD</strong> level it sounds at without being touched. Playing a voice lifts it above that level, and letting go returns it there. The keys don't trigger the drone, they <em>shape</em> it.</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Page</th><th>Contents</th></tr></thead>
+      <tbody>
+        <tr><td>DRONE</td><td>Four voices (type, tuning, HOLD, PAN, volume), GRAVITY, the selected voice's detail, MASTER (PITCH, DUST, VOLUME, FILL).</td></tr>
+        <tr><td>LEAD · FX</td><td>At the top FILTER, ECHO and SPACE for the whole instrument. Below the melodic LEAD layer (oscillators, envelope, vibrato) and ARP.</td></tr>
+      </tbody>
+    </table></div>
+    <div class="chain"><span>4 voices (CHOIR / SIREN / PULSAR)</span><i>⇄</i><span class="me">GRAVITY · DUST</span><i>→</i><span>+ LEAD</span><i>→</i><span>FILTER</span><i>→</i><span>ECHO</span><i>→</i><span>SPACE</span><i>→</i><span>MASTER → limiter</span></div>
+    <p>The voices form two pairs, <strong>1·2</strong> and <strong>3·4</strong>. GRAVITY lets the voices of a pair, and later all four in one ring, modulate each other. Voices, LEAD and filter run oversampled (2× by default), so high notes and heavy modulation stay clean. A soft limiter at the end keeps the output below −0.3 dBFS.</p>
+    <div class="note info"><p><strong>Silent? That's fine.</strong>Some presets (Slow Bloom, Requiem Air, Four Plates) have HOLD at zero and only sound while you play. All other presets drone right away.</p></div>
+
+    <h2 id="start"><span class="num">02</span>Quick start</h2>
+    <ol class="steps">
+      <li><div>Put ResoOpus on a MIDI track in Ableton (Plug-Ins → Gavr → ResoOpus). You hear a drone immediately.</div></li>
+      <li><div>Play the white keys <strong>C3, D3, E3, F3</strong> (numbered 1–4 on the keyboard below). Each one swells one voice, more the harder you play.</div></li>
+      <li><div>Turn <strong>GRAVITY</strong> in the middle. To the left: pure tuning and slow beating. To the right the voices start to tremble, growl and finally pulse on their own.</div></li>
+      <li><div>Click the preset name at the top. The browser opens with categories and a description of what to turn first.</div></li>
+      <li><div>On the <strong>LEAD · FX</strong> page try FILTER, ECHO and SPACE. The power icon at the tab switches the LEAD on: keys outside C3–F3 then play a melody.</div></li>
+    </ol>
+
+    <h2 id="voices"><span class="num">03</span>Voices</h2>
+    <div class="duo">
+      <figure class="shot"><img src="img/voice-strip.jpg" alt="Voice 1" width="432" height="720" loading="lazy"><figcaption>Voice 1 (CHOIR)</figcaption></figure>
+      <div>
+        <p>Every voice is its own module. Click it to select it and its details appear in the <strong>VOICE</strong> panel below.</p>
+        <ul>
+          <li>The <strong>header</strong> shows the type and voice number (= plate number on the keyboard). The dot lights up while the voice sounds.</li>
+          <li><strong>TUNE</strong>: C0–C8, free and microtonal. Double-click to type a note with cents, e.g. <code>D2+12</code>.</li>
+          <li>The <strong>second knob</strong> follows the type: TIDE (CHOIR), FM (SIREN), SHARP (PULSAR).</li>
+          <li><strong>HOLD</strong>: drone level without touching anything. 0 % = only sounds while played.</li>
+          <li><strong>PAN</strong>: position left / right.</li>
+          <li>The <strong>trace</strong> shows the voice's level over the last ~8 s. The rise is ATTACK, the fall RELEASE, the dashed line HOLD.</li>
+          <li><strong>VOL</strong>: drag for volume (−60 to +6 dB), double-click = −2 dB. The thin green line below is the live level.</li>
+        </ul>
+      </div>
+    </div>
+    <p>The voice detail always has <strong>TYPE</strong> (OFF / CHOIR / SIREN / PULSAR), <strong>ATTACK</strong> (1 ms–30 s, how slowly the voice swells, also when HOLD brings it in) and <strong>RELEASE</strong> (1 ms–30 s, how long it fades). A voice set to OFF uses no CPU.</p>
+
+    <h2 id="types"><span class="num">04</span>CHOIR · SIREN · PULSAR</h2>
+    <h3>CHOIR: five saws as a chord</h3>
+    <figure class="shot"><img src="img/detail-choir.jpg" alt="CHOIR detail" width="1724" height="372" loading="lazy"><figcaption>CHOIR: TYPE, CHORD, the intervals of the five oscillators with LED switches, ATTACK and RELEASE.</figcaption></figure>
+    <ul>
+      <li><strong>CHORD</strong> fills all five intervals at once: <em>Unison</em> (a few cents apart, beating), <em>Octaves</em>, <em>Fifths</em>, <em>Major</em> (0 4 7 12 16), <em>Minor</em> (0 3 7 12 15).</li>
+      <li><strong>OSC 1–5</strong>: interval of each saw above TUNE (−24 to +36 semitones). <kbd>Shift</kbd>-drag moves in cents. The LED above the knob switches the saw off.</li>
+      <li><strong>TIDE</strong> (in the voice module): up to 50 % it pulls the whole chord down. Beyond 50 % it sinks further and the saws start to modulate each other: growl, metallic overtones and crackle at the bottom.</li>
+    </ul>
+    <h3>SIREN: sirens, birds, monsters, wind</h3>
+    <figure class="shot"><img src="img/detail-siren.jpg" alt="SIREN detail" width="1724" height="372" loading="lazy"><figcaption>SIREN: the modulator (RATE, AM, WAVE), DIVIDER for sub-harmonics and NOISE.</figcaption></figure>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Control</th><th>What it does</th></tr></thead>
+      <tbody>
+        <tr><td>FM (voice module)</td><td>How far the modulator sweeps the pitch, up to ±3 octaves.</td></tr>
+        <tr><td>RATE</td><td>Modulator speed 0.05–300 Hz: slow wails, warbles, buzzing. Above ~30 Hz it becomes a new timbre.</td></tr>
+        <tr><td>AM</td><td>How much the modulator chops the tone into beeps (Morse, alarm).</td></tr>
+        <tr><td>DIVIDER</td><td>Adds a sub-harmonic: 1:2 = an octave below, 1:3, 1:5… up to 1:16. Growl and monsters.</td></tr>
+        <tr><td>NOISE</td><td>White noise: wind, surf, static.</td></tr>
+        <tr><td>WAVE</td><td>Modulator shape: 0 = square (two-tone siren), 100 = triangle (wail).</td></tr>
+      </tbody>
+    </table></div>
+    <h3>PULSAR: one tone that blooms</h3>
+    <figure class="shot"><img src="img/detail-pulsar.jpg" alt="PULSAR detail" width="1724" height="372" loading="lazy"><figcaption>PULSAR: BLOOM, TWIN with BLEND, SUB and VIBRATO.</figcaption></figure>
+    <ul>
+      <li><strong>SHARP</strong> (voice module): the shape of the tone from a soft triangle through shark fin and saw to a sharp square.</li>
+      <li><strong>BLOOM</strong>: the envelope bends the tone. It starts a little flat and dull and blooms into pitch and edge.</li>
+      <li><strong>TWIN</strong> and <strong>BLEND</strong>: a second tone above the first (−12 to +24 semitones). A few cents off unison = slow beating, 7 = a fifth.</li>
+      <li><strong>SUB</strong>: a soft tone an octave below. <strong>VIBRATO</strong>: up to 50 cents; every voice has a slightly different speed, so they never wobble together.</li>
+    </ul>
+
+    <h2 id="gravity"><span class="num">05</span>GRAVITY</h2>
+    <p>GRAVITY is the heart of the instrument: one knob from tuning to chaos. The voices frequency-modulate each other, first in pairs, then in one ring, and finally the instrument's own output joins the loop.</p>
+    <div class="quad">
+      <figure class="shot"><img src="img/gravity-10.jpg" alt="GRAVITY 10 %" width="616" height="720" loading="lazy"><figcaption>STILL 10 %</figcaption></figure>
+      <figure class="shot"><img src="img/gravity-40.jpg" alt="GRAVITY 40 %" width="616" height="720" loading="lazy"><figcaption>ORBIT 40 %</figcaption></figure>
+      <figure class="shot"><img src="img/gravity-70.jpg" alt="GRAVITY 70 %" width="616" height="720" loading="lazy"><figcaption>TURBULENCE 70 %</figcaption></figure>
+      <figure class="shot"><img src="img/gravity-93.jpg" alt="GRAVITY 93 %" width="616" height="720" loading="lazy"><figcaption>COLLAPSE 93 %</figcaption></figure>
+    </div>
+    <div class="zones">
+      <div class="z1"><b>STILL 0–25 %</b>Pure tuning, only slow beating between the voices.</div>
+      <div class="z2"><b>ORBIT 25–55 %</b>The voices of a pair pull on each other (FM), the tone trembles and glitters.</div>
+      <div class="z3"><b>TURBULENCE 55–85 %</b>All four in one loop, the output feeds back into the voices. It growls and breathes.</div>
+      <div class="z4"><b>COLLAPSE 85–100 %</b>The loop runs away and pulses on its own. It never repeats.</div>
+    </div>
+    <p>The coloured dots on the orbit are the voices in the colour of their type. They grow with their level, and as GRAVITY rises they pull together and shake. Loudness changes by only about 2 dB between STILL and COLLAPSE, so you can automate GRAVITY without jumps.</p>
+    <ul>
+      <li><strong>Right-click</strong> GRAVITY → <strong>PATH</strong>: <em>Auto</em> (pairs up to the middle, then a ring), <em>Pairs</em> (always pairs 1·2 and 3·4), <em>Ring</em> (always the ring 1→2→3→4→1). The menu also has <em>Modulate with</em>.</li>
+      <li>Drag up / down (<kbd>Shift</kbd> = fine), mouse wheel, double-click = type a value, <kbd>Cmd</kbd>/<kbd>Ctrl</kbd>-click = default 15 %.</li>
+    </ul>
+    <div class="duo">
+      <figure class="shot"><img src="img/gravity-mod.jpg" alt="GRAVITY with modulation" width="616" height="720" loading="lazy"><figcaption>Preset Tidal Lock: mod wheel on GRAVITY.</figcaption></figure>
+      <div>
+        <p>When GRAVITY is modulated, a <strong>ring</strong> in the source's colour appears around the knob, with a dot for its live value. Drag the ring to change the depth.</p>
+        <p>The best pairing is <strong>finger pressure</strong> (aftertouch) on GRAVITY: a light touch keeps the voices in orbit, pressing harder pulls them into turbulence. The presets <em>Gravity Well</em> and <em>Event Horizon</em> work this way.</p>
+        <p><strong>ECHO TO VOICES</strong> on the FX page feeds the echo back into the voices as extra FM. With more GRAVITY the whole instrument becomes one loop.</p>
+      </div>
+    </div>
+
+    <h2 id="master"><span class="num">06</span>MASTER and DUST</h2>
+    <figure class="shot narrow"><img src="img/master.jpg" alt="MASTER" width="616" height="372" loading="lazy"></figure>
+    <ul>
+      <li><strong>PITCH</strong>: transposes all four voices together (±24 semitones), their intervals stay the same.</li>
+      <li><strong>DUST</strong>: analog life. Slow drift of the tuning, voices leaking into each other and a quiet breath of noise in the background (at most −54 dBFS). 0 % = clean digital.</li>
+      <li><strong>VOLUME</strong>: output level (−∞ to +12 dB).</li>
+      <li><strong>FILL</strong> (right in the header): spreads the four voices over a chosen scale from a chosen root. The quick way to a tuned chord.</li>
+    </ul>
+
+    <h2 id="fx"><span class="num">07</span>FILTER · ECHO · SPACE</h2>
+    <figure class="shot"><img src="img/fx.jpg" alt="LEAD · FX page" width="2400" height="1552" loading="lazy"><figcaption>The <strong>LEAD · FX</strong> page with the Pulse Engine preset: LADDER filter, eighth-note ECHO, VOID, and below the LEAD with an arpeggio.</figcaption></figure>
+    <h3>FILTER</h3>
+    <div class="duo">
+      <figure class="shot"><img src="img/filter.jpg" alt="FILTER" width="696" height="488" loading="lazy"><figcaption>Preset Squelch Bass: velocity modulates CUTOFF (ring).</figcaption></figure>
+      <div>
+        <p>A stereo filter for the whole instrument, running oversampled. <strong>CUTOFF</strong> 20 Hz–20 kHz, <strong>RESONANCE</strong> 0–10, <strong>DRIVE</strong> 0–10, <strong>SPREAD</strong> detunes the left and right filters against each other (wider stereo). <strong>MODE</strong>: Low Pass, Band Pass, High Pass (High Pass removes the lows for clear, high drones).</p>
+      </div>
+    </div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Model</th><th>Slope</th><th>Character</th></tr></thead>
+      <tbody>
+        <tr><td>GROWL</td><td class="num">12 dB</td><td>Dirty state-variable filter with saturating integrators. Loud input and resonance growl.</td></tr>
+        <tr><td>LADDER</td><td class="num">24 dB</td><td>Transistor ladder: round, thins the lows a little at high resonance and sings.</td></tr>
+        <tr><td>DIODE</td><td class="num">24 dB</td><td>Diode ladder with coupled stages: rubbery "squelch", the resonance bites more than it rings.</td></tr>
+        <tr><td>SCREAM</td><td class="num">12 dB</td><td>Clipped resonance loop: harsh, screams and screeches when pushed.</td></tr>
+        <tr><td>SILK</td><td class="num">12 dB</td><td>Clean and smooth, only the input is gently limited. For calm pads.</td></tr>
+      </tbody>
+    </table></div>
+    <p>At full resonance Band Pass keeps its level (from +0.6 to +9.8 dB against resonance 0, depending on the model): a narrow band doesn't vanish, it sings.</p>
+    <h3>ECHO</h3>
+    <figure class="shot"><img src="img/echo.jpg" alt="ECHO" width="876" height="488" loading="lazy"></figure>
+    <ul>
+      <li>Two lines (<strong>TIME 1</strong> left, <strong>TIME 2</strong> right, 5 ms–2 s) with cross feedback. Time changes glide like tape.</li>
+      <li><strong>FEEDBACK</strong>: above ~55 % the echo starts to sing on its own. You can "play" the standing waves with TIME. The loop has a ceiling, so the level never runs away.</li>
+      <li><strong>MIX</strong>: dry / echo. <strong>MOD</strong> and <strong>MOD SOURCE</strong>: <em>Self</em> = the echo modulates its own time (resonances turn unstable), <em>LFO</em> = a slow sine.</li>
+      <li><strong>TO VOICES</strong>: the echo returns into the voices as FM. See GRAVITY.</li>
+    </ul>
+    <h3>SPACE</h3>
+    <figure class="shot"><img src="img/space.jpg" alt="SPACE" width="764" height="488" loading="lazy"></figure>
+    <p>Five algorithms. The labels of X, Y and Z follow the algorithm and a short description is right in the panel. <strong>BLEND</strong> is dry / effect.</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Algorithm</th><th>X · Y · Z</th><th>Sound</th></tr></thead>
+      <tbody>
+        <tr><td>AURORA</td><td>OCT UP · OCT DOWN · DECAY</td><td>Shimmer: the reverb rises an octave up or falls an octave down as it decays.</td></tr>
+        <tr><td>VOID</td><td>PRE-DELAY · WOBBLE · DECAY</td><td>A huge dark space. DECAY at the very top freezes what is sounding (FREEZE).</td></tr>
+        <tr><td>RUNNER</td><td>FEEDBACK · TIME · PITCH</td><td>Repeats that rise or fall. PITCH per repeat, middle = none.</td></tr>
+        <tr><td>SATURN</td><td>FREQUENCY · STEPS · ROOM</td><td>Metallic ring modulation. STEPS jumps to random notes, ROOM adds a space.</td></tr>
+        <tr><td>COMET</td><td>FEEDBACK · TIME · WOBBLE</td><td>A dirty, saturated delay that sings at high FEEDBACK.</td></tr>
+      </tbody>
+    </table></div>
+    <p>Every loop in the FX has a ceiling and feedback compensation, and the stereo balance follows the input. Neither ECHO at 100 % nor COMET jumps in level or drifts to one side (measured within ±3 dB, L/R within 1 dB).</p>
+
+    <h2 id="lead"><span class="num">08</span>LEAD and ARP</h2>
+    <figure class="shot"><img src="img/lead-row.jpg" alt="LEAD and ARP" width="2344" height="604" loading="lazy"><figcaption>LEAD OSC, ENVELOPE, LEAD VOICE and ARP. The panels are dimmed while the LEAD is off.</figcaption></figure>
+    <p>LEAD is a monophonic melodic layer above the drone. Switch it on with the <strong>power icon</strong> at the LEAD · FX tab (gold = playing). Then every key <em>outside</em> the plates C3–F3 plays the LEAD; in Keys mode all keys do. The LEAD goes through the same FILTER, ECHO and SPACE as the voices.</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Panel</th><th>Controls</th></tr></thead>
+      <tbody>
+        <tr><td>LEAD OSC</td><td><strong>WAVE</strong> morphs Sine → Triangle → Shark fin → Saw → Square. <strong>OSC 2</strong> interval ±12 semitones (a few cents = chorus, 7 = fifth), <strong>OSC 2 LEVEL</strong>, <strong>OCTAVE</strong> ±2, <strong>SUB</strong> sine an octave below, <strong>SYNC</strong> = hard sync (set OSC 2 a few semitones up for the classic tear).</td></tr>
+        <tr><td>ENVELOPE</td><td>ADSR: ATTACK 1 ms–10 s, DECAY and RELEASE 1 ms–30 s, SUSTAIN.</td></tr>
+        <tr><td>LEAD VOICE</td><td><strong>GLIDE</strong> (slides between overlapping notes, 0–2 s), <strong>VIBRATO</strong> (100 % = a semitone), <strong>VIB RATE</strong>, <strong>VIB DELAY</strong> (vibrato fades in after each note), <strong>TOUCH VIB</strong> (more vibrato when pressing harder), <strong>VOLUME</strong>, <strong>PAN</strong>.</td></tr>
+        <tr><td>ARP</td><td><strong>ARP</strong> switches the arpeggiator on, <strong>LATCH</strong> keeps it running after you let go. <strong>DIRECTION</strong> Up / Down / Ping-Pong / Random, <strong>RATE</strong> 1/4 to 1/32 including triplets, <strong>OCTAVES</strong> 1–4. Locked to the song tempo.</td></tr>
+      </tbody>
+    </table></div>
+    <p>The last pressed note always plays. When you release it, the LEAD returns to the previously held note.</p>
+
+    <h2 id="modulation"><span class="num">09</span>Modulation</h2>
+    <figure class="shot"><img src="img/mod-panel.jpg" alt="Modulation panel" width="2400" height="1552" loading="lazy"><figcaption>The Mod panel with the Gravity Well preset: finger pressure (Pressure) pulls GRAVITY by +45 %.</figcaption></figure>
+    <p>ResoOpus has 24 modulation slots. Each one runs <strong>source → function → controller → amount → destination</strong>. Any continuous knob of the voices, GRAVITY, FX and LEAD can be a destination.</p>
+    <ul>
+      <li><strong>Right-click</strong> a knob → <em>Modulate with</em> → source.</li>
+      <li>In the <strong>Mod</strong> panel (top right or key <kbd>9</kbd>) with <em>+ Add</em>.</li>
+      <li><strong>Sources</strong>: Velocity, Mod Wheel, Pressure (aftertouch), Pitch Bend, Constant.</li>
+      <li><strong>Controller</strong> works like a VCA: the modulation is only as strong as a second source (e.g. velocity → TIDE with Mod Wheel as controller).</li>
+      <li><strong>Function</strong>: Scale, Offset, Low / High Clip, Exponential, Norm Exponential, Low / High Pass, Slew, Low / High Slew, Sample &amp; Hold, Bounce.</li>
+      <li><strong>Bipolar</strong>: on = swings around the knob position, off = one direction only.</li>
+    </ul>
+
+    <h2 id="playing"><span class="num">10</span>Playing and bars</h2>
+    <figure class="strip"><img src="img/keyboard.jpg" alt="Keyboard" width="2400" height="296" loading="lazy"><figcaption>PB (pitch bend) and MW (mod wheel), 25 keys from C2 (Ableton: C3 = MIDI 60). The numbers 1–4 are the plates in the colour of their voice type. On the right PLAY, TOUCH and octave.</figcaption></figure>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Option</th><th>Meaning</th></tr></thead>
+      <tbody>
+        <tr><td>PLAY: Plates</td><td>The white keys C3, D3, E3, F3 play voices 1–4 at their own tuning. The pitch of the key doesn't matter, the touch does.</td></tr>
+        <tr><td>PLAY: Keys</td><td>A played note retunes the next free voice to itself. A helper for chromatic playing.</td></tr>
+        <tr><td>TOUCH</td><td>What lifts a voice above HOLD: <em>Velocity</em> (how hard you strike), <em>Aftertouch</em> (pressure after the strike, e.g. KeyStep) or <em>Both</em>.</td></tr>
+        <tr><td>Snap (bottom bar)</td><td><em>Free</em> = microtonal, <em>Chromatic</em> = voices snap to semitones, <em>Scale</em> = to a scale. Scales: Major, Minor, Dorian, Phrygian, Lydian, Mixolydian, Harmonic Minor, Pentatonic Major/Minor, Whole Tone, Hirajoshi, Double Harmonic.</td></tr>
+      </tbody>
+    </table></div>
+    <figure class="strip"><img src="img/topbar.jpg" alt="Top bar" width="2400" height="72" loading="lazy"><figcaption>Logo, tabs DRONE and LEAD · FX (keys 1 and 2) with the LEAD switch, preset browser with arrows, undo/redo, A/B + Copy, Mod, Help and <strong>?</strong> (tooltips on / off, gold = on).</figcaption></figure>
+    <figure class="strip"><img src="img/bottombar.jpg" alt="Bottom bar" width="2400" height="56" loading="lazy"><figcaption>Plates/Keys, Touch, Snap, category and preset, oversampling 1×/2×/4×, this instance's CPU and output peak.</figcaption></figure>
+    <p>The <strong>Help</strong> menu has the window size (70–150 %), tuning (A = 415 / 432 / 440 / 442 / 444 Hz), pitch bend range, plates position (from C1 / C2 / C3 / C4) and silent preset changes. <strong>Silent preset changes</strong> (on by default) fade the output for 6 ms, clear echoes and old voices and fade back in.</p>
+
+    <h2 id="browser"><span class="num">11</span>Preset browser</h2>
+    <figure class="shot"><img src="img/presets.jpg" alt="Preset browser" width="2400" height="1552" loading="lazy"><figcaption>Categories on the left, filters and search at the top, the list in the middle, preview on the right: four voices with type, note and HOLD, GRAVITY and the active effects.</figcaption></figure>
+    <ul>
+      <li>Click the preset name in the top bar to open it (the arrows next to it step through presets without opening).</li>
+      <li><strong>All / Factory / User / Favourites</strong> and the categories combine. Search covers name, category and description.</li>
+      <li>The <strong>star</strong> marks a favourite. The <strong>…</strong> menu: set as default (loads in every new instance), edit info, delete.</li>
+      <li><strong>Save</strong> overwrites the current user preset, <strong>Save as</strong> stores a new one (name, category, description). An asterisk after the name at the top means the preset was changed.</li>
+      <li><kbd>↑</kbd> <kbd>↓</kbd> load presets right away, <kbd>Enter</kbd> or <kbd>Esc</kbd> close the browser. The <strong>☰</strong> menu: open a file, show the folder, rescan.</li>
+    </ul>
+
+    <!-- recipes -->
+    <section class="genre-head" id="blade">
+      <p class="tempo">noir sci-fi · Blade Runner · rain, neon, brassy swells</p>
+      <h2>Neon and rain</h2>
+      <p>Wide, slowly swelling pads like a distant brass section, a singing lead with pressure vibrato on top. And rain everywhere.</p>
+    </section>
+    <div class="recipe">
+      <div class="recipe-head"><h4>Pad and singing lead</h4><span class="where">preset Night Lead · Northern Lights</span></div>
+      <div class="settings"><span class="chip choir">Voices 1–2 CHOIR <b>Major / Fifths</b></span><span class="chip choir">ATTACK <b>2–4 s</b></span><span class="chip">TOUCH <b>Aftertouch</b></span><span class="chip">FILTER <b>SILK LP 2.5 kHz</b></span><span class="chip">LEAD WAVE <b>Saw</b></span><span class="chip">OSC 2 <b>+7 c</b></span><span class="chip">GLIDE <b>0.2 s</b></span><span class="chip">VIB DELAY <b>0.8 s</b></span><span class="chip">TOUCH VIB <b>70 %</b></span><span class="chip">SPACE <b>VOID, DECAY 75</b></span><span class="chip">ECHO <b>420 / 630 ms, 25 %</b></span></div>
+      <div class="recipe-body"><p>Finger pressure lifts the voices above HOLD like a brass swell and adds vibrato to the lead at the same time. Play slow melodies with overlapping notes so GLIDE connects them.</p><p>Rain: voice 4 as SIREN, FM 0, NOISE 60 %, HOLD 15 %, FILTER Band Pass closed to 3 kHz.</p></div>
+    </div>
+
+    <section class="genre-head" id="dune">
+      <p class="tempo">desert epic · Dune · throat depth, wind, pressure</p>
+      <h2>Desert and spice</h2>
+      <p>A very deep drone that growls like throat singing, with sand wind above it. You feel it in your chest more than you hear it.</p>
+    </section>
+    <div class="recipe">
+      <div class="recipe-head"><h4>Throat drone with wind</h4><span class="where">preset Deep Ocean · Monastery</span></div>
+      <div class="settings"><span class="chip choir">Voice 1 <b>CHOIR Octaves, D0–A0</b></span><span class="chip choir">TIDE <b>60–70 %</b></span><span class="chip choir">HOLD <b>80 %</b></span><span class="chip grav">GRAVITY <b>35–45 % (ORBIT)</b></span><span class="chip">FILTER <b>DIODE LP 400 Hz, RES 4, DRIVE 5</b></span><span class="chip siren">Voice 4 SIREN <b>NOISE 60, RATE 0.1, FM 8</b></span><span class="chip">SPACE <b>VOID, DECAY 80</b></span><span class="chip">DUST <b>40 %</b></span></div>
+      <div class="recipe-body"><p>TIDE above 50 % makes the chord growl like throat singing, ORBIT adds the tremble. The wind is a noise siren with a very slow modulator. For a build, automate GRAVITY slowly into TURBULENCE.</p></div>
+    </div>
+
+    <section class="genre-head" id="calm">
+      <p class="tempo">ambient · clean, calm, still</p>
+      <h2>Clean calm drone</h2>
+      <p>For meditation, documentaries or a quiet scene. No growl, only pure intervals and air.</p>
+    </section>
+    <div class="recipe">
+      <div class="recipe-head"><h4>Pure fifths and light</h4><span class="where">preset Pure Fifths · Northern Lights</span></div>
+      <div class="settings"><span class="chip grav">GRAVITY <b>0–10 % (STILL)</b></span><span class="chip">DUST <b>0–10 %</b></span><span class="chip choir">CHORD <b>Fifths / Unison</b></span><span class="chip choir">ATTACK <b>6 s</b></span><span class="chip choir">RELEASE <b>12 s</b></span><span class="chip">FILTER <b>SILK LP 5 kHz</b></span><span class="chip">SPACE <b>AURORA, OCT UP 40, DECAY 70, BLEND 40</b></span></div>
+      <div class="recipe-body"><p>STILL leaves only slow beating; detune the OSC intervals by a few cents with <kbd>Shift</kbd>. AURORA adds a shimmer an octave up. For complete calm set DUST to 0.</p></div>
+    </div>
+
+    <section class="genre-head" id="organ">
+      <p class="tempo">cosmic epic · Interstellar · an organ in space</p>
+      <h2>Cosmic organ</h2>
+      <p>Organ stops from five saws: 16′, 8′, 4′, 2 ⅔′, 2′. Slow dynamic swells and a vast space.</p>
+    </section>
+    <div class="recipe">
+      <div class="recipe-head"><h4>Stops from a CHOIR</h4><span class="where">preset Monastery · Requiem Air</span></div>
+      <div class="settings"><span class="chip choir">OSC 1–5 <b>0, +12, +19, +24, −12</b></span><span class="chip choir">TIDE <b>0</b></span><span class="chip">Snap <b>Chromatic</b></span><span class="chip grav">GRAVITY <b>5 %</b></span><span class="chip">FILTER <b>SILK LP 3 kHz</b></span><span class="chip">SPACE <b>VOID, PRE-DELAY 40, DECAY 70, BLEND 45</b></span><span class="chip">TOUCH <b>Velocity</b></span></div>
+      <div class="recipe-body"><p>Set the same intervals on two or three voices and tune them to a chord (or use FILL). HOLD at 30–50 % gives a quiet bed and playing the plates "pulls out" the stops. For a pulsing build try mod wheel → GRAVITY (preset Tidal Lock).</p></div>
+    </div>
+
+    <section class="genre-head" id="contact">
+      <p class="tempo">sci-fi · Arrival · microtonal clusters, uncertainty</p>
+      <h2>First contact</h2>
+      <p>Tones just a hair apart that rub and breathe, and a distant two-tone siren as if something is calling back.</p>
+    </section>
+    <div class="recipe">
+      <div class="recipe-head"><h4>Microtonal cluster</h4><span class="where">preset Arrival · Microtonal Glass</span></div>
+      <div class="settings"><span class="chip choir">OSC 2–5 <b>+0.5, +1, +12.5 st</b></span><span class="chip choir">Voice 1 TIDE <b>30 %</b></span><span class="chip">Snap <b>Free</b></span><span class="chip grav">GRAVITY <b>25–30 %</b></span><span class="chip siren">Voice 4 SIREN <b>WAVE 0, RATE 0.25, FM 5, HOLD 18</b></span><span class="chip">SPACE <b>VOID, DECAY 85</b></span></div>
+      <div class="recipe-body"><p>Quarter-tone and cent intervals create uncertainty and slow beating; GRAVITY at the edge of ORBIT makes them tremble. The siren with a square modulator is the two-tone "call": bring it down to −10 dB and keep it far away.</p></div>
+    </div>
+
+    <section class="genre-head" id="synthwave">
+      <p class="tempo">the 80s · Stranger Things · an arpeggio over a drone</p>
+      <h2>Synthwave arpeggio</h2>
+      <p>A pulsing saw in sixteenths over a dark minor drone. The classic of 80s-inspired soundtracks.</p>
+    </section>
+    <div class="recipe">
+      <div class="recipe-head"><h4>Arpeggio in tempo</h4><span class="where">preset Pulse Engine</span></div>
+      <div class="settings"><span class="chip">LEAD <b>ON</b></span><span class="chip">ARP <b>Up, 1/16, OCTAVES 2, LATCH</b></span><span class="chip">WAVE <b>Saw → Square</b></span><span class="chip">ENVELOPE <b>D 180 ms, S 20 %</b></span><span class="chip">FILTER <b>LADDER LP 1.2–1.6 kHz, RES 5</b></span><span class="chip choir">Drone <b>CHOIR Minor, HOLD 45</b></span><span class="chip">ECHO <b>375 / 500 ms, MIX 20</b></span></div>
+      <div class="recipe-body"><p>Hold two or three notes outside the plates; LATCH keeps the arpeggio going. Open CUTOFF slowly over the whole section (automation or mod wheel). An ECHO of 375 ms is a dotted eighth at 120 BPM.</p></div>
+    </div>
+
+    <section class="genre-head" id="dread">
+      <p class="tempo">thriller · Sicario · subliminal pressure, a pulse</p>
+      <h2>Creeping dread</h2>
+      <p>A low end you barely hear that keeps sinking, and a slow heartbeat. Tension that grows before anyone notices.</p>
+    </section>
+    <div class="recipe">
+      <div class="recipe-head"><h4>Sinking drone with a heartbeat</h4><span class="where">preset Heartbeat · Sinking Choir</span></div>
+      <div class="settings"><span class="chip choir">Voice 1 CHOIR <b>C1, TIDE 70 %</b></span><span class="chip siren">Voice 2 SIREN <b>AM 85, RATE 1.1 Hz, DIVIDER 1:2</b></span><span class="chip">FILTER <b>LADDER LP 300 Hz</b></span><span class="chip grav">GRAVITY <b>15 → 60 % over 32 bars</b></span><span class="chip">DUST <b>30 %</b></span></div>
+      <div class="recipe-body"><p>A siren chopped by AM at about 1 Hz with a 1:2 sub-harmonic sounds like a heartbeat; automate RATE for a racing pulse. GRAVITY creeping into TURBULENCE adds unrest so slowly that listeners feel it before they hear it.</p></div>
+    </div>
+
+    <section class="genre-head" id="zone">
+      <p class="tempo">industrial · Chernobyl · machine hum, radiation</p>
+      <h2>The zone</h2>
+      <p>Electrical hum, broken machines, crackle in the background. Metallic, dirty, dangerous.</p>
+    </section>
+    <div class="recipe">
+      <div class="recipe-head"><h4>Hum and crackle</h4><span class="where">preset Iron Hum · Deep Field Static</span></div>
+      <div class="settings"><span class="chip choir">Voices 1–2 <b>CHOIR 11 cents apart</b></span><span class="chip">FILTER <b>DIODE LP 900 Hz, RES 5.5, DRIVE 6</b></span><span class="chip">DUST <b>60–85 %</b></span><span class="chip">SPACE <b>SATURN, ROOM 40</b></span><span class="chip siren">Voice 4 SIREN <b>NOISE 50, AM 100, RATE 9 Hz</b></span></div>
+      <div class="recipe-body"><p>Two voices tuned almost the same throb like a transformer, DIODE with drive adds dirt, SATURN metallic overtones. A siren chopped by fast AM with noise crackles like a Geiger counter. Also try TIDE above 80 % at the bottom of the chord.</p></div>
+    </div>
+
+    <section class="genre-head" id="ship">
+      <p class="tempo">sci-fi horror · Alien · ship hum, signals from afar</p>
+      <h2>Deep space</h2>
+      <p>The hum of a giant ship, a beacon and a broken signal. An emptiness in which something can be heard.</p>
+    </section>
+    <div class="recipe">
+      <div class="recipe-head"><h4>Ship and beacon</h4><span class="where">preset Last Transmission · Morse Beacon · Shortwave</span></div>
+      <div class="settings"><span class="chip choir">Voice 1 CHOIR <b>A0–C1, HOLD 60</b></span><span class="chip pulsar">Voice 3 PULSAR <b>TWIN +0.05 st, BLEND 50, SUB 40</b></span><span class="chip siren">Voice 4 SIREN <b>AM 100, RATE 3 Hz, NOISE 20</b></span><span class="chip">SPACE <b>COMET, FEEDBACK 55</b></span><span class="chip">DUST <b>55 %</b></span></div>
+      <div class="recipe-body"><p>A PULSAR with TWIN a few cents off unison gives the slow throb of engines. The AM-chopped siren is the beacon; slow RATE for longer pauses. COMET smears and dirties the signal. To "tune the radio", switch FILTER to SCREAM Band Pass and sweep CUTOFF (preset Shortwave).</p></div>
+    </div>
+
+    <section class="genre-head" id="meditation">
+      <p class="tempo">meditation · tanpura, singing bowls</p>
+      <h2>Meditation</h2>
+      <p>Root, fifth and octave like an Indian tanpura, with blooming tones and metallic bowls above.</p>
+    </section>
+    <div class="recipe">
+      <div class="recipe-head"><h4>Tanpura and bowls</h4><span class="where">preset Tanpura Bed</span></div>
+      <div class="settings"><span class="chip choir">Voice 1 OSC <b>0, +7, +12, −12</b></span><span class="chip pulsar">Voice 3 PULSAR <b>SHARP 55, BLOOM 80, HOLD 30</b></span><span class="chip grav">GRAVITY <b>20 %</b></span><span class="chip">ECHO <b>MIX 18, FB 30</b></span><span class="chip">SPACE <b>SATURN, STEPS 0, ROOM 60</b></span><span class="chip">A = <b>432 Hz (Help)</b></span></div>
+      <div class="recipe-body"><p>Set voice 1's TUNE to the tonic (sa). BLOOM makes the pulsar bloom like a plucked string each time you play a plate, SATURN with ROOM gives the metallic shine of bowls. 432 Hz tuning is in Help → Tuning.</p></div>
+    </div>
+
+    <h2 id="presets"><span class="num">12</span>Factory presets</h2>
+    <p>42 presets in seven categories. Open the browser by clicking the preset name, or step with the ◀ ▶ arrows.</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Preset</th><th>What for, what to turn</th></tr></thead>
+      <tbody>
+        <tr class="cat"><td colspan="2">Basics</td></tr>
+        <tr><td>Init</td><td>Drones on its own: two low choirs, a pulsar and a slow siren. Play C3–F3, HOLD sets the level.</td></tr>
+        <tr><td>Pure Fifths</td><td>One clean choir of stacked fifths, nothing moving. Tune voice 1 to your key and build from there.</td></tr>
+        <tr><td>Four Plates</td><td>Four single saws, each key C3–F3 plays one voice. For learning the plates.</td></tr>
+        <tr><td>Keys Drone</td><td>Keys mode: each played note retunes the next free voice and holds it.</td></tr>
+        <tr class="cat"><td colspan="2">Drones</td></tr>
+        <tr><td>Low Choir</td><td>Two deep choirs a fifth apart. TIDE of voice 1 sinks it into a growl.</td></tr>
+        <tr><td>Sinking Choir</td><td>The low choir pulled down by TIDE until it growls, the pulsar stays clear above. TIDE between 40 and 80 %.</td></tr>
+        <tr><td>Deep Ocean</td><td>A very low choir under a slow LADDER filter. Big and dark; CUTOFF lets light onto the water.</td></tr>
+        <tr><td>Monastery</td><td>Choirs in octaves and fifths like male voices in stone, AURORA above.</td></tr>
+        <tr><td>Tanpura Bed</td><td>Root, fifth and octave with a blooming pulsar above. TUNE of voice 1 = tonic.</td></tr>
+        <tr><td>Iron Hum</td><td>Industrial: two slightly mistuned choirs through a driven DIODE filter.</td></tr>
+        <tr><td>Low Saturn</td><td>A dark choir through the metallic SATURN, bell-like overtones. The plates call a distant siren.</td></tr>
+        <tr><td>Cello Ground</td><td>A bowed-feeling pulsar with vibrato over a soft choir. Warm and woody.</td></tr>
+        <tr class="cat"><td colspan="2">Cinematic</td></tr>
+        <tr><td>Slow Bloom</td><td>Silent until you play: every plate blooms over seconds and fades for twelve.</td></tr>
+        <tr><td>Microtonal Glass</td><td>Choirs a few cents apart, slow beating like a glass harmonica.</td></tr>
+        <tr><td>Pulsar Field</td><td>Four pulsars from soft to sharp, each blooming from flat into pitch.</td></tr>
+        <tr><td>Arrival</td><td>A vast low cluster and a distant two-tone siren. GRAVITY towards ORBIT as the scene builds.</td></tr>
+        <tr><td>Northern Lights</td><td>Major choirs high up through a long AURORA. Calm, wide, bright.</td></tr>
+        <tr><td>Dune Sunrise</td><td>Minor choirs and a warm pulsar with a slow echo. Heat haze over sand, DUST = shimmer.</td></tr>
+        <tr><td>Requiem Air</td><td>Sad, breathy minor choirs, only when played, long release. Hold chords on the plates.</td></tr>
+        <tr><td>Frozen Hall</td><td>VOID at the edge of FREEZE: whatever you play hangs in the air. DECAY down = thaw.</td></tr>
+        <tr><td>Last Transmission</td><td>A broken signal: a chopped siren over a low drone through COMET.</td></tr>
+        <tr class="cat"><td colspan="2">Textures</td></tr>
+        <tr><td>Night Sirens</td><td>A slow wailing siren over a choir and a distant two-tone siren with noise.</td></tr>
+        <tr><td>Shortwave</td><td>Radio between stations: noisy sirens through a SCREAM band pass. CUTOFF = the dial.</td></tr>
+        <tr><td>Wind Harp</td><td>Noise winds and whistling sirens with a quiet choir. NOISE of voices 3–4 = gusts.</td></tr>
+        <tr><td>Rain Machine</td><td>Fast chopped sirens through RUNNER: drops falling in pitch. RATE = downpour.</td></tr>
+        <tr><td>Deep Field Static</td><td>A choir buried in DUST and ring modulation. Old tape, cosmic background.</td></tr>
+        <tr><td>Glass Rain</td><td>Bright pulsars in a self-singing ECHO. Play E3 and F3 lightly.</td></tr>
+        <tr class="cat"><td colspan="2">Orbits</td></tr>
+        <tr><td>Gravity Well</td><td>Pressing harder pulls GRAVITY into TURBULENCE; let go and the voices settle.</td></tr>
+        <tr><td>Collapse</td><td>All voices in a ring past the edge: the loop pulses on its own. GRAVITY below 85 % tames it.</td></tr>
+        <tr><td>Binary Stars</td><td>Two pairs in orbit tuned close together, their FM beats slowly.</td></tr>
+        <tr><td>Tidal Lock</td><td>Mod wheel = GRAVITY. Ride it slowly through the whole range.</td></tr>
+        <tr><td>Ring World</td><td>A ring of four voices in TURBULENCE through LADDER: a living loop that never repeats.</td></tr>
+        <tr><td>Event Horizon</td><td>Pressing harder pulls into COLLAPSE, the echo feeds back into the voices. Play softly to hover at the edge.</td></tr>
+        <tr class="cat"><td colspan="2">Lead</td></tr>
+        <tr><td>Solo Saw</td><td>A classic mono saw lead with glide and delayed vibrato over a quiet drone.</td></tr>
+        <tr><td>Night Lead</td><td>A soft singing lead with long glide in VOID. Pressure = more vibrato.</td></tr>
+        <tr><td>Glide Sine</td><td>A pure sine with a sub sliding between notes. Play legato.</td></tr>
+        <tr><td>Sync Scream</td><td>Hard sync through the SCREAM filter. The mod wheel tears OSC 2.</td></tr>
+        <tr><td>Squelch Bass</td><td>A square through DIODE with high resonance: rubbery acid bass. Velocity opens the filter.</td></tr>
+        <tr class="cat"><td colspan="2">Pulse</td></tr>
+        <tr><td>Pulse Engine</td><td>A sixteenth arpeggio over a LADDER drone. Hold a chord outside the plates.</td></tr>
+        <tr><td>Constellation</td><td>A ping-pong arpeggio of soft sines over three octaves and a shimmer. Stars switching on.</td></tr>
+        <tr><td>Morse Beacon</td><td>A siren chopped into beeps, a slow beacon and a low drone. RATE = code speed.</td></tr>
+        <tr><td>Heartbeat</td><td>A low siren chopped slowly with a sub-harmonic: a deep pulse like a heart or an engine.</td></tr>
+      </tbody>
+    </table></div>
+
+    <h2 id="measurements"><span class="num">13</span>Measurements</h2>
+    <p>Measured by the ResoOpusTests app on every build (48 kHz, Apple M1).</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Property</th><th class="num">Value</th></tr></thead>
+      <tbody>
+        <tr><td>Tuning accuracy (TUNE, intervals, PITCH, A = 432 Hz, Snap, SIREN)</td><td class="num">worst 0.016 cent</td></tr>
+        <tr><td>Aliasing at 1976 Hz below 10 kHz: CHOIR saw 2× / 1×</td><td class="num">−93 / −81 dB</td></tr>
+        <tr><td>GRAVITY: loudness change STILL → COLLAPSE</td><td class="num">2.2 dB</td></tr>
+        <tr><td>Stability 60 s in every GRAVITY zone, 44.1–192 kHz</td><td class="num">no NaN, ≤ −0.3 dBFS</td></tr>
+        <tr><td>FILTER: LP at 3 kHz / HP at 110 Hz (5 models)</td><td class="num">−31 to −64 / −53 to −109 dB</td></tr>
+        <tr><td>Effects: ECHO / COMET / AURORA level at extremes, L/R</td><td class="num">±3 dB, L/R ≤ 1 dB</td></tr>
+        <tr><td>LEAD: tuning accuracy / ARP step at 120 BPM, 1/16</td><td class="num">0.009 c / 125 ms</td></tr>
+        <tr><td>CPU: default patch 2× / idle</td><td class="num">~2.7 / 0.7 % of a core</td></tr>
+        <tr><td>Parameter audit (does each one change the sound?)</td><td class="num">175 of 175</td></tr>
+      </tbody>
+    </table></div>
+
+    <h2 id="trouble"><span class="num">14</span>Troubleshooting</h2>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Problem</th><th>Solution</th></tr></thead>
+      <tbody>
+        <tr><td>Silent after loading</td><td>The preset has HOLD at 0 (Slow Bloom, Requiem Air…). Play C3–F3 or turn HOLD up.</td></tr>
+        <tr><td>Keys outside C3–F3 do nothing</td><td>The LEAD is off. Switch it on with the power icon at the LEAD · FX tab.</td></tr>
+        <tr><td>A voice is silent</td><td>Its TYPE is OFF, or VOL is at −∞.</td></tr>
+        <tr><td>ECHO knobs do nothing</td><td>ECHO MIX is at 0 %.</td></tr>
+        <tr><td>PATH changes nothing</td><td>PATH only matters from ORBIT up; in STILL the voices don't pull.</td></tr>
+        <tr><td>The arpeggio stops</td><td>ARP only takes keys outside the plates. Without LATCH it plays only while you hold the keys. It follows the song tempo; the transport doesn't need to run.</td></tr>
+        <tr><td>Aftertouch does nothing</td><td>Set TOUCH (bottom bar or next to the keyboard) to Aftertouch or Both. The keyboard must send channel pressure.</td></tr>
+        <tr><td>No tooltips over the knobs</td><td>Switch them on with the <strong>?</strong> icon at the top right.</td></tr>
+        <tr><td>Whistling in the highs</td><td>Oversampling is 1× in the bottom bar; switch to 2× or 4×.</td></tr>
+      </tbody>
+    </table></div>
+
+    <h2 id="keys"><span class="num">15</span>Mouse and keys</h2>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Action</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td>Drag a knob up / down</td><td>Change the value, <kbd>Shift</kbd> = fine (cents for tuning)</td></tr>
+        <tr><td>Mouse wheel over a knob</td><td>One step (one option on switches)</td></tr>
+        <tr><td>Double-click a knob</td><td>Type a value: <code>D2+12</code>, <code>+19 -8c</code>, <code>2.5k</code>, <code>3 s</code>, <code>L 30</code></td></tr>
+        <tr><td><kbd>Cmd</kbd>/<kbd>Ctrl</kbd>-click</td><td>Default value</td></tr>
+        <tr><td>Right-click a knob</td><td>Reset, type, Modulate with, manage modulations</td></tr>
+        <tr><td>Drag a knob's ring</td><td>Modulation depth</td></tr>
+        <tr><td>Click a voice module</td><td>Selects the voice for the VOICE panel</td></tr>
+        <tr><td><kbd>1</kbd> / <kbd>2</kbd></td><td>Pages DRONE / LEAD · FX</td></tr>
+        <tr><td><kbd>9</kbd> / <kbd>0</kbd>, <kbd>Esc</kbd></td><td>Open / close the modulation panel</td></tr>
+        <tr><td><kbd>Cmd</kbd>+<kbd>Z</kbd>, <kbd>Shift</kbd>+<kbd>Cmd</kbd>+<kbd>Z</kbd></td><td>Undo / Redo</td></tr>
+        <tr><td>On-screen keyboard: click lower on a key</td><td>Harder strike. Drag across keys for a glissando.</td></tr>
+      </tbody>
+    </table></div>
+
+    <h2 id="install"><span class="num">16</span>Installation and files</h2>
+    <div class="table-wrap"><table>
+      <thead><tr><th></th><th>macOS</th><th>Windows</th></tr></thead>
+      <tbody>
+        <tr><td>VST3</td><td><code>~/Library/Audio/Plug-Ins/VST3/ResoOpus.vst3</code></td><td><code>C:\Program Files\Common Files\VST3\ResoOpus.vst3</code></td></tr>
+        <tr><td>AU</td><td><code>~/Library/Audio/Plug-Ins/Components/ResoOpus.component</code></td><td>–</td></tr>
+        <tr><td>User presets</td><td><code>~/Documents/Gavr/ResoOpus Presets/*.ropreset</code></td><td><code>Documents\Gavr\ResoOpus Presets\*.ropreset</code></td></tr>
+        <tr><td>Settings (tooltips, size, favourites)</td><td><code>~/Library/Application Support/Gavr/ResoOpus/</code></td><td><code>%APPDATA%\Gavr\ResoOpus\</code></td></tr>
+      </tbody>
+    </table></div>
+    <p>In Ableton: Settings → Plug-Ins → turn on "Use VST3 Plug-In System Folders" → Rescan. ResoOpus is under Plug-Ins → Gavr.</p>
+
+    <footer>ResoOpus · version 0.1.0 · Gavr. Film titles (Blade Runner, Dune, Interstellar, Arrival, Stranger Things, Sicario, Chernobyl, Alien) only point to a well-known sonic atmosphere; ResoOpus is not affiliated with them or their makers. VST is a trademark of Steinberg Media Technologies GmbH.</footer>
+  </div>
+  </main>
+</div>
+</body>
+</html>

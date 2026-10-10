@@ -67,6 +67,7 @@ public:
     // Lays out children in a grid: column weights, items row-major (nullptr = empty cell)
     void setGrid (std::vector<float> columnWeights, std::vector<juce::Component*> items);
     void setRightText (const juce::String& t) { rightText = t; repaint(); }
+    const juce::String& getTitle() const { return title; }
     void setTitleAndColour (const juce::String& t, juce::Colour c) { title = t; colour = c; repaint(); }
     void setEnvelopeIcon (int stages) { envIcon = stages; repaint(); }   // 4 = ADSR, 6 = DAHDSR
     void setLiveValue (float v);   // header dot follows the source (LFO / random)

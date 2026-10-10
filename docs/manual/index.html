@@ -1,0 +1,500 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ResoOpus Příručka</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="page">
+  <nav class="toc" aria-label="Obsah">
+    <div class="lang" aria-label="Jazyk"><span aria-current="page">CS</span><a href="en.html" hreflang="en" lang="en">EN</a></div>
+    <p>Obsah</p>
+    <ol>
+      <li><a href="#princip">Jak funguje</a></li>
+      <li><a href="#start">Rychlý start</a></li>
+      <li><a href="#hlasy">Hlasy</a></li>
+      <li><a href="#typy">CHOIR · SIREN · PULSAR</a></li>
+      <li><a href="#gravity">GRAVITY</a></li>
+      <li><a href="#master">MASTER a DUST</a></li>
+      <li><a href="#fx">FILTER · ECHO · SPACE</a></li>
+      <li><a href="#lead">LEAD a ARP</a></li>
+      <li><a href="#modulace">Modulace</a></li>
+      <li><a href="#hrani">Hraní a lišty</a></li>
+      <li><a href="#prohlizec">Prohlížeč presetů</a></li>
+      <li class="genre sep"><a href="#blade">Neon a déšť</a></li>
+      <li class="genre"><a href="#duna">Poušť a koření</a></li>
+      <li class="genre"><a href="#calm">Čistý klidný drone</a></li>
+      <li class="genre"><a href="#varhany">Kosmické varhany</a></li>
+      <li class="genre"><a href="#kontakt">První kontakt</a></li>
+      <li class="genre"><a href="#synthwave">Synthwave arpeggio</a></li>
+      <li class="genre"><a href="#hrozba">Plíživá hrozba</a></li>
+      <li class="genre"><a href="#zona">Zóna a reaktor</a></li>
+      <li class="genre"><a href="#lod">Hluboký vesmír</a></li>
+      <li class="genre"><a href="#meditace">Meditace</a></li>
+      <li class="sep"><a href="#presety">Tovární presety</a></li>
+      <li><a href="#mereni">Měření</a></li>
+      <li><a href="#potize">Řešení potíží</a></li>
+      <li><a href="#klavesy">Myš a klávesy</a></li>
+      <li><a href="#instalace">Instalace a soubory</a></li>
+    </ol>
+  </nav>
+
+  <main>
+  <div class="doc">
+    <header class="hero">
+      <div class="hero-top">
+        <p class="eyebrow">Uživatelská příručka · verze 0.1.0</p>
+        <div class="lang" aria-label="Jazyk"><span aria-current="page">CS</span><a href="en.html" hreflang="en" lang="en">EN</a></div>
+      </div>
+      <h1>Reso<span class="q">Opus</span></h1>
+      <p class="lede">Drone syntezátor pro filmové, ambientní a experimentální plochy. Čtyři ručně a mikrotonálně laděné hlasy ve dvou párech hrají hned po vložení do stopy. Uprostřed je velký knob GRAVITY, který vede od čistého ladění k chaosu. K tomu filtr s pěti charaktery, ozvěna, prostor a melodická vrstva LEAD s arpeggiatorem.</p>
+      <div class="meta">
+        <span>VST3 · Windows / macOS</span><span>AU · macOS</span><span>instrument · drone + mono lead</span><span>Ableton Live 11 / 12</span><span>4 hlasy · 24 modulací · 42 presetů</span>
+      </div>
+    </header>
+
+    <figure class="shot"><img src="img/overview.jpg" alt="Stránka DRONE s presetem Monastery" width="2400" height="1552"><figcaption>Stránka <strong>DRONE</strong> s presetem <strong>Monastery</strong>. Nahoře čtyři hlasy a GRAVITY uprostřed, pod nimi detail vybraného hlasu a MASTER, dole klávesnice s očíslovanými „plates“. Barva říká typ hlasu: CHOIR azurově, SIREN růžově, PULSAR fialově.</figcaption></figure>
+
+    <h2 id="princip"><span class="num">01</span>Jak funguje</h2>
+    <p>ResoOpus je nástroj, který zní sám od sebe. Každý hlas má <strong>HOLD</strong>, tedy úroveň, na které hraje i bez doteku. Když hlas zahraješ, zesílí nad tuto úroveň a po puštění se do ní zase vrátí. Klávesy tak drone nespouští, ale <em>tvarují</em>.</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Stránka</th><th>Co obsahuje</th></tr></thead>
+      <tbody>
+        <tr><td>DRONE</td><td>Čtyři hlasy (typ, ladění, HOLD, PAN, hlasitost), GRAVITY, detail vybraného hlasu, MASTER (PITCH, DUST, VOLUME, FILL).</td></tr>
+        <tr><td>LEAD · FX</td><td>Nahoře FILTER, ECHO a SPACE pro celý nástroj. Dole melodická vrstva LEAD (oscilátory, obálka, vibrato) a ARP.</td></tr>
+      </tbody>
+    </table></div>
+    <div class="chain"><span>4 hlasy (CHOIR / SIREN / PULSAR)</span><i>⇄</i><span class="me">GRAVITY · DUST</span><i>→</i><span>+ LEAD</span><i>→</i><span>FILTER</span><i>→</i><span>ECHO</span><i>→</i><span>SPACE</span><i>→</i><span>MASTER → limiter</span></div>
+    <p>Hlasy jsou ve dvou párech: <strong>1·2</strong> a <strong>3·4</strong>. GRAVITY nechává hlasy v páru, a později všechny čtyři v kruhu, navzájem se modulovat. Hlasy, LEAD i filtr běží převzorkovaně (výchozí 2×), takže ani vysoké tóny a silná modulace nezní digitálně. Na konci je měkký limiter, který drží výstup pod −0,3 dBFS.</p>
+    <div class="note info"><p><strong>Nic nehraje? Je to v pořádku.</strong>Některé presety (Slow Bloom, Requiem Air, Four Plates) mají HOLD na nule: zní, jen když hraješ. Ostatní presety droní hned po vložení.</p></div>
+
+    <h2 id="start"><span class="num">02</span>Rychlý start</h2>
+    <ol class="steps">
+      <li><div>Vlož ResoOpus na MIDI stopu v Abletonu (Plug-Ins → Gavr → ResoOpus). Hned uslyšíš drone.</div></li>
+      <li><div>Zahraj bílé klávesy <strong>C3, D3, E3, F3</strong> (na klávesnici dole označené 1–4). Každá zesílí jeden hlas. Čím silněji, tím víc.</div></li>
+      <li><div>Otoč <strong>GRAVITY</strong> uprostřed. Doleva čisté ladění a pomalé zázněje, doprava se hlasy začnou chvět, vrčet a nakonec pulzovat samy.</div></li>
+      <li><div>Klikni na název presetu nahoře. Otevře se prohlížeč s kategoriemi a popisem, co u presetu otočit nejdřív.</div></li>
+      <li><div>Na stránce <strong>LEAD · FX</strong> zkus FILTER, ECHO a SPACE. Ikonou napájení u záložky zapneš LEAD: klávesy mimo C3–F3 pak hrají melodii.</div></li>
+    </ol>
+
+    <h2 id="hlasy"><span class="num">03</span>Hlasy</h2>
+    <div class="duo">
+      <figure class="shot"><img src="img/voice-strip.jpg" alt="Hlas 1" width="432" height="720" loading="lazy"><figcaption>Hlas 1 (CHOIR)</figcaption></figure>
+      <div>
+        <p>Každý hlas je samostatný modul. Klikem do něj ho vybereš a jeho podrobnosti se ukážou v panelu <strong>VOICE</strong> pod ním.</p>
+        <ul>
+          <li><strong>Hlavička</strong> ukazuje typ a číslo hlasu (= číslo plate na klávesnici). Tečka vlevo svítí, když hlas zní.</li>
+          <li><strong>TUNE</strong>: ladění C0–C8, volné a mikrotonální. Dvojklikem napíšeš notu i s centy, třeba <code>D2+12</code>.</li>
+          <li><strong>Druhý knob</strong> mění podle typu: TIDE (CHOIR), FM (SIREN), SHARP (PULSAR).</li>
+          <li><strong>HOLD</strong>: úroveň droneu bez doteku. 0 % = hlas zní jen při hraní.</li>
+          <li><strong>PAN</strong>: poloha vlevo a vpravo.</li>
+          <li><strong>Křivka</strong> ukazuje hlasitost hlasu za posledních ~8 s. Náběh je ATTACK, pokles RELEASE, čárkovaná čára HOLD.</li>
+          <li><strong>VOL</strong>: tažením hlasitost (−60 až +6 dB), dvojklik = −2 dB. Tenký zelený proužek pod ní je aktuální úroveň.</li>
+        </ul>
+      </div>
+    </div>
+    <p>V detailu hlasu je vždy <strong>TYPE</strong> (OFF / CHOIR / SIREN / PULSAR), <strong>ATTACK</strong> (1 ms–30 s, jak pomalu hlas nabíhá i při náběhu HOLD) a <strong>RELEASE</strong> (1 ms–30 s, jak dlouho doznívá). Vypnutý hlas (OFF) nebere CPU.</p>
+
+    <h2 id="typy"><span class="num">04</span>CHOIR · SIREN · PULSAR</h2>
+    <h3>CHOIR: pět pil jako akord</h3>
+    <figure class="shot"><img src="img/detail-choir.jpg" alt="Detail hlasu CHOIR" width="1724" height="372" loading="lazy"><figcaption>CHOIR: TYPE, CHORD, intervaly pěti oscilátorů s LED vypínači, ATTACK a RELEASE.</figcaption></figure>
+    <ul>
+      <li><strong>CHORD</strong> naplní všech pět intervalů najednou: <em>Unison</em> (pár centů od sebe, zázněje), <em>Octaves</em>, <em>Fifths</em>, <em>Major</em> (0 4 7 12 16), <em>Minor</em> (0 3 7 12 15).</li>
+      <li><strong>OSC 1–5</strong>: interval každé pily nad TUNE (−24 až +36 půltónů). Tažení se <kbd>Shift</kbd> jde po centech. LED nad knobem pilu vypne.</li>
+      <li><strong>TIDE</strong> (v modulu hlasu): do 50 % stahuje celý akord dolů. Nad 50 % klesá dál a pily se začnou navzájem modulovat: vrčení, kovové alikvoty a praskání na dně.</li>
+    </ul>
+    <h3>SIREN: sirény, ptáci, monstra, vítr</h3>
+    <figure class="shot"><img src="img/detail-siren.jpg" alt="Detail hlasu SIREN" width="1724" height="372" loading="lazy"><figcaption>SIREN: modulátor (RATE, AM, WAVE), DIVIDER pro podtóny a NOISE.</figcaption></figure>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Ovladač</th><th>Co dělá</th></tr></thead>
+      <tbody>
+        <tr><td>FM (v modulu hlasu)</td><td>Jak daleko modulátor táhne výšku, až ±3 oktávy.</td></tr>
+        <tr><td>RATE</td><td>Rychlost modulátoru 0,05–300 Hz: pomalé houkání, trylky, bzučení. Nad ~30 Hz vzniká nová barva tónu.</td></tr>
+        <tr><td>AM</td><td>Jak moc modulátor seká tón na pípnutí (morseovka, alarm).</td></tr>
+        <tr><td>DIVIDER</td><td>Přidá podtón: 1:2 = oktáva dolů, 1:3, 1:5… až 1:16. Vrčení a monstra.</td></tr>
+        <tr><td>NOISE</td><td>Bílý šum: vítr, příboj, statika.</td></tr>
+        <tr><td>WAVE</td><td>Tvar modulátoru: 0 = obdélník (dvoutónová siréna), 100 = trojúhelník (kvílení).</td></tr>
+      </tbody>
+    </table></div>
+    <h3>PULSAR: jeden tón, který rozkvete</h3>
+    <figure class="shot"><img src="img/detail-pulsar.jpg" alt="Detail hlasu PULSAR" width="1724" height="372" loading="lazy"><figcaption>PULSAR: BLOOM, TWIN s BLEND, SUB a VIBRATO.</figcaption></figure>
+    <ul>
+      <li><strong>SHARP</strong> (v modulu hlasu): tvar tónu od měkkého trojúhelníku přes „žraločí ploutev“ a pilu po ostrý obdélník.</li>
+      <li><strong>BLOOM</strong>: obálka ohýbá tón. Začne trochu podladěný a matný a rozkvete do výšky a jasu.</li>
+      <li><strong>TWIN</strong> a <strong>BLEND</strong>: druhý tón nad prvním (−12 až +24 půltónů). Pár centů od unisona = pomalé zázněje, 7 = kvinta.</li>
+      <li><strong>SUB</strong>: měkký tón o oktávu níž. <strong>VIBRATO</strong>: až 50 centů, každý hlas má trochu jinou rychlost, takže se nikdy nechvějí společně.</li>
+    </ul>
+
+    <h2 id="gravity"><span class="num">05</span>GRAVITY</h2>
+    <p>GRAVITY je srdce nástroje: jeden knob od ladění k chaosu. Hlasy se navzájem frekvenčně modulují, nejdřív v párech, pak v jednom kruhu, a nakonec do smyčky vstupuje i výstup nástroje.</p>
+    <div class="quad">
+      <figure class="shot"><img src="img/gravity-10.jpg" alt="GRAVITY 10 %" width="616" height="720" loading="lazy"><figcaption>STILL 10 %</figcaption></figure>
+      <figure class="shot"><img src="img/gravity-40.jpg" alt="GRAVITY 40 %" width="616" height="720" loading="lazy"><figcaption>ORBIT 40 %</figcaption></figure>
+      <figure class="shot"><img src="img/gravity-70.jpg" alt="GRAVITY 70 %" width="616" height="720" loading="lazy"><figcaption>TURBULENCE 70 %</figcaption></figure>
+      <figure class="shot"><img src="img/gravity-93.jpg" alt="GRAVITY 93 %" width="616" height="720" loading="lazy"><figcaption>COLLAPSE 93 %</figcaption></figure>
+    </div>
+    <div class="zones">
+      <div class="z1"><b>STILL 0–25 %</b>Čisté ladění, jen pomalé zázněje mezi hlasy.</div>
+      <div class="z2"><b>ORBIT 25–55 %</b>Hlasy v páru se přitahují (FM), tón se chvěje a třpytí.</div>
+      <div class="z3"><b>TURBULENCE 55–85 %</b>Všechny čtyři v jedné smyčce, výstup se vrací do hlasů. Vrčí a dýchá.</div>
+      <div class="z4"><b>COLLAPSE 85–100 %</b>Smyčka se utrhne a pulzuje sama. Nikdy se neopakuje.</div>
+    </div>
+    <p>Barevné tečky na oběžné dráze jsou hlasy v barvě svého typu. Čím víc znějí, tím jsou větší, a s rostoucí GRAVITY se k sobě přitahují a třesou. Hlasitost se mezi STILL a COLLAPSE mění jen asi o 2 dB, takže GRAVITY můžeš automatizovat bez skoků.</p>
+    <ul>
+      <li><strong>Pravé tlačítko</strong> na GRAVITY → <strong>PATH</strong>: <em>Auto</em> (páry do poloviny, pak kruh), <em>Pairs</em> (vždy jen páry 1·2 a 3·4), <em>Ring</em> (vždy kruh 1→2→3→4→1). V menu je i <em>Modulate with</em>.</li>
+      <li>Tažení nahoru a dolů (<kbd>Shift</kbd> jemně), kolečko, dvojklik = napsat hodnotu, <kbd>Cmd</kbd>/<kbd>Ctrl</kbd>-klik = výchozí 15 %.</li>
+    </ul>
+    <div class="duo">
+      <figure class="shot"><img src="img/gravity-mod.jpg" alt="GRAVITY s modulací" width="616" height="720" loading="lazy"><figcaption>Preset Tidal Lock: mod wheel na GRAVITY.</figcaption></figure>
+      <div>
+        <p>Když GRAVITY moduluješ, ukáže se kolem knobu <strong>prstenec</strong> v barvě zdroje a tečka jeho aktuální hodnoty. Tažením prstence měníš hloubku.</p>
+        <p>Nejlepší kombinace je <strong>tlak prstu</strong> (aftertouch) na GRAVITY: lehký dotek drží hlasy na oběžné dráze, silnější je stáhne do turbulence. Takhle jsou nastavené presety <em>Gravity Well</em> a <em>Event Horizon</em>.</p>
+        <p><strong>ECHO TO VOICES</strong> na stránce FX vrací ozvěnu do hlasů jako další FM. S vyšší GRAVITY se pak celý nástroj stane jednou smyčkou.</p>
+      </div>
+    </div>
+
+    <h2 id="master"><span class="num">06</span>MASTER a DUST</h2>
+    <figure class="shot narrow"><img src="img/master.jpg" alt="MASTER" width="616" height="372" loading="lazy"></figure>
+    <ul>
+      <li><strong>PITCH</strong>: transpozice všech čtyř hlasů najednou (±24 půltónů), intervaly mezi nimi zůstanou.</li>
+      <li><strong>DUST</strong>: analogový život. Pomalé bloudění ladění, hlasy prosakují jeden do druhého a v pozadí je tichý dech šumu (nejvýš −54 dBFS). 0 % = čistě digitální.</li>
+      <li><strong>VOLUME</strong>: výstupní hlasitost (−∞ až +12 dB).</li>
+      <li><strong>FILL</strong> (vpravo v hlavičce): rozloží čtyři hlasy do zvolené stupnice od zvoleného základu. Rychlá cesta k laděnému akordu.</li>
+    </ul>
+
+    <h2 id="fx"><span class="num">07</span>FILTER · ECHO · SPACE</h2>
+    <figure class="shot"><img src="img/fx.jpg" alt="Stránka LEAD · FX" width="2400" height="1552" loading="lazy"><figcaption>Stránka <strong>LEAD · FX</strong> s presetem Pulse Engine: LADDER filtr, ECHO v osminách, VOID, dole LEAD s arpeggiem.</figcaption></figure>
+    <h3>FILTER</h3>
+    <div class="duo">
+      <figure class="shot"><img src="img/filter.jpg" alt="FILTER" width="696" height="488" loading="lazy"><figcaption>Preset Squelch Bass: modulace velocity na CUTOFF (prstenec).</figcaption></figure>
+      <div>
+        <p>Stereo filtr pro celý nástroj, běží převzorkovaně. <strong>CUTOFF</strong> 20 Hz–20 kHz, <strong>RESONANCE</strong> 0–10, <strong>DRIVE</strong> 0–10, <strong>SPREAD</strong> rozladí levý a pravý filtr proti sobě (širší stereo). <strong>MODE</strong>: Low Pass, Band Pass, High Pass (High Pass vezme spodek a nechá čisté vysoké drony).</p>
+      </div>
+    </div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Model</th><th>Strmost</th><th>Charakter</th></tr></thead>
+      <tbody>
+        <tr><td>GROWL</td><td class="num">12 dB</td><td>Špinavý stavový filtr se saturujícími integrátory. Hlasitý vstup a rezonance vrčí.</td></tr>
+        <tr><td>LADDER</td><td class="num">24 dB</td><td>Tranzistorový žebřík: kulatý, při vysoké rezonanci trochu ztenčí basy a zpívá.</td></tr>
+        <tr><td>DIODE</td><td class="num">24 dB</td><td>Diodový žebřík s provázanými stupni: gumový „squelch“, rezonance spíš kouše než zvoní.</td></tr>
+        <tr><td>SCREAM</td><td class="num">12 dB</td><td>Ořezaná rezonanční smyčka: ostrý, křičí a při vytočení piští.</td></tr>
+        <tr><td>SILK</td><td class="num">12 dB</td><td>Čistý a hladký, jemně se omezuje jen vstup. Na klidné plochy.</td></tr>
+      </tbody>
+    </table></div>
+    <p>Při plné rezonanci si Band Pass udrží hlasitost (u všech modelů od +0,6 do +9,8 dB proti rezonanci 0). Úzké pásmo tedy nezmizí, ale zpívá.</p>
+    <h3>ECHO</h3>
+    <figure class="shot"><img src="img/echo.jpg" alt="ECHO" width="876" height="488" loading="lazy"></figure>
+    <ul>
+      <li>Dvě linky (<strong>TIME 1</strong> vlevo, <strong>TIME 2</strong> vpravo, 5 ms–2 s) s křížovou zpětnou vazbou. Změna času klouže jako u pásky.</li>
+      <li><strong>FEEDBACK</strong>: nad ~55 % začne echo samo zpívat. Stojaté vlny pak můžeš „hrát“ knobem TIME. Smyčka má strop, takže hlasitost neuteče.</li>
+      <li><strong>MIX</strong>: poměr suchého signálu a ozvěny. <strong>MOD</strong> a <strong>MOD SOURCE</strong>: <em>Self</em> = echo moduluje svůj čas samo sebou (rezonance se rozkolísají), <em>LFO</em> = pomalý sinus.</li>
+      <li><strong>TO VOICES</strong>: ozvěna se vrací do hlasů jako FM. Viz GRAVITY.</li>
+    </ul>
+    <h3>SPACE</h3>
+    <figure class="shot"><img src="img/space.jpg" alt="SPACE" width="764" height="488" loading="lazy"></figure>
+    <p>Pět algoritmů. Popisky knobů X, Y a Z se mění podle algoritmu a krátký popis je přímo v panelu. <strong>BLEND</strong> je poměr suchého signálu a efektu.</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Algoritmus</th><th>X · Y · Z</th><th>Zvuk</th></tr></thead>
+      <tbody>
+        <tr><td>AURORA</td><td>OCT UP · OCT DOWN · DECAY</td><td>Shimmer: dozvuk při doznívání stoupá o oktávu nahoru nebo klesá dolů.</td></tr>
+        <tr><td>VOID</td><td>PRE-DELAY · WOBBLE · DECAY</td><td>Obrovský tmavý prostor. DECAY úplně nahoře zmrazí, co zrovna zní (FREEZE).</td></tr>
+        <tr><td>RUNNER</td><td>FEEDBACK · TIME · PITCH</td><td>Opakování, která stoupají nebo klesají. PITCH na opakování, střed = beze změny.</td></tr>
+        <tr><td>SATURN</td><td>FREQUENCY · STEPS · ROOM</td><td>Kovový kruhový modulátor. STEPS skáče po náhodných notách, ROOM přidá prostor.</td></tr>
+        <tr><td>COMET</td><td>FEEDBACK · TIME · WOBBLE</td><td>Špinavý saturovaný delay, který při vysokém FEEDBACK zpívá.</td></tr>
+      </tbody>
+    </table></div>
+    <p>Všechny smyčky ve FX mají strop a kompenzaci podle feedbacku a stereo vyvážení se drží podle vstupu. Ani ECHO na 100 %, ani COMET nevyletí v hlasitosti a neujedou do jednoho kanálu (měřeno v rozmezí ±3 dB, L/R do 1 dB).</p>
+
+    <h2 id="lead"><span class="num">08</span>LEAD a ARP</h2>
+    <figure class="shot"><img src="img/lead-row.jpg" alt="LEAD a ARP" width="2344" height="604" loading="lazy"><figcaption>LEAD OSC, ENVELOPE, LEAD VOICE a ARP. Když je LEAD vypnutý, jsou panely ztlumené.</figcaption></figure>
+    <p>LEAD je monofonní melodická vrstva nad dronem. Zapíná se <strong>ikonou napájení</strong> u záložky LEAD · FX (zlatá = hraje). Pak hrají LEAD všechny klávesy <em>mimo</em> plates C3–F3. V režimu Keys hrají LEAD všechny klávesy. LEAD jde přes stejný FILTER, ECHO i SPACE jako hlasy.</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Panel</th><th>Ovladače</th></tr></thead>
+      <tbody>
+        <tr><td>LEAD OSC</td><td><strong>WAVE</strong> plynule Sine → Triangle → Shark fin → Saw → Square. <strong>OSC 2</strong> interval ±12 půltónů (pár centů = chorus, 7 = kvinta), <strong>OSC 2 LEVEL</strong>, <strong>OCTAVE</strong> ±2, <strong>SUB</strong> sinus o oktávu níž, <strong>SYNC</strong> = tvrdá synchronizace (OSC 2 pár půltónů nahoru pro klasické trhání).</td></tr>
+        <tr><td>ENVELOPE</td><td>ADSR: ATTACK 1 ms–10 s, DECAY a RELEASE 1 ms–30 s, SUSTAIN.</td></tr>
+        <tr><td>LEAD VOICE</td><td><strong>GLIDE</strong> (klouzání mezi překrývanými notami, 0–2 s), <strong>VIBRATO</strong> (100 % = půltón), <strong>VIB RATE</strong>, <strong>VIB DELAY</strong> (vibrato nabíhá až po nástupu noty), <strong>TOUCH VIB</strong> (víc vibrata silnějším tlakem), <strong>VOLUME</strong>, <strong>PAN</strong>.</td></tr>
+        <tr><td>ARP</td><td><strong>ARP</strong> zapne arpeggiator, <strong>LATCH</strong> ho nechá běžet i po puštění kláves. <strong>DIRECTION</strong> Up / Down / Ping-Pong / Random, <strong>RATE</strong> 1/4 až 1/32 včetně triol, <strong>OCTAVES</strong> 1–4. Běží v tempu skladby.</td></tr>
+      </tbody>
+    </table></div>
+    <p>Hraje vždy poslední zmáčknutá nota. Po jejím puštění se LEAD vrátí na předchozí drženou notu.</p>
+
+    <h2 id="modulace"><span class="num">09</span>Modulace</h2>
+    <figure class="shot"><img src="img/mod-panel.jpg" alt="Panel modulací" width="2400" height="1552" loading="lazy"><figcaption>Panel Mod s presetem Gravity Well: tlak prstu (Pressure) táhne GRAVITY o +45 %.</figcaption></figure>
+    <p>ResoOpus má 24 modulačních slotů. Každý vede <strong>zdroj → funkce → controller → amount → cíl</strong>. Cílem může být jakýkoli spojitý knob hlasů, GRAVITY, FX i LEAD.</p>
+    <ul>
+      <li><strong>Pravým tlačítkem</strong> na knob → <em>Modulate with</em> → zdroj.</li>
+      <li>V panelu <strong>Mod</strong> (vpravo nahoře nebo klávesa <kbd>9</kbd>) tlačítkem <em>+ Add</em>.</li>
+      <li><strong>Zdroje</strong>: Velocity, Mod Wheel, Pressure (aftertouch), Pitch Bend, Constant.</li>
+      <li><strong>Controller</strong> funguje jako „VCA“: modulace je jen tak silná, jak velký je druhý zdroj (např. velocity → TIDE s controllerem Mod Wheel).</li>
+      <li><strong>Function</strong>: Scale, Offset, Low / High Clip, Exponential, Norm Exponential, Low / High Pass, Slew, Low / High Slew, Sample &amp; Hold, Bounce.</li>
+      <li><strong>Bipolar</strong>: zapnuto = houpe se kolem polohy knobu, vypnuto = jen jedním směrem.</li>
+    </ul>
+
+    <h2 id="hrani"><span class="num">10</span>Hraní a lišty</h2>
+    <figure class="strip"><img src="img/keyboard.jpg" alt="Klávesnice" width="2400" height="296" loading="lazy"><figcaption>PB (pitch bend) a MW (mod wheel), 25 kláves od C2 (Ableton: C3 = MIDI 60). Čísla 1–4 jsou plates v barvě typu hlasu. Vpravo PLAY, TOUCH a oktávy.</figcaption></figure>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Volba</th><th>Význam</th></tr></thead>
+      <tbody>
+        <tr><td>PLAY: Plates</td><td>Bílé klávesy C3, D3, E3, F3 hrají hlasy 1–4 s jejich vlastním laděním. Na výšce zahrané klávesy nezáleží, jde o dotek.</td></tr>
+        <tr><td>PLAY: Keys</td><td>Zahraná nota přeladí další volný hlas na sebe. Pomůcka pro chromatické hraní.</td></tr>
+        <tr><td>TOUCH</td><td>Co zesiluje hlas nad HOLD: <em>Velocity</em> (síla úhozu), <em>Aftertouch</em> (tlak po úhozu, např. KeyStep) nebo <em>Both</em>.</td></tr>
+        <tr><td>Snap (dolní lišta)</td><td><em>Free</em> = mikrotonální, <em>Chromatic</em> = hlasy se přichytí k půltónům, <em>Scale</em> = ke stupnici. Stupnice: Major, Minor, Dorian, Phrygian, Lydian, Mixolydian, Harmonic Minor, Pentatonic Major/Minor, Whole Tone, Hirajoshi, Double Harmonic.</td></tr>
+      </tbody>
+    </table></div>
+    <figure class="strip"><img src="img/topbar.jpg" alt="Horní lišta" width="2400" height="72" loading="lazy"><figcaption>Logo, záložky DRONE a LEAD · FX (klávesy 1 a 2) s vypínačem LEAD, prohlížeč presetů se šipkami, undo/redo, A/B + Copy, Mod, Help a <strong>?</strong> (zapíná nápovědu, zlatá = zapnuto).</figcaption></figure>
+    <figure class="strip"><img src="img/bottombar.jpg" alt="Dolní lišta" width="2400" height="56" loading="lazy"><figcaption>Plates/Keys, Touch, Snap, kategorie a preset, oversampling 1×/2×/4×, CPU instance a špička výstupu.</figcaption></figure>
+    <p>V menu <strong>Help</strong> najdeš velikost okna (70–150 %), ladění (A = 415 / 432 / 440 / 442 / 444 Hz), rozsah pitch bendu, posun plates (od C1 / C2 / C3 / C4) a tiché přepínání presetů. <strong>Tiché přepínání</strong> (výchozí zapnuto) při změně presetu na 6 ms ztlumí výstup, smaže ozvěny a staré hlasy a zvuk plynule vrátí.</p>
+
+    <h2 id="prohlizec"><span class="num">11</span>Prohlížeč presetů</h2>
+    <figure class="shot"><img src="img/presets.jpg" alt="Prohlížeč presetů" width="2400" height="1552" loading="lazy"><figcaption>Kategorie vlevo, filtry a hledání nahoře, seznam uprostřed, náhled vpravo: čtyři hlasy s typem, notou a HOLD, GRAVITY a zapnuté efekty.</figcaption></figure>
+    <ul>
+      <li>Otevře se klikem na název presetu v horní liště (šipky vedle procházejí presety bez otevření).</li>
+      <li><strong>All / Factory / User / Favourites</strong> a kategorie se kombinují. Hledání prochází název, kategorii i popis.</li>
+      <li><strong>Hvězdička</strong> u presetu = oblíbený. Menu <strong>…</strong>: nastavit jako výchozí (načte se v každé nové instanci), upravit info, smazat.</li>
+      <li><strong>Save</strong> přepíše aktuální uživatelský preset, <strong>Save as</strong> uloží nový (jméno, kategorie, popis). Hvězdička za názvem nahoře znamená, že je preset upravený.</li>
+      <li>Šipky <kbd>↑</kbd> <kbd>↓</kbd> načítají presety rovnou, <kbd>Enter</kbd> nebo <kbd>Esc</kbd> prohlížeč zavře. Menu <strong>☰</strong>: otevřít soubor, ukázat složku, znovu načíst.</li>
+    </ul>
+
+    <!-- recipes -->
+    <section class="genre-head" id="blade">
+      <p class="tempo">noir sci-fi · Blade Runner · déšť, neon, mosazné nádechy</p>
+      <h2>Neon a déšť</h2>
+      <p>Široké, pomalu nabíhající plochy jako žesťová sekce v dálce, nad nimi zpívající lead s vibratem na tlak prstu. A všude déšť.</p>
+    </section>
+    <div class="recipe">
+      <div class="recipe-head"><h4>Plocha a zpívající lead</h4><span class="where">preset Night Lead · Northern Lights</span></div>
+      <div class="settings"><span class="chip choir">Hlasy 1–2 CHOIR <b>Major / Fifths</b></span><span class="chip choir">ATTACK <b>2–4 s</b></span><span class="chip">TOUCH <b>Aftertouch</b></span><span class="chip">FILTER <b>SILK LP 2,5 kHz</b></span><span class="chip">LEAD WAVE <b>Saw</b></span><span class="chip">OSC 2 <b>+7 c</b></span><span class="chip">GLIDE <b>0,2 s</b></span><span class="chip">VIB DELAY <b>0,8 s</b></span><span class="chip">TOUCH VIB <b>70 %</b></span><span class="chip">SPACE <b>VOID, DECAY 75</b></span><span class="chip">ECHO <b>420 / 630 ms, 25 %</b></span></div>
+      <div class="recipe-body"><p>Tlak prstu zesiluje hlasy nad HOLD jako nádech žesťů a zároveň přidává vibrato do leadu. Hraj pomalé melodie s překrývanými notami, GLIDE je pak spojí.</p><p>Déšť: hlas 4 jako SIREN, FM 0, NOISE 60 %, HOLD 15 %, FILTER Band Pass zavřený k 3 kHz.</p></div>
+    </div>
+
+    <section class="genre-head" id="duna">
+      <p class="tempo">pouštní epika · Duna · hrdelní hloubka, vítr, tlak</p>
+      <h2>Poušť a koření</h2>
+      <p>Velmi hluboký drone, který vrčí jako hrdelní zpěv, nad ním písečný vítr. Hlasitost cítíš víc v hrudi než v uších.</p>
+    </section>
+    <div class="recipe">
+      <div class="recipe-head"><h4>Hrdelní drone s větrem</h4><span class="where">preset Deep Ocean · Monastery</span></div>
+      <div class="settings"><span class="chip choir">Hlas 1 <b>CHOIR Octaves, D0–A0</b></span><span class="chip choir">TIDE <b>60–70 %</b></span><span class="chip choir">HOLD <b>80 %</b></span><span class="chip grav">GRAVITY <b>35–45 % (ORBIT)</b></span><span class="chip">FILTER <b>DIODE LP 400 Hz, RES 4, DRIVE 5</b></span><span class="chip siren">Hlas 4 SIREN <b>NOISE 60, RATE 0,1, FM 8</b></span><span class="chip">SPACE <b>VOID, DECAY 80</b></span><span class="chip">DUST <b>40 %</b></span></div>
+      <div class="recipe-body"><p>TIDE nad 50 % rozvrčí akord jako hrdelní zpěv. ORBIT k tomu přidá chvění. Vítr je šumová siréna s velmi pomalým modulátorem. V gradaci automatizuj GRAVITY pomalu do TURBULENCE.</p></div>
+    </div>
+
+    <section class="genre-head" id="calm">
+      <p class="tempo">ambient · čisté, klidné, bez pohybu</p>
+      <h2>Čistý klidný drone</h2>
+      <p>Pod meditaci, dokument nebo klidnou scénu. Žádné vrčení, jen čisté intervaly a vzduch.</p>
+    </section>
+    <div class="recipe">
+      <div class="recipe-head"><h4>Čisté kvinty a světlo</h4><span class="where">preset Pure Fifths · Northern Lights</span></div>
+      <div class="settings"><span class="chip grav">GRAVITY <b>0–10 % (STILL)</b></span><span class="chip">DUST <b>0–10 %</b></span><span class="chip choir">CHORD <b>Fifths / Unison</b></span><span class="chip choir">ATTACK <b>6 s</b></span><span class="chip choir">RELEASE <b>12 s</b></span><span class="chip">FILTER <b>SILK LP 5 kHz</b></span><span class="chip">SPACE <b>AURORA, OCT UP 40, DECAY 70, BLEND 40</b></span></div>
+      <div class="recipe-body"><p>STILL nechá jen pomalé zázněje. Rozladíš je o pár centů intervaly OSC se <kbd>Shift</kbd>. AURORA přidá třpyt o oktávu výš. Pro úplný klid dej DUST na 0.</p></div>
+    </div>
+
+    <section class="genre-head" id="varhany">
+      <p class="tempo">kosmická epika · Interstellar · varhany ve vesmíru</p>
+      <h2>Kosmické varhany</h2>
+      <p>Varhanní rejstříky z pěti pil: 16′, 8′, 4′, 2 ⅔′, 2′. Pomalé nádechy dynamikou a obrovský prostor.</p>
+    </section>
+    <div class="recipe">
+      <div class="recipe-head"><h4>Rejstříky z CHOIRu</h4><span class="where">preset Monastery · Requiem Air</span></div>
+      <div class="settings"><span class="chip choir">OSC 1–5 <b>0, +12, +19, +24, −12</b></span><span class="chip choir">TIDE <b>0</b></span><span class="chip">Snap <b>Chromatic</b></span><span class="chip grav">GRAVITY <b>5 %</b></span><span class="chip">FILTER <b>SILK LP 3 kHz</b></span><span class="chip">SPACE <b>VOID, PRE-DELAY 40, DECAY 70, BLEND 45</b></span><span class="chip">TOUCH <b>Velocity</b></span></div>
+      <div class="recipe-body"><p>Nastav stejné intervaly na dva nebo tři hlasy a vyladíš je na akord (nebo použij FILL). HOLD 30–50 % dá tichý podklad, hraní plates rejstříky „vytáhne“. Pro pulzující gradaci zkus mod wheel → GRAVITY (preset Tidal Lock).</p></div>
+    </div>
+
+    <section class="genre-head" id="kontakt">
+      <p class="tempo">sci-fi · Arrival · mikrotonální clustery, nejistota</p>
+      <h2>První kontakt</h2>
+      <p>Tóny jen kousek od sebe, které se třou a dýchají. Vzdálená dvoutónová siréna, jako by něco volalo zpět.</p>
+    </section>
+    <div class="recipe">
+      <div class="recipe-head"><h4>Mikrotonální cluster</h4><span class="where">preset Arrival · Microtonal Glass</span></div>
+      <div class="settings"><span class="chip choir">OSC 2–5 <b>+0,5, +1, +12,5 st</b></span><span class="chip choir">Hlas 1 TIDE <b>30 %</b></span><span class="chip">Snap <b>Free</b></span><span class="chip grav">GRAVITY <b>25–30 %</b></span><span class="chip siren">Hlas 4 SIREN <b>WAVE 0, RATE 0,25, FM 5, HOLD 18</b></span><span class="chip">SPACE <b>VOID, DECAY 85</b></span></div>
+      <div class="recipe-body"><p>Intervaly po čtvrttónech a centech dělají nejistotu a pomalé zázněje. GRAVITY na hranici ORBIT je rozechvěje. Siréna s obdélníkovým modulátorem je dvoutónové „volání“. Ztiš ji na −10 dB a nech ji daleko.</p></div>
+    </div>
+
+    <section class="genre-head" id="synthwave">
+      <p class="tempo">80. léta · Stranger Things · arpeggio přes drone</p>
+      <h2>Synthwave arpeggio</h2>
+      <p>Pulzující pila v šestnáctinách přes temný mollový drone. Klasika soundtracků inspirovaných osmdesátkami.</p>
+    </section>
+    <div class="recipe">
+      <div class="recipe-head"><h4>Arpeggio v tempu</h4><span class="where">preset Pulse Engine</span></div>
+      <div class="settings"><span class="chip">LEAD <b>ON</b></span><span class="chip">ARP <b>Up, 1/16, OCTAVES 2, LATCH</b></span><span class="chip">WAVE <b>Saw → Square</b></span><span class="chip">ENVELOPE <b>D 180 ms, S 20 %</b></span><span class="chip">FILTER <b>LADDER LP 1,2–1,6 kHz, RES 5</b></span><span class="chip choir">Drone <b>CHOIR Minor, HOLD 45</b></span><span class="chip">ECHO <b>375 / 500 ms, MIX 20</b></span></div>
+      <div class="recipe-body"><p>Drž dvě nebo tři noty mimo plates. LATCH arpeggio udrží. Pomalu otevírej CUTOFF přes celou sekci (automatizace nebo mod wheel). ECHO 375 ms je při 120 BPM osmina s tečkou.</p></div>
+    </div>
+
+    <section class="genre-head" id="hrozba">
+      <p class="tempo">thriller · Sicario · podprahový tlak, tep</p>
+      <h2>Plíživá hrozba</h2>
+      <p>Skoro neslyšitelný spodek, který se propadá, a pomalý tep. Napětí, které roste, aniž si toho divák všimne.</p>
+    </section>
+    <div class="recipe">
+      <div class="recipe-head"><h4>Propadající se drone s tepem</h4><span class="where">preset Heartbeat · Sinking Choir</span></div>
+      <div class="settings"><span class="chip choir">Hlas 1 CHOIR <b>C1, TIDE 70 %</b></span><span class="chip siren">Hlas 2 SIREN <b>AM 85, RATE 1,1 Hz, DIVIDER 1:2</b></span><span class="chip">FILTER <b>LADDER LP 300 Hz</b></span><span class="chip grav">GRAVITY <b>15 → 60 % za 32 taktů</b></span><span class="chip">DUST <b>30 %</b></span></div>
+      <div class="recipe-body"><p>Siréna sekaná AM kolem 1 Hz s podtónem 1:2 zní jako tep. Pro zrychlující se tep automatizuj RATE. GRAVITY pomalu stoupající do TURBULENCE přidává neklid tak plíživě, že ho posluchač vnímá dřív, než ho slyší.</p></div>
+    </div>
+
+    <section class="genre-head" id="zona">
+      <p class="tempo">industriál · Černobyl · hukot strojů, radiace</p>
+      <h2>Zóna a reaktor</h2>
+      <p>Elektrický hukot, rozbitá technika, praskání v pozadí. Kovový, špinavý, nebezpečný.</p>
+    </section>
+    <div class="recipe">
+      <div class="recipe-head"><h4>Hukot a praskání</h4><span class="where">preset Iron Hum · Deep Field Static</span></div>
+      <div class="settings"><span class="chip choir">Hlasy 1–2 <b>CHOIR o 11 centů vedle sebe</b></span><span class="chip">FILTER <b>DIODE LP 900 Hz, RES 5,5, DRIVE 6</b></span><span class="chip">DUST <b>60–85 %</b></span><span class="chip">SPACE <b>SATURN, ROOM 40</b></span><span class="chip siren">Hlas 4 SIREN <b>NOISE 50, AM 100, RATE 9 Hz</b></span></div>
+      <div class="recipe-body"><p>Dva skoro stejně naladěné hlasy dají tlučení jako transformátor. DIODE s drivem přidá špínu, SATURN kovové alikvoty. Siréna sekaná rychlou AM se šumem praská jako Geigerův počítač. Zkus i TIDE nad 80 % na dně akordu.</p></div>
+    </div>
+
+    <section class="genre-head" id="lod">
+      <p class="tempo">sci-fi horor · Vetřelec · hukot lodi, signály z dálky</p>
+      <h2>Hluboký vesmír</h2>
+      <p>Hukot obří lodi, maják a rozbitý signál. Prázdnota, ve které je něco slyšet.</p>
+    </section>
+    <div class="recipe">
+      <div class="recipe-head"><h4>Loď a maják</h4><span class="where">preset Last Transmission · Morse Beacon · Shortwave</span></div>
+      <div class="settings"><span class="chip choir">Hlas 1 CHOIR <b>A0–C1, HOLD 60</b></span><span class="chip pulsar">Hlas 3 PULSAR <b>TWIN +0,05 st, BLEND 50, SUB 40</b></span><span class="chip siren">Hlas 4 SIREN <b>AM 100, RATE 3 Hz, NOISE 20</b></span><span class="chip">SPACE <b>COMET, FEEDBACK 55</b></span><span class="chip">DUST <b>55 %</b></span></div>
+      <div class="recipe-body"><p>PULSAR s TWIN pár centů od unisona dá pomalé tlučení motorů. Siréna sekaná AM je maják. RATE zpomal pro delší pauzy. COMET rozmaže a zašpiní signál. Pro „ladění rádia“ přepni FILTER na SCREAM Band Pass a otáčej CUTOFF (preset Shortwave).</p></div>
+    </div>
+
+    <section class="genre-head" id="meditace">
+      <p class="tempo">meditace · tanpura, zpívající mísy</p>
+      <h2>Meditace</h2>
+      <p>Základ, kvinta a oktáva jako indická tanpura, nad nimi rozkvétající tóny a kovové mísy.</p>
+    </section>
+    <div class="recipe">
+      <div class="recipe-head"><h4>Tanpura a mísy</h4><span class="where">preset Tanpura Bed</span></div>
+      <div class="settings"><span class="chip choir">Hlas 1 OSC <b>0, +7, +12, −12</b></span><span class="chip pulsar">Hlas 3 PULSAR <b>SHARP 55, BLOOM 80, HOLD 30</b></span><span class="chip grav">GRAVITY <b>20 %</b></span><span class="chip">ECHO <b>MIX 18, FB 30</b></span><span class="chip">SPACE <b>SATURN, STEPS 0, ROOM 60</b></span><span class="chip">A = <b>432 Hz (Help)</b></span></div>
+      <div class="recipe-body"><p>TUNE hlasu 1 nastav na základní tón (sa). BLOOM nechá pulsar při každém hraní plate rozkvést jako drnknutí struny. SATURN s ROOM dá kovový lesk misek. Pokud chceš ladění 432 Hz, najdeš ho v menu Help → Tuning.</p></div>
+    </div>
+
+    <h2 id="presety"><span class="num">12</span>Tovární presety</h2>
+    <p>42 presetů v sedmi kategoriích. Otevři prohlížeč klikem na název presetu, nebo procházej šipkami ◀ ▶.</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Preset</th><th>Na co a co otočit</th></tr></thead>
+      <tbody>
+        <tr class="cat"><td colspan="2">Basics</td></tr>
+        <tr><td>Init</td><td>Drone hned po vložení: dva nízké choiry, pulsar a pomalá siréna. Hraj C3–F3, HOLD nastaví úroveň.</td></tr>
+        <tr><td>Pure Fifths</td><td>Jeden čistý choir v kvintách, nic se nehýbe. Nejprostší start: nalaď hlas 1 do své tóniny.</td></tr>
+        <tr><td>Four Plates</td><td>Čtyři samostatné pily, každá klávesa C3–F3 hraje jeden hlas. Na naučení plates.</td></tr>
+        <tr><td>Keys Drone</td><td>Režim Keys: každá zahraná nota přeladí další volný hlas a drží ho.</td></tr>
+        <tr class="cat"><td colspan="2">Drones</td></tr>
+        <tr><td>Low Choir</td><td>Dva hluboké choiry o kvintu od sebe. TIDE hlasu 1 je stáhne do vrčení.</td></tr>
+        <tr><td>Sinking Choir</td><td>Spodní choir stažený TIDE do vrčení, pulsar zůstává čistý nad ním. TIDE mezi 40 a 80 %.</td></tr>
+        <tr><td>Deep Ocean</td><td>Velmi nízký choir pod pomalým LADDER filtrem. Velké a tmavé, CUTOFF přidá světlo na hladině.</td></tr>
+        <tr><td>Monastery</td><td>Choiry v oktávách a kvintách jako mužské hlasy v kameni, nad nimi AURORA.</td></tr>
+        <tr><td>Tanpura Bed</td><td>Základ, kvinta a oktáva, nad nimi rozkvétající pulsar. TUNE hlasu 1 = tónika.</td></tr>
+        <tr><td>Iron Hum</td><td>Industriál: dva lehce rozladěné choiry přes přebuzený DIODE filtr.</td></tr>
+        <tr><td>Low Saturn</td><td>Tmavý choir přes kovový SATURN, alikvoty jako zvony. Plates přivolají vzdálenou sirénu.</td></tr>
+        <tr><td>Cello Ground</td><td>Pulsar jako smyčec s vibratem nad měkkým choirem. Teplé a dřevité.</td></tr>
+        <tr class="cat"><td colspan="2">Cinematic</td></tr>
+        <tr><td>Slow Bloom</td><td>Ticho, dokud nehraješ: každá plate se rozvine za několik sekund a doznívá dvanáct.</td></tr>
+        <tr><td>Microtonal Glass</td><td>Choiry pár centů od sebe, pomalé zázněje jako skleněná harmonika.</td></tr>
+        <tr><td>Pulsar Field</td><td>Čtyři pulsary od měkkého po ostrý, každý rozkvete z podladění do výšky.</td></tr>
+        <tr><td>Arrival</td><td>Obrovský nízký cluster a vzdálená dvoutónová siréna. GRAVITY k ORBIT, když scéna graduje.</td></tr>
+        <tr><td>Northern Lights</td><td>Durové choiry vysoko přes dlouhou AURORU. Klidné, široké, jasné.</td></tr>
+        <tr><td>Dune Sunrise</td><td>Mollové choiry a teplý pulsar s pomalým echem. Žár nad pískem, DUST = tetelení.</td></tr>
+        <tr><td>Requiem Air</td><td>Smutné vzdušné mollové choiry, jen při hraní, dlouhý release. Drž akordy na plates.</td></tr>
+        <tr><td>Frozen Hall</td><td>VOID na hraně FREEZE: co zahraješ, zůstane viset. DECAY dolů = rozmrazit.</td></tr>
+        <tr><td>Last Transmission</td><td>Rozbitý signál: sekaná siréna nad nízkým dronem přes COMET.</td></tr>
+        <tr class="cat"><td colspan="2">Textures</td></tr>
+        <tr><td>Night Sirens</td><td>Pomalu kvílící siréna nad choirem a vzdálená dvoutónová siréna se šumem.</td></tr>
+        <tr><td>Shortwave</td><td>Rádio mezi stanicemi: šumové sirény přes SCREAM band pass. CUTOFF = ladění.</td></tr>
+        <tr><td>Wind Harp</td><td>Šumový vítr a pískající sirény s tichým choirem. NOISE hlasů 3–4 = poryvy.</td></tr>
+        <tr><td>Rain Machine</td><td>Rychle sekané sirény přes RUNNER: kapky padající ve výšce. RATE = liják.</td></tr>
+        <tr><td>Deep Field Static</td><td>Choir pohřbený v DUST a kruhové modulaci. Stará páska, kosmické pozadí.</td></tr>
+        <tr><td>Glass Rain</td><td>Jasné pulsary v samozpívajícím ECHU. Hraj E3 a F3 lehce.</td></tr>
+        <tr class="cat"><td colspan="2">Orbits</td></tr>
+        <tr><td>Gravity Well</td><td>Tlak prstu stáhne GRAVITY do TURBULENCE, po puštění se hlasy uklidní.</td></tr>
+        <tr><td>Collapse</td><td>Všechny hlasy v kruhu za hranou: smyčka pulzuje sama. GRAVITY pod 85 % ji zkrotí.</td></tr>
+        <tr><td>Binary Stars</td><td>Dva páry na oběžné dráze naladěné těsně vedle sebe, FM pomalu tluče.</td></tr>
+        <tr><td>Tidal Lock</td><td>Mod wheel = GRAVITY. Projeď ho pomalu celým rozsahem.</td></tr>
+        <tr><td>Ring World</td><td>Kruh čtyř hlasů v TURBULENCE přes LADDER: živá smyčka, která se neopakuje.</td></tr>
+        <tr><td>Event Horizon</td><td>Silnější tlak táhne do COLLAPSE a echo se vrací do hlasů. Hraj jemně, ať se vznášíš na hraně.</td></tr>
+        <tr class="cat"><td colspan="2">Lead</td></tr>
+        <tr><td>Solo Saw</td><td>Klasický mono saw lead s glidem a zpožděným vibratem nad tichým dronem.</td></tr>
+        <tr><td>Night Lead</td><td>Měkký zpívající lead s dlouhým glidem ve VOID. Tlak = víc vibrata.</td></tr>
+        <tr><td>Glide Sine</td><td>Čistý sinus se subem klouže mezi notami. Hraj legato.</td></tr>
+        <tr><td>Sync Scream</td><td>Tvrdý sync přes SCREAM filtr. Mod wheel trhá OSC 2.</td></tr>
+        <tr><td>Squelch Bass</td><td>Square přes DIODE s vysokou rezonancí: gumová kyselá basa. Velocity otevírá filtr.</td></tr>
+        <tr class="cat"><td colspan="2">Pulse</td></tr>
+        <tr><td>Pulse Engine</td><td>Arpeggio v šestnáctinách přes LADDER drone. Drž akord mimo plates.</td></tr>
+        <tr><td>Constellation</td><td>Ping-pong arpeggio měkkých sinusů přes tři oktávy a shimmer. Hvězdy se rozsvěcují.</td></tr>
+        <tr><td>Morse Beacon</td><td>Siréna sekaná na pípnutí, pomalý maják a nízký drone. RATE = rychlost kódu.</td></tr>
+        <tr><td>Heartbeat</td><td>Nízká siréna pomalu sekaná s podtónem: hluboký tep jako srdce nebo motor.</td></tr>
+      </tbody>
+    </table></div>
+
+    <h2 id="mereni"><span class="num">13</span>Měření</h2>
+    <p>Hodnoty měří testovací aplikace ResoOpusTests při každém buildu (48 kHz, Apple M1).</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Vlastnost</th><th class="num">Hodnota</th></tr></thead>
+      <tbody>
+        <tr><td>Přesnost ladění (TUNE, intervaly, PITCH, A = 432 Hz, Snap, SIREN)</td><td class="num">nejhůř 0,016 centu</td></tr>
+        <tr><td>Aliasing 1976 Hz pod 10 kHz: pila CHOIR 2× / 1×</td><td class="num">−93 / −81 dB</td></tr>
+        <tr><td>GRAVITY: rozdíl hlasitosti STILL → COLLAPSE</td><td class="num">2,2 dB</td></tr>
+        <tr><td>Stabilita 60 s ve všech zónách GRAVITY, 44,1–192 kHz</td><td class="num">bez NaN, ≤ −0,3 dBFS</td></tr>
+        <tr><td>FILTER: LP na 3 kHz / HP na 110 Hz (5 modelů)</td><td class="num">−31 až −64 / −53 až −109 dB</td></tr>
+        <tr><td>Efekty: hlasitost ECHO / COMET / AURORA v extrémech, L/R</td><td class="num">±3 dB, L/R ≤ 1 dB</td></tr>
+        <tr><td>LEAD: přesnost ladění / krok ARP při 120 BPM, 1/16</td><td class="num">0,009 c / 125 ms</td></tr>
+        <tr><td>CPU: výchozí patch 2× / nečinnost</td><td class="num">~2,7 / 0,7 % jádra</td></tr>
+        <tr><td>Audit parametrů (mění každý zvuk?)</td><td class="num">175 ze 175</td></tr>
+      </tbody>
+    </table></div>
+
+    <h2 id="potize"><span class="num">14</span>Řešení potíží</h2>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Problém</th><th>Řešení</th></tr></thead>
+      <tbody>
+        <tr><td>Po vložení nic nehraje</td><td>Preset má HOLD na 0 (Slow Bloom, Requiem Air…). Hraj C3–F3, nebo otoč HOLD.</td></tr>
+        <tr><td>Klávesy mimo C3–F3 nic nedělají</td><td>LEAD je vypnutý. Zapni ho ikonou napájení u záložky LEAD · FX.</td></tr>
+        <tr><td>Hlas nezní</td><td>Jeho TYPE je OFF, nebo je VOL na −∞.</td></tr>
+        <tr><td>Knoby ECHO nic nedělají</td><td>ECHO MIX je na 0 %.</td></tr>
+        <tr><td>PATH nic nemění</td><td>PATH se uplatní až od ORBIT. Ve STILL se hlasy netahají.</td></tr>
+        <tr><td>Arpeggio stojí</td><td>ARP drží jen klávesy mimo plates. Bez LATCH hraje, jen dokud klávesy držíš. Tempo bere ze skladby, transport běžet nemusí.</td></tr>
+        <tr><td>Aftertouch nic nedělá</td><td>TOUCH v dolní liště nebo u klávesnice přepni na Aftertouch nebo Both. Klávesy musí posílat channel pressure.</td></tr>
+        <tr><td>Popisky nad knoby se neukazují</td><td>Zapni je ikonou <strong>?</strong> vpravo nahoře.</td></tr>
+        <tr><td>Pískání ve výškách</td><td>Oversampling 1× v dolní liště. Přepni na 2× nebo 4×.</td></tr>
+      </tbody>
+    </table></div>
+
+    <h2 id="klavesy"><span class="num">15</span>Myš a klávesy</h2>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Akce</th><th>Výsledek</th></tr></thead>
+      <tbody>
+        <tr><td>Tažení knobu nahoru/dolů</td><td>Změna hodnoty, <kbd>Shift</kbd> = jemně (u ladění po centech)</td></tr>
+        <tr><td>Kolečko nad knobem</td><td>Krok (u přepínačů jedna volba)</td></tr>
+        <tr><td>Dvojklik na knob</td><td>Napsat hodnotu: <code>D2+12</code>, <code>+19 -8c</code>, <code>2.5k</code>, <code>3 s</code>, <code>L 30</code></td></tr>
+        <tr><td><kbd>Cmd</kbd>/<kbd>Ctrl</kbd>-klik</td><td>Výchozí hodnota</td></tr>
+        <tr><td>Pravé tlačítko na knob</td><td>Reset, napsat, Modulate with, správa modulací</td></tr>
+        <tr><td>Tažení prstence knobu</td><td>Hloubka modulace</td></tr>
+        <tr><td>Klik do modulu hlasu</td><td>Vybere hlas pro panel VOICE</td></tr>
+        <tr><td><kbd>1</kbd> / <kbd>2</kbd></td><td>Stránky DRONE / LEAD · FX</td></tr>
+        <tr><td><kbd>9</kbd> / <kbd>0</kbd>, <kbd>Esc</kbd></td><td>Panel modulací otevřít / zavřít</td></tr>
+        <tr><td><kbd>Cmd</kbd>+<kbd>Z</kbd>, <kbd>Shift</kbd>+<kbd>Cmd</kbd>+<kbd>Z</kbd></td><td>Undo / Redo</td></tr>
+        <tr><td>Klávesnice dole: klik níž do klávesy</td><td>Silnější úhoz. Tažením přes klávesy glissando.</td></tr>
+      </tbody>
+    </table></div>
+
+    <h2 id="instalace"><span class="num">16</span>Instalace a soubory</h2>
+    <div class="table-wrap"><table>
+      <thead><tr><th></th><th>macOS</th><th>Windows</th></tr></thead>
+      <tbody>
+        <tr><td>VST3</td><td><code>~/Library/Audio/Plug-Ins/VST3/ResoOpus.vst3</code></td><td><code>C:\Program Files\Common Files\VST3\ResoOpus.vst3</code></td></tr>
+        <tr><td>AU</td><td><code>~/Library/Audio/Plug-Ins/Components/ResoOpus.component</code></td><td>–</td></tr>
+        <tr><td>Uživatelské presety</td><td><code>~/Documents/Gavr/ResoOpus Presets/*.ropreset</code></td><td><code>Documents\Gavr\ResoOpus Presets\*.ropreset</code></td></tr>
+        <tr><td>Nastavení (nápověda, velikost, oblíbené)</td><td><code>~/Library/Application Support/Gavr/ResoOpus/</code></td><td><code>%APPDATA%\Gavr\ResoOpus\</code></td></tr>
+      </tbody>
+    </table></div>
+    <p>V Abletonu: Settings → Plug-Ins → zapni „Use VST3 Plug-In System Folders“ → Rescan. ResoOpus najdeš pod Plug-Ins → Gavr.</p>
+
+    <footer>ResoOpus · verze 0.1.0 · Gavr. Názvy filmů (Blade Runner, Duna, Interstellar, Arrival, Stranger Things, Sicario, Černobyl, Vetřelec) slouží jen jako odkaz na známou zvukovou atmosféru. ResoOpus s nimi ani s jejich autory nesouvisí. VST je ochranná známka Steinberg Media Technologies GmbH.</footer>
+  </div>
+  </main>
+</div>
+</body>
+</html>

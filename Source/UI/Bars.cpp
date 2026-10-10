@@ -216,6 +216,16 @@ void TopBar::showHelpMenu()
     for (int s : { 70, 80, 90, 100, 115, 130, 150 })
         size.addItem (100 + s, String (s) + " %", true, cur == s);
     m.addSubMenu ("Window size", size);
+    PopupMenu tuning, bend, plates;
+    const int a4 = roundToInt (proc.getParamReal ("a4"));
+    for (int f : { 415, 432, 440, 442, 444 }) tuning.addItem (300 + f - 400, "A = " + String (f) + " Hz", true, a4 == f);
+    const int pb = roundToInt (proc.getParamReal ("pb_range"));
+    for (int r : { 0, 1, 2, 7, 12, 24 }) bend.addItem (400 + r, r == 0 ? String ("Off") : String (r) + " semitones", true, pb == r);
+    const int base = roundToInt (proc.getParamReal ("plates_base"));
+    for (int n : { 36, 48, 60, 72 }) plates.addItem (500 + n, "From " + Params::noteName (n), true, base == n);
+    m.addSubMenu ("Tuning (reference A)", tuning);
+    m.addSubMenu ("Pitch bend range", bend);
+    m.addSubMenu ("Plates position", plates);
     m.addSeparator();
     m.addSectionHeader ("Plates: the white keys C3-F3 play voices 1-4; HOLD keeps them droning");
     m.addSectionHeader ("Knobs: drag, Shift = fine, double-click = type (D2+12, 3 s, L 30), Cmd-click = default");
@@ -228,6 +238,9 @@ void TopBar::showHelpMenu()
         if (sp == nullptr || r == 0) return;
         if (r == 1) sp->settings.setBool (GlobalSettings::tooltips, ! sp->settings.getBool (GlobalSettings::tooltips, false));
         else if (r == 3) sp->settings.setBool (GlobalSettings::silentPresets, ! sp->settings.getBool (GlobalSettings::silentPresets));
+        else if (r >= 500) sp->proc.setParamReal ("plates_base", (float) (r - 500));
+        else if (r >= 400) sp->proc.setParamReal ("pb_range", (float) (r - 400));
+        else if (r >= 300) sp->proc.setParamReal ("a4", (float) (r - 300 + 400));
         else if (r >= 100 && sp->onScale) sp->onScale (r - 100);
     });
 }
@@ -317,7 +330,7 @@ void BottomBar::mouseMove (const MouseEvent& e)
 {
     switch (itemAt (e.position))
     {
-        case Play:     setTooltip ("Plates: eight white keys play the eight voices with their own tuning. Keys: a played note retunes a voice"); break;
+        case Play:     setTooltip ("Plates: four white keys play the four voices with their own tuning. Keys: a played note retunes a voice"); break;
         case TouchSrc: setTooltip ("What makes a played voice louder than HOLD: velocity, aftertouch (pressure after the strike) or both"); break;
         case SnapMode: setTooltip ("Free: microtonal. Chromatic: voices snap to semitones. Scale: voices snap to the chosen scale"); break;
         case OS:       setTooltip ("Oversampling of the voices: 2x is the sweet spot, 4x for the cleanest high notes and pull"); break;

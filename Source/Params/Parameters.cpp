@@ -87,10 +87,10 @@ const std::vector<ParamDef>& Params::globalDefs()
         d.push_back (F ("master_vol", "Volume", -60.0f, 12.0f, 0.0f, Unit::Decibels, "Output volume", 2.5f));
         d.push_back (C ("oversampling", "Oversampling", { "1x", "2x", "4x" }, 1, "Voices run at a higher rate: less aliasing, more CPU"));
         d.push_back (C ("play_mode", "Play Mode", { "Plates", "Keys" }, 0,
-                        "Plates: eight white keys play the eight voices with their own tuning. Keys: a played note retunes a voice to that note"));
+                        "Plates: four white keys (C3-F3) play the four voices with their own tuning. Keys: a played note retunes a voice to that note"));
         d.push_back (C ("touch", "Touch", { "Velocity", "Aftertouch", "Both" }, 0,
                         "What makes a voice louder above HOLD: how hard you strike (velocity), how hard you press after the strike (aftertouch), or both"));
-        d.push_back (F ("plates_base", "Plates From", 36.0f, 84.0f, 60.0f, Unit::Note, "Lowest key of the eight plates (white keys from here)"));
+        d.push_back (F ("plates_base", "Plates From", 36.0f, 84.0f, 60.0f, Unit::Note, "Lowest key of the four plates (white keys from here)"));
         d.push_back (C ("snap", "Snap", { "Free", "Chromatic", "Scale" }, 0,
                         "Free: microtonal tuning. Chromatic: voices snap to semitones. Scale: voices snap to the notes of the chosen scale"));
         d.push_back (C ("snap_scale", "Scale", Params::scaleNames(), 2, "Scale used by SNAP and FILL"));

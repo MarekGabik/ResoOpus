@@ -1371,6 +1371,125 @@ int main (int argc, char* argv[])
         snapshotDir = root.getChildFile ("snapshots");
         snapshotDir.createDirectory();
     }
+    if (argc > 2 && String (argv[1]) == "--shots")
+    {
+        // screenshots for the manual: full pages and panel crops at 2x, PNG into the given folder
+        const File dir { String (argv[2]) };
+        dir.createDirectory();
+        auto p = makeProc();
+        std::unique_ptr<AudioProcessorEditor> ed (p->createEditor());
+        auto* editor = dynamic_cast<ResoOpusEditor*> (ed.get());
+        ed->setSize (ResoOpusEditor::logicalWidth, ResoOpusEditor::logicalHeight);
+        auto save = [&] (const String& name, Rectangle<int> area)
+        {
+            auto img = ed->createComponentSnapshot (area, true, 2.0f);
+            auto f = dir.getChildFile (name + ".png");
+            f.deleteFile();
+            FileOutputStream os (f);
+            PNGImageFormat().writeImageToStream (img, os);
+            std::cout << "  " << name << " " << img.getWidth() << "x" << img.getHeight() << std::endl;
+        };
+        std::function<ModulePanel* (Component&, const String&)> findPanel = [&] (Component& c, const String& title) -> ModulePanel*
+        {
+            for (auto* ch : c.getChildren())
+            {
+                if (auto* mp = dynamic_cast<ModulePanel*> (ch))
+                    if (mp->getTitle().startsWith (title) && [mp, &ed] { for (Component* q = mp; q != nullptr && q != ed.get(); q = q->getParentComponent()) if (! q->isVisible()) return false; return true; }()) return mp;
+                if (auto* r = findPanel (*ch, title)) return r;
+            }
+            return nullptr;
+        };
+        auto areaOf = [&] (const String& title, int pad = 4)
+        {
+            if (auto* mp = findPanel (*ed, title)) return ed->getLocalArea (mp, mp->getLocalBounds()).expanded (pad);
+            std::cout << "  ! panel " << title << " not found" << std::endl;
+            return Rectangle<int>();
+        };
+        auto preset = [&] (const String& name)
+        {
+            for (int i = 0; i < p->presets->getPresets().size(); ++i)
+                if (p->presets->getPresets()[i].name == name) { p->presets->load (i, false); return; }
+            std::cout << "  ! preset " << name << " not found" << std::endl;
+        };
+        auto live = [&] (double seconds, std::vector<Ev> ev = {})
+        {
+            // audio and UI side by side, so meters, traces and the orbit move
+            const int steps = (int) (seconds / 0.05);
+            size_t ei = 0;
+            for (int i = 0; i < steps; ++i)
+            {
+                std::vector<Ev> now;
+                while (ei < ev.size() && ev[ei].time <= (i + 1) * 0.05) { now.push_back ({ ev[ei].time - i * 0.05, ev[ei].msg }); ++ei; }
+                render (*p, 0.05, now);
+                pumpMessages (35);
+            }
+        };
+        const Rectangle<int> full (0, 0, ResoOpusEditor::logicalWidth, ResoOpusEditor::logicalHeight);
+        auto* drone = editor->getDronePage();
+
+        preset ("Monastery");
+        editor->showPage (0);
+        drone->selectVoice (0);
+        live (5.0, { { 1.0, MidiMessage::noteOn (1, 62, 0.8f) }, { 3.5, MidiMessage::noteOff (1, 62) } });
+        save ("overview", full);
+        save ("voice-strip", areaOf ("CHOIR"));
+        save ("detail-choir", areaOf ("VOICE 1"));
+        save ("master", areaOf ("MASTER"));
+        save ("topbar", { 0, 0, ResoOpusEditor::logicalWidth, TopBar::height });
+        save ("keyboard", { 0, TopBar::height + Stage::height, ResoOpusEditor::logicalWidth, ResoOpusEditor::logicalHeight - TopBar::height - Stage::height - BottomBar::height });
+        save ("bottombar", { 0, ResoOpusEditor::logicalHeight - BottomBar::height, ResoOpusEditor::logicalWidth, BottomBar::height });
+
+        preset ("Night Sirens");
+        drone->selectVoice (3);
+        live (2.0);
+        save ("detail-siren", areaOf ("VOICE 4"));
+        preset ("Pulsar Field");
+        drone->selectVoice (0);
+        live (2.5, { { 0.2, MidiMessage::noteOn (1, 60, 0.9f) } });
+        save ("detail-pulsar", areaOf ("VOICE 1"));
+        live (0.1, { { 0.0, MidiMessage::noteOff (1, 60) } });
+
+        preset ("Ring World");
+        for (float g : { 10.0f, 40.0f, 70.0f, 93.0f })
+        {
+            setParam (*p, "gravity", g);
+            live (2.0);
+            save ("gravity-" + String (roundToInt (g)), areaOf ("GRAVITY"));
+        }
+        preset ("Tidal Lock");
+        p->uiModWheel = 0.6f;
+        live (2.0);
+        save ("gravity-mod", areaOf ("GRAVITY"));
+        save ("drone-orbit", full);
+        p->uiModWheel = 0.0f;
+
+        preset ("Squelch Bass");
+        editor->showPage (1);
+        live (1.5, { { 0.2, MidiMessage::noteOn (1, 43, 1.0f) }, { 1.2, MidiMessage::noteOff (1, 43) } });
+        save ("filter", areaOf ("FILTER"));
+        preset ("Pulse Engine");
+        live (2.0, { { 0.1, MidiMessage::noteOn (1, 67, 0.8f) }, { 0.1, MidiMessage::noteOn (1, 71, 0.8f) } });
+        save ("fx", full);
+        save ("echo", areaOf ("ECHO"));
+        save ("space", areaOf ("SPACE"));
+        save ("lead-row", areaOf ("LEAD OSC").getUnion (areaOf ("ARP")));
+
+        preset ("Gravity Well");
+        editor->showPage (0);
+        editor->setModDrawer (true, 0);
+        live (1.5);
+        save ("mod-panel", full);
+        editor->setModDrawer (false);
+
+        preset ("Northern Lights");
+        editor->setPresetBrowser (true);
+        live (1.0);
+        save ("presets", full);
+        editor->setPresetBrowser (false);
+        ed.reset();
+        std::cout << "done" << std::endl;
+        return 0;
+    }
     if (argc > 1 && String (argv[1]) == "--repeat")
     {
         // diagnostics: the same SIREN FM render many times; any difference means non-deterministic audio
