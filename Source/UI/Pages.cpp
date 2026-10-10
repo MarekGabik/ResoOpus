@@ -696,7 +696,7 @@ FxPage::FxPage (ResoOpusProcessor& p) : Page (p)
 {
     const int rowH = 262, gap = 10, fw = 372;
     auto* filter = panel ("FILTER", Palette::filter, { 0, 0, fw, rowH }, -1, "12 dB");
-    auto* mode = new LedRadio (proc, "flt_mode", "MODE", { "LOW PASS", "BAND PASS" });
+    auto* mode = new LedRadio (proc, "flt_mode", "MODE", { "LOW PASS", "BAND PASS", "HIGH PASS" });
     owned.add (mode);
     filter->setGrid ({ 1.0f, 1.0f, 1.0f }, {
         knob ("flt_cutoff", "CUTOFF", Palette::filter, range ("20", "20k")),

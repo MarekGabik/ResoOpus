@@ -668,12 +668,12 @@ void ResoOpusProcessor::runArp (int len)
 
 void ResoOpusProcessor::applyFilter (float* L, float* R, int count)
 {
-    const bool bp = (int) curG[GP::flt_mode] == 1;
+    const int mode = (int) curG[GP::flt_mode];
     for (int k = 0; k < count; ++k)
     {
         const float gl = cutoffRamp[0].next(), gr = cutoffRamp[1].next(), res = resRamp.next(), drive = driveRamp.next();
-        L[k] = filters[0].process (L[k], gl, res, drive, bp);
-        R[k] = filters[1].process (R[k], gr, res, drive, bp);
+        L[k] = filters[0].process (L[k], gl, res, drive, mode);
+        R[k] = filters[1].process (R[k], gr, res, drive, mode);
     }
 }
 

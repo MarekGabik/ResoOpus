@@ -23,8 +23,8 @@ class GrowlFilter
 public:
     void reset() { s1 = s2 = 0.0f; }
 
-    // g = tan(pi fc / fs), res 0..1, drive 0..1, bandpass = BP output instead of LP
-    float process (float x, float g, float res, float drive, bool bandpass)
+    // g = tan(pi fc / fs), res 0..1, drive 0..1, mode 0 = low pass, 1 = band pass, 2 = high pass
+    float process (float x, float g, float res, float drive, int mode)
     {
         const float k = 2.0f - 1.97f * res;                  // damping: 2 (none) .. 0.03 (near self-oscillation)
         x *= 1.0f + 3.0f * drive;
@@ -37,7 +37,7 @@ public:
         const float lp = v2 + s2;
         s2 = lp + v2;
         if (! (std::abs (s1) < 1.0e4f) || ! (std::abs (s2) < 1.0e4f)) reset();
-        const float out = bandpass ? bp * k : lp;
+        const float out = mode == 1 ? bp * k : (mode == 2 ? hp : lp);
         return out / (1.0f + 1.5f * drive);
     }
 
@@ -45,6 +45,35 @@ private:
     // integrators clip a little harder on one side (the "op-amp as integrator" character)
     static float sat (float v) { return v > 0.0f ? 1.6f * tanhFast (v / 1.6f) : 1.4f * tanhFast (v / 1.4f); }
     float s1 = 0.0f, s2 = 0.0f;
+};
+
+// Soft ceiling for signals inside a feedback loop: transparent when quiet, never louder than c
+inline float ceilingClip (float x, float c) { return c * tanhFast (x / c); }
+
+//==============================================================================
+// Slowly keeps the left / right balance of a wet signal equal to the balance of its input (feedback loops drift
+// to one side), +-4 dB at most
+struct AutoBalance
+{
+    float eL = 1.0e-6f, eR = 1.0e-6f, iL = 1.0e-6f, iR = 1.0e-6f, gL = 1.0f, gR = 1.0f, c = 0.0001f, gc = 0.0001f;
+    void prepare (double fs) { c = (float) (1.0 - std::exp (-1.0 / (1.5 * fs))); gc = (float) (1.0 - std::exp (-1.0 / (0.5 * fs))); }
+    void reset() { eL = eR = iL = iR = 1.0e-6f; gL = gR = 1.0f; }
+    void process (float& l, float& r, float inL, float inR)
+    {
+        eL += c * (l * l - eL);
+        eR += c * (r * r - eR);
+        iL += c * (inL * inL - iL);
+        iR += c * (inR * inR - iR);
+        // share of the energy each side should get (from the input), spread over the wet total
+        const float total = eL + eR, inTotal = std::max (1.0e-12f, iL + iR);
+        const float wantL = total * iL / inTotal, wantR = total * iR / inTotal;
+        const float tl = clampf (std::sqrt (wantL / std::max (1.0e-12f, eL)), 0.63f, 1.58f);
+        const float tr = clampf (std::sqrt (wantR / std::max (1.0e-12f, eR)), 0.63f, 1.58f);
+        gL += gc * (tl - gL);
+        gR += gc * (tr - gR);
+        l *= gL;
+        r *= gR;
+    }
 };
 
 //==============================================================================
@@ -128,10 +157,12 @@ public:
     {
         sr = fs;
         for (auto& l : lines) l.prepare ((int) (fs * 2.2));
+        balance.prepare (fs);
         reset();
     }
     void reset()
     {
+        balance.reset();
         for (auto& l : lines) l.reset();
         for (auto& d : damp) d.reset();
         fbL = fbR = 0.0f; selfMod[0] = selfMod[1] = 0.0f; lfo = 0.0; wet = 0.0f;
@@ -152,6 +183,9 @@ public:
         const float t1 = (float) (s.time1 * sr), t2 = (float) (s.time2 * sr);
         if (primed) { timeR[0].set (t1, n); timeR[1].set (t2, n); } else { timeR[0].reset (t1); timeR[1].reset (t2); primed = true; }
         const float fb = 1.25f * s.feedback;
+        // the more the loop holds, the more its output is turned down (steady-state gain of the loop)
+        const float g = std::min (0.98f, fb);
+        const float comp = std::sqrt (1.0f - g * g);
         const float dampC = OnePole::coefFor (7000.0 - 4500.0 * s.dust, sr);
         const double lfoInc = 0.23 / sr;
         for (int k = 0; k < n; ++k)
@@ -165,14 +199,16 @@ public:
             selfMod[0] += 0.002f * (y0 - selfMod[0]);
             selfMod[1] += 0.002f * (y1 - selfMod[1]);
             // cross feedback with damping and a soft limiter; DUST adds hiss in the loop
-            const float in0 = L[k] + damp[0].lp (tanhFast (fb * y1), dampC) + s.dust * 0.003f * rng.next();
-            const float in1 = R[k] + damp[1].lp (tanhFast (fb * y0), dampC);
+            const float in0 = L[k] + damp[0].lp (ceilingClip (fb * y1, 0.5f), dampC) + s.dust * 0.003f * rng.next();
+            const float in1 = R[k] + damp[1].lp (ceilingClip (fb * y0, 0.5f), dampC);
             lines[0].push (in0);
             lines[1].push (in1);
-            wet = 0.5f * (y0 + y1);
+            float wl = y0 * comp, wr = y1 * comp;
+            balance.process (wl, wr, L[k], R[k]);
+            wet = 0.5f * (wl + wr);
             if (wetOut != nullptr) wetOut[k] = wet;
-            L[k] = L[k] * (1.0f - 0.5f * s.mix) + s.mix * y0;
-            R[k] = R[k] * (1.0f - 0.5f * s.mix) + s.mix * y1;
+            L[k] = L[k] * (1.0f - s.mix) + s.mix * wl;
+            R[k] = R[k] * (1.0f - s.mix) + s.mix * wr;
             wetBuf[k & 255] = std::abs (y0) + std::abs (y1);
         }
         float m = 0.0f;
@@ -190,6 +226,7 @@ private:
     float fbL = 0.0f, fbR = 0.0f, selfMod[2] {}, wet = 0.0f, wetBuf[256] {};
     bool primed = false;
     Sleeper sleeper;
+    AutoBalance balance;
 };
 
 //==============================================================================
@@ -264,10 +301,12 @@ public:
         for (auto& p : shiftDown) p.prepare (fs);
         for (auto& p : runShift) p.prepare (fs);
         for (auto& l : delay) l.prepare ((int) (fs * 2.2));
+        balance.prepare (fs);
         reset();
     }
     void reset()
     {
+        balance.reset();
         fdn.reset();
         for (auto& p : shiftUp) p.reset();
         for (auto& p : shiftDown) p.reset();
@@ -311,9 +350,10 @@ public:
                     const double t = (0.06 + 1.9 * Y * Y) * sr;
                     const float semis = -12.0f + 24.0f * Z;
                     const float r0 = delay[0].read (t), r1 = delay[1].read (t * 1.003);
-                    delay[0].push (dl + tanhFast (0.95f * X * runShift[0].process (r0, semis)));
-                    delay[1].push (dr + tanhFast (0.95f * X * runShift[1].process (r1, semis)));
-                    wl = r0; wr = r1;
+                    delay[0].push (dl + ceilingClip (0.95f * X * runShift[0].process (r0, semis), 0.6f));
+                    delay[1].push (dr + ceilingClip (0.95f * X * runShift[1].process (r1, semis), 0.6f));
+                    const float comp = 1.0f / (1.0f + 1.5f * X * X);
+                    wl = r0 * comp; wr = r1 * comp;
                     break;
                 }
                 case Saturn:
@@ -339,14 +379,17 @@ public:
                     wob += (0.6 + 4.0 * Z) / sr; wob -= std::floor (wob);
                     const double t = (0.04 + 1.0 * Y * Y) * sr * (1.0 + 0.012 * Z * std::sin (twoPi * wob) + 0.004 * Z * rng.next());
                     const float r0 = delay[0].read (t), r1 = delay[1].read (t * 1.01);
-                    const float fb = 1.3f * X;
-                    delay[0].push (dl + damp[0].lp (tanhFast (1.6f * fb * r1), dampC) + 0.002f * dust * rng.next());
-                    delay[1].push (dr + damp[1].lp (tanhFast (1.6f * fb * r0), dampC));
-                    wl = r0; wr = r1;
+                    const float fb = 2.08f * X;
+                    delay[0].push (dl + damp[0].lp (ceilingClip (fb * r1, 0.4f), dampC) + 0.002f * dust * rng.next());
+                    delay[1].push (dr + damp[1].lp (ceilingClip (fb * r0, 0.4f), dampC));
+                    const float g = std::min (0.95f, fb);
+                    const float comp = std::sqrt (1.0f - g * g);
+                    wl = r0 * comp; wr = r1 * comp;
                     break;
                 }
             }
             if (! std::isfinite (wl) || ! std::isfinite (wr)) { reset(); wl = wr = 0.0f; }
+            balance.process (wl, wr, dl, dr);
             tail = std::max (tail, std::max (std::abs (wl), std::abs (wr)));
             L[k] = dl * (1.0f - B) + wl * B * 1.2f;
             R[k] = dr * (1.0f - B) + wr * B * 1.2f;
@@ -365,5 +408,6 @@ private:
     int lastAlgo = -1;
     bool primed = false;
     Sleeper sleeper;
+    AutoBalance balance;
 };
 }

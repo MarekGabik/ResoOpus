@@ -662,6 +662,9 @@ static void testEffects()
     check (open - closed > 24.0, "FILTER low pass at 500 Hz takes the 28th harmonic (3 kHz) down " + String (open - closed, 1) + " dB (> 24)");
     const double lowOpen = harmonicDb (20000.0f, 0.0f, 0, 110.0), lowBp = harmonicDb (2000.0f, 0.0f, 1, 110.0);
     check (lowOpen - lowBp > 12.0, "FILTER band pass at 2 kHz thins the 110 Hz fundamental by " + String (lowOpen - lowBp, 1) + " dB");
+    const double lowHp = harmonicDb (1500.0f, 0.0f, 2, 110.0), highHp = harmonicDb (1500.0f, 0.0f, 2, 3080.0);
+    check (lowOpen - lowHp > 30.0 && open - highHp < 3.0, "FILTER high pass at 1.5 kHz removes the 110 Hz fundamental (" + String (lowOpen - lowHp, 1)
+           + " dB) and keeps the highs (" + String (open - highHp, 1) + " dB)");
     {
         auto p = makeProc (sr);
         soloVoice1 (*p, 45.0f);
@@ -749,6 +752,47 @@ static void leadPatch (ResoOpusProcessor& p)
     setParam (p, "lead_vib", 0.0f); setParam (p, "lead_touch_vib", 0.0f); setParam (p, "lead_mix", 0.0f);
     setParam (p, "lead_attack", 0.002f); setParam (p, "lead_sustain", 100.0f); setParam (p, "lead_glide", 0.0f);
     setParam (p, "space_blend", 0.0f); setParam (p, "echo_mix", 0.0f); setParam (p, "dust", 0.0f); setParam (p, "gravity", 0.0f);
+}
+
+// Loudness and left / right balance of every effect against the dry drone (default patch)
+static void testEffectLevels()
+{
+    std::cout << "Effect levels" << std::endl;
+    const double sr = 48000.0;
+    auto measure = [sr] (std::vector<std::pair<const char*, float>> set, double& balance)
+    {
+        auto p = makeProc (sr);
+        setParam (*p, "space_blend", 0.0f);
+        setParam (*p, "echo_mix", 0.0f);
+        for (auto& kv : set) setParam (*p, kv.first, kv.second);
+        auto out = render (*p, 14.0);
+        const int a = (int) (6.0 * sr), b = out.getNumSamples();
+        double l = 0.0, r = 0.0;
+        for (int i = a; i < b; ++i) { l += out.getSample (0, i) * out.getSample (0, i); r += out.getSample (1, i) * out.getSample (1, i); }
+        balance = 10.0 * std::log10 ((l + 1e-20) / (r + 1e-20));
+        return rmsDb (out, a, b);
+    };
+    double bal = 0.0;
+    const double dry = measure ({}, bal);
+    const double dryBal = bal;
+    struct Case { const char* name; std::vector<std::pair<const char*, float>> set; };
+    const std::vector<Case> cases = {
+        { "ECHO 100 % wet, feedback 35 %", { { "echo_mix", 100.0f } } },
+        { "ECHO 100 % wet, feedback 90 %", { { "echo_mix", 100.0f }, { "echo_fb", 90.0f } } },
+        { "ECHO 100 % wet, feedback 100 %, SELF mod 100 %", { { "echo_mix", 100.0f }, { "echo_fb", 100.0f }, { "echo_mod", 100.0f } } },
+        { "AURORA 100 %", { { "space_algo", 0.0f }, { "space_blend", 100.0f } } },
+        { "VOID 100 %", { { "space_algo", 1.0f }, { "space_blend", 100.0f } } },
+        { "RUNNER 100 %, feedback max", { { "space_algo", 2.0f }, { "space_blend", 100.0f }, { "space_x", 100.0f } } },
+        { "SATURN 100 %", { { "space_algo", 3.0f }, { "space_blend", 100.0f } } },
+        { "COMET 100 %", { { "space_algo", 4.0f }, { "space_blend", 100.0f } } },
+        { "COMET 100 %, feedback max", { { "space_algo", 4.0f }, { "space_blend", 100.0f }, { "space_x", 100.0f } } },
+    };
+    for (auto& c : cases)
+    {
+        const double lv = measure (c.set, bal);
+        check (lv - dry < 3.0 && lv - dry > -12.0 && std::abs (bal - dryBal) < 1.5,
+               String (c.name) + ": " + (lv - dry >= 0 ? "+" : "") + String (lv - dry, 1) + " dB vs dry, L/R " + String (bal - dryBal, 1) + " dB");
+    }
 }
 
 static void testLead()
@@ -1303,6 +1347,7 @@ int main (int argc, char* argv[])
     testGravity();
     testDust();
     testEffects();
+    testEffectLevels();
     testLead();
     testPlates();
     testTouchAboveHold();

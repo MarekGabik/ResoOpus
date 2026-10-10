@@ -109,7 +109,8 @@ const std::vector<ParamDef>& Params::globalDefs()
         d.push_back (LogF ("flt_cutoff", "Cutoff", 20.0f, 20000.0f, 20000.0f, Unit::Hz, "Filter cutoff (left and right, see SPREAD)"));
         d.push_back (F ("flt_res", "Resonance", 0.0f, 10.0f, 0.0f, Unit::Scale10, "Filter resonance; near 10 it sings on its own and keeps the lows"));
         d.push_back (F ("flt_drive", "Drive", 0.0f, 10.0f, 0.0f, Unit::Scale10, "Drives the filter into its dirty, growling saturation"));
-        d.push_back (C ("flt_mode", "Filter Mode", { "Low Pass", "Band Pass" }, 0, "Low pass: darker. Band pass: thin, vocal"));
+        d.push_back (C ("flt_mode", "Filter Mode", { "Low Pass", "Band Pass", "High Pass" }, 0,
+                        "Low pass: darker. Band pass: thin, vocal. High pass: takes the lows away for clear, high drones"));
         d.push_back (F ("flt_spread", "Spread", 0.0f, 100.0f, 10.0f, Unit::Percent, "Detunes the left and right filters against each other: a wider stereo image"));
         // ECHO
         d.push_back (LogF ("echo_time1", "Echo Time 1", 0.005f, 2.0f, 0.34f, Unit::Seconds, "Delay time of the left line"));
