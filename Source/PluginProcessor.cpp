@@ -51,7 +51,7 @@ ResoOpusProcessor::ResoOpusProcessor()
 
     // the user's default preset (a host session restores its own state on top of it)
     const auto def = presets->getDefaultKey();
-    if (def.isNotEmpty() && ! SystemStats::getEnvironmentVariable ("RESOOPUS_NO_DEFAULT", {}).isNotEmpty())
+    if (def.isNotEmpty() && loadUserDefault)
         if (const int i = presets->indexOf (def); i > 0) presets->load (i, false);
 }
 

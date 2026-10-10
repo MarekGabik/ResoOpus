@@ -1363,7 +1363,7 @@ static void testHostedPlugin (const String& path)
 int main (int argc, char* argv[])
 {
     ScopedJuceInitialiser_GUI gui;
-    setenv ("RESOOPUS_NO_DEFAULT", "1", 1);   // the user's default preset must not change the tested patches
+    ResoOpusProcessor::loadUserDefault = false;   // the user's default preset must not change the tested patches
     auto root = File::getSpecialLocation (File::currentExecutableFile);
     while (root.exists() && ! root.getChildFile ("CMakeLists.txt").existsAsFile()) root = root.getParentDirectory();
     if (root.exists())

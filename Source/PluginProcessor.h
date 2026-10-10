@@ -71,6 +71,7 @@ public:
     juce::ValueTree uiState { "UI" };
     std::unique_ptr<StateHistory> history;
     std::unique_ptr<PresetManager> presets;
+    static inline bool loadUserDefault = true;   // tests switch it off: the user's default preset must not change them
     juce::MidiKeyboardState keyboardState;
 
     // UI -> audio
