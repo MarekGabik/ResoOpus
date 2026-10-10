@@ -72,7 +72,8 @@ Další režimy testů: `--audit` (mění každý parametr zvuk?), `--bench` (CP
 ## Windows
 
 Windows VST3 sestaví GitHub Actions (`.github/workflows/build.yml`) po pushi. Artefakt `ResoOpus-VST3-Windows`
-se zkopíruje do `C:\Program Files\Common Files\VST3`. **Zatím neověřeno** (repozitář ještě není na GitHubu).
+se zkopíruje do `C:\Program Files\Common Files\VST3`. Build i všechny testy na Windows procházejí (GitHub Actions);
+v Abletonu na Windows zatím nevyzkoušeno.
 
 ## Ableton Live
 
