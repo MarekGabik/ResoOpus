@@ -1,5 +1,9 @@
 # ResoOpus
 
+> **📖 Příručka / Manual (CS · EN):** https://claude.ai/artifact/XsEtBkoLKuA1WsiY3c4SHR
+> · v repozitáři: [docs/manual/index.html](docs/manual/index.html) (česky), [docs/manual/en.html](docs/manual/en.html) (English).
+> Screeny se generují z pluginu: `ResoOpusTests --shots docs/manual/img`.
+
 Drone syntezátor značky Gavr pro filmové, ambientní a experimentální plochy. Čtyři ručně, mikrotonálně laděné
 hlasy ve dvou párech hrají po vložení do Abletonu samy (HOLD). Ve středu nástroje bude knob GRAVITY, který vede
 od čistého ladění k chaosu. Formáty VST3 (Mac + Windows), AU (Mac), Standalone.
