@@ -1,7 +1,6 @@
-# ResoMoon – specifikace a plán vývoje
+# ResoOpus – specifikace a plán vývoje
 
-> Pracovní název **ResoMoon**. Finální název a 4znakový kód pluginu se potvrdí před fází 1 (identita jde do
-> bundle ID, ukládání projektů v Abletonu a presetů, později se mění špatně).
+> Název **ResoOpus** (schválen 10. 10. 2026; dříve pracovně ResoMoon). Logo: `Reso` bíle + `Opus` zlatě.
 
 Podklady: `RESERSE.md` (rešerše inspirací), `KONCEPT.md` (rozhodnutí s Markem),
 `podklady/reso-moon-vst3-spec.md` (Markův podklad), Gavr blueprinty (ResoOG, ResoQBand).
@@ -24,7 +23,7 @@ Formáty VST3 (Win + Mac), AU (Mac), Standalone. Cíl: Ableton Live 11/12.
 ## 2. Stack a identita
 
 - JUCE 8.0.10, C++17, CMake + Ninja, universal `arm64;x86_64`, macOS 10.13+.
-- `COMPANY Gavr`, `BUNDLE_ID cz.gavr.<nazev>`, `PLUGIN_CODE` (návrh podle názvu, např. `RsMn`), instrument
+- `COMPANY Gavr`, `PRODUCT_NAME ResoOpus`, `BUNDLE_ID cz.gavr.resoopus`, `PLUGIN_CODE RsOp` (obsazené: RsQB, RsOG, RsTm, RsT2), instrument
   (`IS_SYNTH`, `NEEDS_MIDI_INPUT`, AU `aumu`, VST3 `Instrument|Synth`), **sidechain vstup** (stereo bus pro
   FOLLOWER a vnější audio do efektů).
 - Testovací aplikace `<Name>Tests`, CI GitHub Actions Windows + macOS s anotacemi chyb (z ResoOG).
@@ -37,7 +36,7 @@ Formáty VST3 (Win + Mac), AU (Mac), Standalone. Cíl: Ableton Live 11/12.
                     ▼                                                                  │
  SKUPINA A  pár 1·2  pár 3·4         SKUPINA B  pár 5·6  pár 7·8                       │
    hlas: CHOIR | SIREN | PULSAR   (typ volitelný pro každý hlas)                       │
-   každý hlas: TUNE, charakter, obálka (ATT/RLS, SLOW/FAST), HOLD, VOL, PAN, DUST      │
+   každý hlas: TUNE, charakter, obálka (ATT/RLS), VOL, PAN · skupina: HOLD, PITCH     │
         │  FM síť: pár ← sousední pár / BINARY LFO / FEEDBACK / sidechain              │
         ▼                                                                              │
  STEREO MIX (8 hlasů + LEAD + sidechain audio)                                         │
@@ -162,7 +161,7 @@ pak JUCE UI podle mockupu a kontrola snímků.
 | SIREN | Schmittův oscilátor (hystereze), dělič, AM/FM, šum | stabilita, bez DC (DC blokátor) |
 | FM síť | po vzorcích (1vzorkové zpoždění mezi páry), modulátor × obálka | nic NaN/Inf, 60 s při GRAVITY 100 % na 44,1–192 kHz |
 | GRAVITY | tabulky vah zón, spojité přechody, kompenzace zisku | rozdíl hlasitosti napříč 0–100 % ≤ 3 dB, max skok mezi vzorky ≤ 0,05 |
-| Obálky | RC náběh/doznění, HOLD jako spodní mez, SLOW/FAST rozsahy, dotyk mění úroveň i rychlost | |
+| Obálky | RC náběh/doznění, HOLD skupiny jako spodní mez, dotyk mění úroveň i rychlost | |
 | Ladění | TUNE s rozlišením < 1 cent, SNAP přesně | odchylka < 1 cent |
 | FILTER | TPT SVF, nelineární integrátory | samooscilace, ladění < 60 centů |
 | ECHO | interpolace (kubická), limiter ve smyčce | stabilita při FB 100 %, výstup < +6 dBFS |
@@ -191,7 +190,7 @@ Cíl ve verzi 1.0: ~40 presetů. Recepty v manuálu: ambient, dub techno, filmov
 
 | Fáze | Obsah | Brána (musí projít) |
 |---|---|---|
-| **0** | rešerše, koncept, specifikace, **HTML mockup** | Marek odsouhlasí vzhled a název |
+| **0** ✅ | rešerše, koncept, specifikace, **HTML mockup** | vzhled DRONE a název ResoOpus odsouhlaseny |
 | **1** | projekt, CMake, CI, převzatá infrastruktura z ResoOG (Theme, Knob, Widgets, Bars, Keyboard, State, TestHost), parametry, jeden hlas CHOIR hraje v HOLD | universal build, `lipo`, `auval`, VST3 se načte v Live, CI zelené (Windows) |
 | **2** | všech 8 hlasů (CHOIR, SIREN, PULSAR), obálky, HOLD, TOUCH, PLATES/KEYS, TUNE + SNAP, TIDE, mixer | ladění < 1 cent, aliasing podle tabulky, CPU |
 | **3** | GRAVITY, FM síť, FEEDBACK, DUST | stabilita 60 s ve všech zónách a SR, hlasitost ≤ 3 dB, bez skoků |

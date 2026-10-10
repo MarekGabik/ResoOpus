@@ -16,7 +16,7 @@ Stav: 10. 10. 2026, po rešerši (`RESERSE.md`) a první zpětné vazbě od Mark
 - **Efekty uhlazené** (reverb, shimmer, mod delay), ne syrové zkreslení Lyry.
 - Přepínatelná **dynamika**: velocity / aftertouch (tlak) / obojí.
 - Přepínatelné **hraní**: 8 kláves = 8 hlasů, nebo chromaticky/ve stupnici.
-- Název začíná `Reso` a skrytě odkazuje na vesmírný drone (pracovně **ResoMoon**). Složka zatím `~/ResoFoon`.
+- Název začíná `Reso` a skrytě odkazuje na vesmírný drone → **ResoOpus** (schváleno 10. 10.).
 
 ## „Solar s duší Lyry“: co to znamená
 **Tělo ze Solaru:**
