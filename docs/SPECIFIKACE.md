@@ -54,7 +54,7 @@ Formáty VST3 (Win + Mac), AU (Mac), Standalone. Cíl: Ableton Live 11/12.
 
 | Typ | Zdroj | Ovladače | Charakter |
 |---|---|---|---|
-| **CHOIR** | 5 pilovitých oscilátorů **laděných relativně k TUNE hlasu** (OSC 1 = kořen, OSC 2–5 = intervaly −24 až +36 st + centy) | TUNE (posune celý akord), **CHORD** (Unison / Octaves / Fifths / Major / Minor / Sus / Cluster naplní intervaly jedním klikem), 5× interval se zap/vyp, **TIDE** | sborový akord v jednom hlasu. TIDE 0–50 % transpozice dolů, 50–100 % dál dolů + vzájemná FM pil („gravitace uvnitř hlasu“), dole sub-audio praskání |
+| **CHOIR** | 5 pilovitých oscilátorů **laděných relativně k TUNE hlasu** (OSC 1–5 = intervaly −24 až +36 st + centy) | TUNE (posune celý akord), **CHORD** (Unison / Octaves / Fifths / Major / Minor naplní intervaly jedním klikem), 5× interval se zap/vyp, **TIDE** | sborový akord v jednom hlasu. TIDE 0–50 % transpozice dolů, 50–100 % dál dolů + vzájemná FM pil („gravitace uvnitř hlasu“), dole sub-audio praskání |
 | **SIREN** | 2 Schmittovy oscilátory (pomalý modulátor + tónový C0–E7) + bílý šum | PITCH, RANGE, RATE (×1/×10), FM AMT, DIVIDER (dělič 1:1–1:16), přepínače FM / AM, NOISE | sirény, ptáci, „monstra“, lasery, vítr, příboj. Šum napájí S&H |
 | **PULSAR** | tónový generátor trojúhelník ↔ obdélník, obálka ovlivňuje výšku a tvar | TUNE, SHARP, BLOOM (vliv obálky na výšku/barvu) | jemný až ostrý tón, nejcitlivější na FM, „živý“ |
 
@@ -65,6 +65,8 @@ Hierarchie ovladačů (zjednodušeno 10. 10. – „méně je víc“):
 - **globál:** GRAVITY (sám, velký). DUST je na stránce SPACE v MASTER, FEEDBACK do hlasů jako TO VOICES v ECHO.
 - Vypuštěno z UI: PULL, FAST (rychlé doznění = krátký RELEASE), tlačítka LIGHT (LIGHT se přiřazuje tažením
   jako každý zdroj modulace), PATH (výchozí AUTO, ruční volba v menu pravého tlačítka na GRAVITY).
+- Markovy úpravy 10. 10.: hlasy v pásech s vlastním štítkem („CHOIR 1“) a VOL lištou, TYPE i CHORD jako přepínač
+  s LED, CHORD jen 5 akordů: Unison, Octaves, Fifths, Major, Minor.
 Dotyk (velocity / aftertouch / MPE pressure) přidává hlasitost nad HOLD a lehký dotyk dává pomalejší náběh.
 
 Ladění: TUNE v Hz i jako nota (`A2+12`), **SNAP** Free / Chromatic / Scale (stupnice + kořen). Skupina má
@@ -191,8 +193,8 @@ Cíl ve verzi 1.0: ~40 presetů. Recepty v manuálu: ambient, dub techno, filmov
 | Fáze | Obsah | Brána (musí projít) |
 |---|---|---|
 | **0** ✅ | rešerše, koncept, specifikace, **HTML mockup** | vzhled DRONE a název ResoOpus odsouhlaseny |
-| **1** | projekt, CMake, CI, převzatá infrastruktura z ResoOG (Theme, Knob, Widgets, Bars, Keyboard, State, TestHost), parametry, jeden hlas CHOIR hraje v HOLD | universal build, `lipo`, `auval`, VST3 se načte v Live, CI zelené (Windows) |
-| **2** | všech 8 hlasů (CHOIR, SIREN, PULSAR), obálky, HOLD, TOUCH, PLATES/KEYS, TUNE + SNAP, TIDE, mixer | ladění < 1 cent, aliasing podle tabulky, CPU |
+| **1** ✅ (Mac) | projekt, CMake, CI, převzatá infrastruktura z ResoOG, parametry, 8 hlasů CHOIR s CHORD a TIDE, HOLD, PITCH, FILL, Plates/Keys, Touch, Snap, UI stránky DRONE, 5 presetů | universal ✅, `lipo` ✅, `auval` ✅, testy proti nainstalovanému VST3 ✅, audit 150/150 ✅; **CI Windows čeká na push** |
+| **2** | engine SIREN a PULSAR, BLOOM, ladění detailů podle poslechu v Live | aliasing podle tabulky, CPU, audit 100 % |
 | **3** | GRAVITY, FM síť, FEEDBACK, DUST | stabilita 60 s ve všech zónách a SR, hlasitost ≤ 3 dB, bez skoků |
 | **4** | FILTER L/R, ECHO, SPACE (5 algoritmů) | stabilita při max FB, RT60, FREEZE, CPU |
 | **5** | MOTION (zdroje + matice), LEAD + ARP, host sync | audit parametrů 100 % |

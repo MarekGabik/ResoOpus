@@ -1,0 +1,49 @@
+name: Build
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-14]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DRESOOPUS_TESTS=ON
+
+      - name: Build plug-in and tests
+        shell: bash
+        run: |
+          set -o pipefail
+          cmake --build build --config Release --parallel 4 --target ResoOpus_VST3 ResoOpusTests 2>&1 | tee build.log
+
+      - name: Report compile errors as annotations
+        if: failure()
+        shell: bash
+        run: |
+          grep -E "error C[0-9]+|error LNK|: error:|fatal error" build.log | sort -u | head -40 | while IFS= read -r line; do
+            echo "::error::${line//%/%25}"
+          done
+
+      - name: Run tests (Windows)
+        if: runner.os == 'Windows'
+        working-directory: build
+        run: ./ResoOpusTests_artefacts/Release/ResoOpusTests.exe "ResoOpus_artefacts/Release/VST3/ResoOpus.vst3"
+
+      - name: Run tests (macOS)
+        if: runner.os == 'macOS'
+        working-directory: build
+        run: ./ResoOpusTests_artefacts/Release/ResoOpusTests "ResoOpus_artefacts/Release/VST3/ResoOpus.vst3"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ResoOpus-VST3-${{ runner.os }}
+          path: build/ResoOpus_artefacts/Release/VST3/
