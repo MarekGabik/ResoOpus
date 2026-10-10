@@ -22,6 +22,7 @@ enum class Unit
     Interval,   // semitones relative to the voice root ("+7 st", "+19 -8c")
     Tide,       // 0..100 %: transposition down, then pull (FM) between the oscillators
     Divider,    // 1..16 sub-harmonic ("off", "1:3")
+    Gravity,    // 0..100 % with its zone ("ORBIT 42 %")
     Choice,
     Toggle
 };
@@ -81,6 +82,24 @@ namespace Params
         const float t = juce::jlimit (0.0f, 1.0f, tide01);
         return t <= 0.5f ? -24.0f * std::pow (t * 2.0f, 1.3f) : -24.0f - 36.0f * (t - 0.5f) * 2.0f;
     }
+    // GRAVITY zones (0..1): STILL < 0.25 <= ORBIT < 0.55 <= TURBULENCE < 0.85 <= COLLAPSE
+    juce::String gravityZone (float g01);
+    inline int gravityZoneIndex (float g01) { return g01 < 0.25f ? 0 : (g01 < 0.55f ? 1 : (g01 < 0.85f ? 2 : 3)); }
+    // Frequency deviation (Hz per unit of modulator) at a GRAVITY setting: 0 in STILL, growing through the zones
+    inline float gravityDeviation (float g01)
+    {
+        const float g = juce::jlimit (0.0f, 1.0f, g01);
+        if (g < 0.25f) return 0.0f;
+        if (g < 0.55f) { const float t = (g - 0.25f) / 0.3f; return 40.0f * t * t; }
+        if (g < 0.85f) { const float t = (g - 0.55f) / 0.3f; return 40.0f + 200.0f * t * t; }
+        const float t = (g - 0.85f) / 0.15f;
+        return 240.0f + 760.0f * t * t;
+    }
+    // Share of the ring (all four voices in one loop) vs the pairs, for PATH = Auto
+    inline float gravityRing (float g01) { return juce::jlimit (0.0f, 1.0f, (g01 - 0.55f) / 0.15f); }
+    // Feedback of the instrument's output into the modulators
+    inline float gravityFeedback (float g01) { return g01 < 0.55f ? 0.0f : (g01 < 0.85f ? 0.5f * (g01 - 0.55f) / 0.3f : 0.5f + 0.5f * (g01 - 0.85f) / 0.15f); }
+
     inline float tidePull (float tide01)
     {
         const float t = juce::jlimit (0.0f, 1.0f, tide01);
@@ -133,11 +152,13 @@ namespace GP
     enum : int
     {
         master_vol = 0, oversampling, play_mode, touch, plates_base, snap, snap_scale, snap_root, a4, pb_range, pitch,
+        gravity, gravity_path, dust,
         count
     };
     enum PlayMode { Plates = 0, Keys };
     enum Touch { TouchVelocity = 0, TouchAftertouch, TouchBoth };
     enum Snap { SnapFree = 0, SnapChromatic, SnapScale };
+    enum Path { PathAuto = 0, PathPairs, PathRing };
 }
 
 namespace MP

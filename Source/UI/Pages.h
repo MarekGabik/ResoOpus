@@ -55,19 +55,39 @@ private:
     bool on = false;
 };
 
-// GRAVITY panel. Phase 1: the eight voices as dots on an orbit (brightness = level); the knob arrives in phase 3.
-class GravityView : public juce::Component
+// GRAVITY: the big centre knob. Zones STILL / ORBIT / TURBULENCE / COLLAPSE around it, value arc in the zone colour,
+// modulation ring (live value), the four voices as dots on an orbit that pull together as GRAVITY rises.
+// Drag vertically (Shift = fine), wheel, double-click = type, Cmd/Ctrl-click = default, right-click = PATH and modulation,
+// drop a modulation source on it.
+class GravityView : public juce::Component, public juce::SettableTooltipClient, public juce::DragAndDropTarget
 {
 public:
-    explicit GravityView (ResoOpusProcessor& p) : proc (p) {}
+    explicit GravityView (ResoOpusProcessor&);
     void refresh();
     void paint (juce::Graphics&) override;
+    void mouseDown (const juce::MouseEvent&) override;
+    void mouseDrag (const juce::MouseEvent&) override;
+    void mouseUp (const juce::MouseEvent&) override;
+    void mouseDoubleClick (const juce::MouseEvent&) override;
+    void mouseWheelMove (const juce::MouseEvent&, const juce::MouseWheelDetails&) override;
+    bool isInterestedInDragSource (const SourceDetails&) override;
+    void itemDragEnter (const SourceDetails&) override { dropHover = true; repaint(); }
+    void itemDragExit (const SourceDetails&) override { dropHover = false; repaint(); }
+    void itemDropped (const SourceDetails&) override;
+    float getValue01() const { return value; }
 
 private:
+    juce::Point<float> centre() const { return { getWidth() * 0.5f, getHeight() * 0.5f - 12.0f }; }
+    void showMenu();
     ResoOpusProcessor& proc;
+    juce::RangedAudioParameter* param = nullptr;
+    std::unique_ptr<juce::ParameterAttachment> attachment;
+    std::unique_ptr<juce::TextEditor> editor;
+    float value = 0.0f, live = 0.0f, dragStart = 0.0f;
     float levels[Params::numVoices] {};
     int types[Params::numVoices] {};
-    double phase = 0.0, lastTime = 0.0;
+    double phase = 0.0, lastTime = 0.0, jitter = 0.0;
+    bool dropHover = false;
 };
 
 class DronePage : public Page
@@ -77,6 +97,7 @@ public:
     void refreshLive() override;
     void selectVoice (int v);
     int getSelectedVoice() const { return selected; }
+    GravityView* getGravityView() { return gravity; }
 
 private:
     // Volume of a voice as a thin bar (drag to change) with the pan position and a level meter below
@@ -134,6 +155,13 @@ private:
 
     int voiceType (int v) const;
     void showFillMenu (juce::Component* target);
+
+    struct MasterPanel : public ModulePanel
+    {
+        MasterPanel (DronePage& o) : ModulePanel ("MASTER", Palette::master, -1, "FILL"), owner (o) {}
+        void mouseDown (const juce::MouseEvent& e) override { if (e.y < headerHeight && e.x > getWidth() - 80) owner.showFillMenu (this); }
+        DronePage& owner;
+    };
 
     Column* columns[Params::numVoices] {};
     Detail details[Params::numVoices];

@@ -60,6 +60,17 @@ const std::vector<FactoryPreset>& factoryPresets()
             { "v1_hold", 50.0f }, { "v2_hold", 30.0f }, { "v3_hold", 0.0f }, { "v4_hold", 0.0f },
             { "v1_attack", 4.0f }, { "v2_attack", 5.0f }, { "v3_attack", 3.0f }, { "v4_attack", 2.5f },
             { "v1_release", 8.0f }, { "v2_release", 8.0f }, { "v3_release", 7.0f }, { "v4_release", 7.0f } }, {} },
+
+        { "Gravity Well", "Orbits",
+          "Two choirs and a pulsar in ORBIT. Press harder on the keys (aftertouch) and GRAVITY pulls them into TURBULENCE; let go and they settle. Turn GRAVITY for the resting point.",
+          { { "gravity", 38.0f }, { "touch", 2.0f }, { "v3_hold", 35.0f }, { "v3_sharp", 35.0f }, { "v4_type", 0.0f },
+            { "v1_hold", 60.0f }, { "v2_hold", 50.0f }, { "dust", 30.0f } },
+          { { Mod::Pressure, "gravity", 0.45f, 0, 50.0f, 0, false } } },
+
+        { "Collapse", "Orbits",
+          "All four voices locked in one ring past the edge: the loop pulses and growls on its own. Pull GRAVITY back below 85 % to tame it, TIDE for weight.",
+          { { "gravity", 93.0f }, { "gravity_path", 2.0f }, { "v3_hold", 40.0f }, { "v4_hold", 30.0f }, { "v4_siren_fm", 10.0f },
+            { "v1_volume", -6.0f }, { "v2_volume", -6.0f }, { "v3_volume", -6.0f }, { "v4_volume", -8.0f } }, {} },
     };
     return presets;
 }

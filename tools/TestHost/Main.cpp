@@ -149,6 +149,8 @@ static void soloVoice1 (ResoOpusProcessor& p, float tune, int type = VP::Choir)
     setParam (p, "v1_type", (float) type);
     setParam (p, "v1_siren_fm", 0.0f);
     setParam (p, "v1_bloom", 0.0f);
+    setParam (p, "gravity", 0.0f);
+    setParam (p, "dust", 0.0f);
     setParam (p, "v1_tune", tune);
     setParam (p, "v1_attack", 0.001f);
     setParam (p, "v1_volume", -6.0f);
@@ -167,7 +169,8 @@ static void testParameters()
     bool ok = (int) Params::voiceDefs().size() == VP::count && voiceOrder.size() == VP::count;
     for (int i = 0; i < voiceOrder.size() && ok; ++i) ok = voiceOrder[i] == Params::voiceDefs()[(size_t) i].id;
     check (ok, "voice table matches the VP index constants (" + String ((int) Params::voiceDefs().size()) + " per voice)");
-    const StringArray globalOrder { "master_vol", "oversampling", "play_mode", "touch", "plates_base", "snap", "snap_scale", "snap_root", "a4", "pb_range", "pitch" };
+    const StringArray globalOrder { "master_vol", "oversampling", "play_mode", "touch", "plates_base", "snap", "snap_scale", "snap_root", "a4", "pb_range", "pitch",
+                                    "gravity", "gravity_path", "dust" };
     ok = (int) Params::globalDefs().size() == GP::count;
     for (int i = 0; i < globalOrder.size() && ok; ++i) ok = globalOrder[i] == Params::globalDefs()[(size_t) i].id;
     check (ok, "global table matches the GP index constants (" + String ((int) Params::globalDefs().size()) + ")");
@@ -463,6 +466,160 @@ static void testPulsar()
     }
 }
 
+// Four plain saws (one per voice), all at HOLD 100: a clean object for GRAVITY measurements
+static void gravityPatch (ResoOpusProcessor& p, float gravity, int path = 0, float dust = 0.0f, std::initializer_list<int> onlyVoices = { 0, 1, 2, 3 })
+{
+    static const float tunes[] = { 45.0f, 52.0f, 57.0f, 64.0f };
+    for (int v = 0; v < Params::numVoices; ++v)
+    {
+        const bool on = std::find (onlyVoices.begin(), onlyVoices.end(), v) != onlyVoices.end();
+        setParam (p, Params::voiceID (v, "type"), on ? (float) VP::Choir : (float) VP::Off);
+        setParam (p, Params::voiceID (v, "tune"), tunes[v]);
+        setParam (p, Params::voiceID (v, "hold"), 100.0f);
+        setParam (p, Params::voiceID (v, "attack"), 0.01f);
+        setParam (p, Params::voiceID (v, "volume"), -6.0f);
+        for (int i = 1; i <= 5; ++i) { setParam (p, Params::voiceID (v, "int" + String (i)), 0.0f); setParam (p, Params::voiceID (v, "on" + String (i)), i == 1 ? 1.0f : 0.0f); }
+    }
+    setParam (p, "gravity", gravity);
+    setParam (p, "gravity_path", (float) path);
+    setParam (p, "dust", dust);
+}
+
+// Share of the energy (dB) that is NOT on the harmonics of f1 or f2: rises when the voices modulate each other
+static double inharmonicDb (const AudioBuffer<float>& out, double sr, int start, double f1, double f2)
+{
+    const auto db = spectrum (out, start, 15);
+    const double binHz = sr / 32768.0;
+    double total = 0.0, off = 0.0;
+    for (size_t i = (size_t) (30.0 / binHz); i < (size_t) (10000.0 / binHz); ++i)
+    {
+        const double pw = std::pow (10.0, db[i] / 10.0);
+        total += pw;
+        const double f = i * binHz;
+        auto near = [f, binHz] (double f0) { const double h = std::round (f / f0); return h >= 1.0 && std::abs (f - h * f0) < 5.0 * binHz; };
+        if (! near (f1) && ! near (f2)) off += pw;
+    }
+    return 10.0 * std::log10 (off / total + 1e-30);
+}
+
+static void testGravity()
+{
+    std::cout << "GRAVITY" << std::endl;
+    const double sr = 48000.0;
+    auto def = *Params::findDef ("gravity");
+    check (Params::format (def, 10.0f) == "STILL 10 %" && Params::format (def, 40.0f) == "ORBIT 40 %"
+           && Params::format (def, 70.0f) == "TURBULENCE 70 %" && Params::format (def, 95.0f) == "COLLAPSE 95 %", "zones: STILL / ORBIT / TURBULENCE / COLLAPSE");
+
+    // voices tuned a tritone and a quarter apart so that sidebands never land on a harmonic
+    auto inharm = [sr] (float g, int path, std::initializer_list<int> voicesOn)
+    {
+        auto p = makeProc (sr);
+        gravityPatch (*p, g, path, 0.0f, voicesOn);
+        for (int v : voicesOn) setParam (*p, Params::voiceID (v, "tune"), v == *voicesOn.begin() ? 45.0f : 51.5f);
+        auto out = render (*p, 2.0);
+        return inharmonicDb (out, sr, (int) (0.6 * sr), 110.0, 110.0 * std::pow (2.0, 6.5 / 12.0));
+    };
+    const double still = inharm (10.0f, 1, { 0, 1 }), orbit = inharm (45.0f, 1, { 0, 1 });
+    check (orbit > still + 20.0, "ORBIT: a pair pulls on each other (energy off the harmonics " + String (still, 1) + " -> " + String (orbit, 1) + " dB)");
+    const double pairs = inharm (50.0f, 1, { 0, 3 }), ringed = inharm (50.0f, 2, { 0, 3 });
+    check (ringed > pairs + 20.0, "PATH: voices 1 and 4 are not partners (" + String (pairs, 1) + " dB) but meet in the ring (" + String (ringed, 1) + " dB)");
+
+    // stability: every zone for 60 s at 48 kHz, 10 s at the other rates; the full patch (four five-saw choirs)
+    bool finite = true;
+    double worst = -200.0;
+    for (float g : { 0.0f, 40.0f, 70.0f, 92.0f, 100.0f })
+        for (double rate : { 48000.0, 44100.0, 96000.0, 192000.0 })
+        {
+            auto p = makeProc (rate);
+            for (int v = 0; v < Params::numVoices; ++v)
+            {
+                setParam (*p, Params::voiceID (v, "type"), (float) VP::Choir);
+                setParam (*p, Params::voiceID (v, "hold"), 100.0f);
+                for (int i = 1; i <= 5; ++i) setParam (*p, Params::voiceID (v, "on" + String (i)), 1.0f);
+            }
+            setParam (*p, "gravity", g);
+            setParam (*p, "dust", 100.0f);
+            auto out = render (*p, rate == 48000.0 ? 60.0 : 10.0, {}, 512);
+            finite = finite && allFinite (out);
+            worst = std::max (worst, peakDb (out));
+        }
+    check (finite && worst < 0.0, "every zone, 44.1-192 kHz, 60 s at 48 kHz: finite, peak " + String (worst, 1) + " dBFS");
+
+    // loudness across the zones (four voices) stays within 3 dB of STILL
+    double ref = 0.0, maxDiff = 0.0;
+    String levels;
+    for (float g : { 0.0f, 40.0f, 70.0f, 90.0f, 100.0f })
+    {
+        auto p = makeProc (sr);
+        gravityPatch (*p, g);
+        auto out = render (*p, 4.0);
+        const double r = rmsDb (out, (int) (1.0 * sr), out.getNumSamples());
+        if (g == 0.0f) ref = r;
+        maxDiff = std::max (maxDiff, std::abs (r - ref));
+        levels << String (r, 1) << " ";
+    }
+    check (maxDiff < 3.0, "loudness from STILL to COLLAPSE within 3 dB (" + levels.trim() + " dB)");
+
+    // a fast sweep 0 -> 100 % in 2 s adds no step bigger than the sound's own edges
+    {
+        auto p = makeProc (sr);
+        gravityPatch (*p, 0.0f);
+        auto steady = render (*p, 1.0);
+        float own = 0.0f, sweep = 0.0f;
+        for (int i = 1; i < steady.getNumSamples(); ++i) own = std::max (own, std::abs (steady.getSample (0, i) - steady.getSample (0, i - 1)));
+        for (int b = 0; b < 188; ++b)
+        {
+            setParam (*p, "gravity", (float) b / 187.0f * 100.0f);
+            auto out = render (*p, 512.0 / sr);
+            for (int i = 1; i < out.getNumSamples(); ++i) sweep = std::max (sweep, std::abs (out.getSample (0, i) - out.getSample (0, i - 1)));
+        }
+        auto tail = render (*p, 1.0);
+        float ownMax = own;
+        for (int i = 1; i < tail.getNumSamples(); ++i) ownMax = std::max (ownMax, std::abs (tail.getSample (0, i) - tail.getSample (0, i - 1)));
+        check (sweep <= ownMax * 1.1f, "sweeping GRAVITY 0 -> 100 % in 2 s: no jump (max step " + String (sweep, 3) + " vs the sound's own " + String (ownMax, 3) + ")");
+    }
+
+    // pressure can pull GRAVITY
+    {
+        auto p = makeProc (sr);
+        gravityPatch (*p, 20.0f);
+        p->addModulation (Mod::Pressure, "gravity", 0.5f);
+        setParam (*p, Params::modID (0, "bi"), 0.0f);
+        render (*p, 0.2, { { 0.0, MidiMessage::channelPressureChange (1, 0) } });
+        const float before = p->liveGravity.load();
+        render (*p, 0.2, { { 0.0, MidiMessage::channelPressureChange (1, 127) } });
+        check (p->liveGravity.load() > before + 0.3f, "aftertouch pulls GRAVITY up (" + String (before * 100.0f, 0) + " -> " + String (p->liveGravity.load() * 100.0f, 0) + " %)");
+    }
+}
+
+static void testDust()
+{
+    std::cout << "DUST" << std::endl;
+    auto floorAt = [] (float dust)
+    {
+        auto p = makeProc();
+        for (int v = 0; v < Params::numVoices; ++v) setParam (*p, Params::voiceID (v, "type"), (float) VP::Off);
+        setParam (*p, "dust", dust);
+        auto out = render (*p, 2.0);
+        return rmsDb (out, 24000, out.getNumSamples());
+    };
+    const double clean = floorAt (0.0f), dusty = floorAt (100.0f);
+    check (clean < -120.0, "DUST 0: digital silence (" + String (clean, 1) + " dB)");
+    check (dusty > -80.0 && dusty < -54.0, "DUST 100: a breath of background noise (" + String (dusty, 1) + " dBFS RMS)");
+    // drift: the pitch wanders a few cents over time
+    auto p = makeProc();
+    soloVoice1 (*p, 69.0f);
+    setParam (*p, "dust", 100.0f);
+    auto out = render (*p, 12.0);
+    double lo = 1e9, hi = -1e9;
+    for (double t = 1.0; t < 10.5; t += 1.5)
+    {
+        const double f = peakFrequency (out, 48000.0, 380.0, 500.0, (int) (t * 48000.0));
+        lo = std::min (lo, cents (f, 440.0)); hi = std::max (hi, cents (f, 440.0));
+    }
+    check (hi - lo > 1.0 && std::max (std::abs (lo), std::abs (hi)) < 12.0, "DUST 100: the tuning drifts slowly (" + String (lo, 1) + " .. " + String (hi, 1) + " cents)");
+}
+
 static void testPlates()
 {
     std::cout << "Plates and touch" << std::endl;
@@ -616,7 +773,9 @@ static void testSilentChange()
     float maxStep = 0.0f;
     for (int i = 1; i < b.getNumSamples(); ++i) maxStep = std::max (maxStep, std::abs (b.getSample (0, i) - b.getSample (0, i - 1)));
     check (p->getPresetName() == "Slow Bloom", "preset applied after the fade");
-    check (rmsDb (c) < -100.0, "the old drone is cleared (" + String (rmsDb (c), 1) + " dB)");
+    bool silent = true;
+    for (int v = 0; v < Params::numVoices; ++v) silent = silent && p->liveLevel[v].load() < 1.0e-4f;
+    check (silent && rmsDb (c) < -60.0, "the old drone is cleared: all voices silent, only the DUST breath remains (" + String (rmsDb (c), 1) + " dB)");
     check (maxStep <= ownStep * 1.02f + 0.002f, "the fade adds no click: max step " + String (maxStep, 4) + " vs the drone's own " + String (ownStep, 4));
 }
 
@@ -751,6 +910,18 @@ static void testEditor()
         check (std::abs (p->getParamReal ("v1_tune") - 50.12f) < 0.01f, "typing \"D2+12\" into TUNE sets D2 +12 cents");
     }
 
+    if (auto* gv = page->getGravityView())
+    {
+        const float before = p->getParamReal ("gravity");
+        const auto c = gv->getLocalBounds().getCentre().toFloat();
+        gv->mouseDown (mouse (*gv, c, c, false));
+        gv->mouseDrag (mouse (*gv, c.translated (0.0f, -60.0f), c, true));
+        gv->mouseUp (mouse (*gv, c.translated (0.0f, -60.0f), c, true));
+        check (p->getParamReal ("gravity") > before + 15.0f, "dragging GRAVITY up raises it (" + String (before, 0) + " -> " + String (p->getParamReal ("gravity"), 0) + " %)");
+        setParam (*p, "gravity", 72.0f);
+        for (int i = 0; i < 4; ++i) { render (*p, 0.05); pumpMessages (40); }
+        saveShot (*ed, "drone-turbulence", 2.0f);
+    }
     page->selectVoice (2);
     pumpMessages (40);
     saveShot (*ed, "drone-pulsar-selected", 2.0f);
@@ -824,6 +995,7 @@ int main (int argc, char* argv[])
         {
             auto p = makeProc();
             setParam (*p, "v1_tune", 57.3f);       // off the grid so SNAP has something to do
+            if (id == "gravity_path") setParam (*p, "gravity", 60.0f);
             // engine parameters only matter for their type: switch the voice to it
             const int v = id.startsWith ("v") ? id[1] - '1' : -1;
             if (v >= 0 && id.contains ("siren")) setParam (*p, Params::voiceID (v, "type"), (float) VP::Siren);
@@ -892,6 +1064,8 @@ int main (int argc, char* argv[])
     testTide();
     testSiren();
     testPulsar();
+    testGravity();
+    testDust();
     testPlates();
     testTouchAboveHold();
     testKeys();

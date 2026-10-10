@@ -98,6 +98,13 @@ const std::vector<ParamDef>& Params::globalDefs()
         d.push_back (F ("a4", "Reference A", 415.0f, 466.0f, 440.0f, Unit::Hz, "Concert pitch of A (440 Hz standard, 432 and 415 for other tunings)"));
         d.push_back (F ("pb_range", "Pitch Bend Range", 0.0f, 24.0f, 2.0f, Unit::Semitones, "Pitch bend range in semitones (all voices)"));
         d.push_back (F ("pitch", "Pitch", -24.0f, 24.0f, 0.0f, Unit::Semitones, "Transposes all four voices together; their intervals stay the same"));
+        d.push_back (F ("gravity", "Gravity", 0.0f, 100.0f, 15.0f, Unit::Gravity,
+                        "From tuning to chaos. STILL: pure tuning, slow beating. ORBIT: the voices of a pair pull on each other (FM), the tone trembles. "
+                        "TURBULENCE: all four voices close into one loop and the output feeds back. COLLAPSE: the loop runs away and pulses on its own"));
+        d.push_back (C ("gravity_path", "Gravity Path", { "Auto", "Pairs", "Ring" }, 0,
+                        "Who pulls on whom. Auto: pairs (1-2, 3-4) up to the middle, then one ring of all four. Pairs or Ring: fixed"));
+        d.push_back (F ("dust", "Dust", 0.0f, 100.0f, 20.0f, Unit::Percent,
+                        "The analog life: slow drift of the tuning, voices leaking into each other and a breath of background noise. 0 = clean digital"));
         return d;
     }();
     return defs;
@@ -164,6 +171,12 @@ const ParamDef* Params::findDef (const String& id)
 }
 
 //==============================================================================
+String Params::gravityZone (float g01)
+{
+    static const char* names[] = { "STILL", "ORBIT", "TURBULENCE", "COLLAPSE" };
+    return names[gravityZoneIndex (g01)];
+}
+
 const StringArray& Params::chordNames()
 {
     static const StringArray n { "Unison", "Octaves", "Fifths", "Major", "Minor" };
@@ -324,6 +337,7 @@ String Params::format (const ParamDef& d, float v, bool withUnit)
             return (v > 0.0049f ? "+" : "") + String (roundToInt (v * 100.0f)) + u (" %");
         case Unit::Note:      return noteName (v, true);
         case Unit::Divider:   return roundToInt (v) <= 1 ? String ("off") : "1:" + String (roundToInt (v));
+        case Unit::Gravity:   return withUnit ? gravityZone (v / 100.0f) + " " + String (roundToInt (v)) + " %" : String (roundToInt (v));
         case Unit::Interval:
         {
             const int st = roundToInt (v);
@@ -410,6 +424,7 @@ float Params::parse (const ParamDef& d, const String& text, float fallback)
             if (lower == "off") return 1.0f;
             if (! hasDigit) return fallback;
             return clampV (t.containsChar (':') ? t.fromLastOccurrenceOf (":", false, false).getDoubleValue() : num);
+        case Unit::Gravity:
         case Unit::Tide:
         case Unit::Plain: case Unit::Scale10: case Unit::Semitones: case Unit::Percent:
             return hasDigit ? clampV (num) : fallback;

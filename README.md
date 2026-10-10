@@ -7,7 +7,7 @@ od čistého ladění k chaosu. Formáty VST3 (Mac + Windows), AU (Mac), Standal
 Podrobnosti: [docs/SPECIFIKACE.md](docs/SPECIFIKACE.md) (architektura, roadmapa s branami), [docs/KONCEPT.md](docs/KONCEPT.md),
 vzhled [design/resoopus-mockup.html](design/resoopus-mockup.html).
 
-## Stav: fáze 2 (verze 0.1.0)
+## Stav: fáze 3 (verze 0.1.0)
 
 Hotovo a otestováno:
 - **4 hlasy** ve dvou párech (1·2 a 3·4 kolem GRAVITY). TYPE každého hlasu: **OFF / CHOIR / SIREN / PULSAR**
@@ -20,7 +20,10 @@ Hotovo a otestováno:
 - hraní: **Plates** (bílé klávesy C3–F3 = hlasy 1–4) a **Keys** (nota přeladí volný hlas), dynamika
   **Velocity / Aftertouch / obojí**, **Snap** Free / Chromatic / Scale, A = 415–466 Hz
 - UI stránky DRONE, klávesnice s čísly hlasů, 7 presetů, undo/redo, A/B, modulační panel
-- **GRAVITY** zatím ukazuje jen oběžnou dráhu hlasů, knob přijde ve fázi 3
+- **GRAVITY** (velký knob uprostřed): STILL (čisté ladění, zázněje) → ORBIT (hlasy v páru se navzájem modulují) →
+  TURBULENCE (všechny 4 v jedné smyčce + zpětná vazba výstupu) → COLLAPSE (smyčka pulzuje sama). PATH Auto / Pairs / Ring
+  (pravé tlačítko), dá se modulovat (např. tlakem prstu). **DUST**: drift ladění, prosakování hlasů, šum pozadí
+- 9 presetů včetně *Gravity Well* (aftertouch táhne GRAVITY) a *Collapse*
 
 Naměřeno (`ResoOpusTests`, Apple M1, 48 kHz):
 
@@ -33,7 +36,8 @@ Naměřeno (`ResoOpusTests`, Apple M1, 48 kHz):
 | CPU: výchozí patch 2× / 4 hlasy × 5 pil s TIDE 2× / 4× | 1,1 % / 0,8 % / 1,7 % jádra |
 | Výchozí patch bez MIDI | drone na −8,6 dBFS, náběh bez lupnutí |
 | Všechno na maximu | měkký limiter drží −0,3 dBFS |
-| Audit parametrů | 115 ze 115 mění zvuk |
+| GRAVITY: hlasitost STILL → COLLAPSE / stabilita 60 s všech pásem 44,1–192 kHz | rozdíl 2,2 dB / bez NaN, špička −0,3 dBFS |
+| Audit parametrů | 134 ze 134 mění zvuk |
 | UBSan (nedefinované chování) | 0 chyb |
 
 ## Build (macOS)

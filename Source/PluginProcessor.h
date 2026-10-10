@@ -78,6 +78,7 @@ public:
     std::atomic<bool> liveGate[Params::numVoices];       // voice touched (plate or key held)
     std::atomic<float> liveRoot[Params::numVoices];      // sounding root (MIDI note), for the keyboard in KEYS mode
     std::atomic<float> meterPeak { -100.0f };
+    std::atomic<float> liveGravity { 0.0f };             // GRAVITY after modulation, 0..1
     std::atomic<float> cpuLoad { 0.0f };
 
     static constexpr int chunkSize = 32;
@@ -105,6 +106,15 @@ private:
     int osIndex = 1;
     juce::AudioBuffer<float> zeros, mixBuf;
     dsp::DcBlocker dc[2];
+
+    // GRAVITY network and DUST
+    void renderVoices (float* L, float* R, int count);
+    dsp::Ramp devRamp, ringRamp, fbRamp, dustRamp;
+    bool networkPrimed = false;
+    float voiceMod[Params::numVoices] {};   // each voice as a modulator (previous sample)
+    float lastMono = 0.0f;                  // the instrument's output, fed back in TURBULENCE and COLLAPSE
+    dsp::RandomGen drift[Params::numVoices];
+    dsp::ColouredNoise hiss[2];
 
     ModMatrix matrix;
     ModMatrix::Slot slots[Params::numModSlots];

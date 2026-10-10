@@ -103,6 +103,15 @@ void LedDot::paint (Graphics& g)
 void LedDot::mouseDown (const MouseEvent&) { attachment->setValueAsCompleteGesture (on ? 0.0f : 1.0f); }
 
 //==============================================================================
+GravityView::GravityView (ResoOpusProcessor& p) : proc (p)
+{
+    param = proc.param ("gravity");
+    attachment = std::make_unique<ParameterAttachment> (*param, [this] (float v) { value = param->convertTo0to1 (v); repaint(); });
+    attachment->sendInitialUpdate();
+    setTooltip (String (Params::findDef ("gravity")->tip) + "\n(drag a modulation source here, right-click for PATH)");
+    setMouseCursor (MouseCursor::UpDownResizeCursor);
+}
+
 void GravityView::refresh()
 {
     bool any = false, changed = false;
@@ -113,35 +122,91 @@ void GravityView::refresh()
         if (std::abs (l - levels[v]) > 0.01f || t != types[v]) { levels[v] = l; types[v] = t; changed = true; }
         any = any || l > 0.01f;
     }
+    const float lg = proc.liveGravity.load();
+    if (std::abs (lg - live) > 0.002f) { live = lg; changed = true; }
     const double now = Time::getMillisecondCounterHiRes() / 1000.0;
-    if (any) phase += 0.18 * std::min (0.1, now - lastTime);   // slow orbit while something sounds
+    const double dt = std::min (0.1, now - lastTime);
     lastTime = now;
+    if (any)
+    {
+        phase += (0.12 + 0.5 * live * live) * dt;   // the orbit speeds up with GRAVITY
+        jitter += dt;
+    }
     if (any || changed) repaint();
 }
 
 void GravityView::paint (Graphics& g)
 {
-    const auto c = getLocalBounds().toFloat().getCentre().translated (0.0f, -6.0f);
-    const float R = 92.0f;
+    const auto c = centre();
+    const float R = 58.0f;
+    constexpr float a0 = -2.35619449f, sweep = 4.71238898f;   // -135 deg .. +135 deg
+    auto ang = [] (float v01) { return a0 + v01 * sweep; };
+    auto at = [&c] (float r, float a) { return Point<float> (c.x + r * std::sin (a), c.y - r * std::cos (a)); };
+    const Colour zoneCol[] = { Palette::zoneStill, Palette::zoneOrbit, Palette::zoneTurb, Palette::zoneCollapse };
+    const float edges[] = { 0.0f, 0.25f, 0.55f, 0.85f, 1.0f };
+    const int zone = Params::gravityZoneIndex (live);
+
+    if (dropHover)
+    {
+        g.setColour (Palette::curve.withAlpha (0.15f));
+        g.fillEllipse (Rectangle<float> (R * 2.0f + 70.0f, R * 2.0f + 70.0f).withCentre (c));
+    }
+    // zone arcs (dim) + labels
+    for (int z = 0; z < 4; ++z)
+    {
+        Path arc;
+        arc.addCentredArc (c.x, c.y, R + 30.0f, R + 30.0f, 0.0f, ang (edges[z]) + 0.02f, ang (edges[z + 1]) - 0.02f, true);
+        g.setColour (zoneCol[z].withAlpha (0.22f));
+        g.strokePath (arc, PathStrokeType (5.0f));
+        static const char* names[] = { "STILL", "ORBIT", "TURBULENCE", "COLLAPSE" };
+        const auto lp = at (R + 58.0f, ang ((edges[z] + edges[z + 1]) * 0.5f));
+        g.setColour (z == zone ? zoneCol[z] : Palette::textFaint);
+        g.setFont (Fonts::bold (10.0f).withExtraKerningFactor (0.06f));
+        g.drawText (names[z], Rectangle<float> (90.0f, 14.0f).withCentre (lp), Justification::centred, false);
+    }
+    // value arc coloured by zone
+    for (int z = 0; z < 4; ++z)
+    {
+        if (value <= edges[z]) break;
+        Path arc;
+        arc.addCentredArc (c.x, c.y, R + 30.0f, R + 30.0f, 0.0f, ang (edges[z]) + 0.02f, ang (std::min (value, edges[z + 1])) - 0.005f, true);
+        g.setColour (zoneCol[z].withAlpha (0.18f));
+        g.strokePath (arc, PathStrokeType (14.0f));
+        g.setColour (zoneCol[z]);
+        g.strokePath (arc, PathStrokeType (5.0f));
+    }
+    // ticks
+    for (int i = 0; i <= 20; ++i)
+    {
+        const float a = ang ((float) i / 20.0f);
+        g.setColour (Colours::white.withAlpha (i % 5 ? 0.18f : 0.45f));
+        g.drawLine (Line<float> (at (R + 21.0f, a), at (R + (i % 5 ? 25.0f : 26.5f), a)), 1.1f);
+    }
+    // modulation ring: from the knob to the live value
+    if (std::abs (live - value) > 0.004f)
+    {
+        Path ring;
+        ring.addCentredArc (c.x, c.y, R + 38.0f, R + 38.0f, 0.0f, ang (std::min (live, value)), ang (std::max (live, value)), true);
+        g.setColour (Palette::text.withAlpha (0.9f));
+        g.strokePath (ring, PathStrokeType (2.6f, PathStrokeType::curved, PathStrokeType::rounded));
+        g.setColour (Colours::white);
+        g.fillEllipse (Rectangle<float> (6.0f, 6.0f).withCentre (at (R + 38.0f, ang (live))));
+    }
+
+    // orbit: the voices pull towards their partner (pairs), then towards each other (ring), then scatter (collapse)
     g.setColour (Colours::white.withAlpha (0.07f));
-    g.drawEllipse (Rectangle<float> (R * 2.0f, R * 2.0f).withCentre (c), 1.0f);
-    g.setColour (Colours::white.withAlpha (0.035f));
-    g.drawEllipse (Rectangle<float> (R * 1.3f, R * 1.3f).withCentre (c), 1.0f);
-
-    // centre: what this panel will become
-    g.setColour (Palette::textFaint);
-    g.setFont (Fonts::bold (11.0f).withExtraKerningFactor (0.12f));
-    g.drawText ("GRAVITY", Rectangle<float> (200.0f, 16.0f).withCentre (c.translated (0.0f, -8.0f)), Justification::centred, false);
-    g.setFont (Fonts::regular (11.0f));
-    g.drawText ("knob arrives in phase 3", Rectangle<float> (200.0f, 16.0f).withCentre (c.translated (0.0f, 10.0f)), Justification::centred, false);
-
+    g.drawEllipse (Rectangle<float> ((R + 13.0f) * 2.0f, (R + 13.0f) * 2.0f).withCentre (c), 1.0f);
+    const float pairPull = jlimit (0.0f, 1.0f, (live - 0.2f) / 0.35f), chaos = jlimit (0.0f, 1.0f, (live - 0.8f) / 0.2f);
     for (int v = 0; v < Params::numVoices; ++v)
     {
-        const double a = phase + v * MathConstants<double>::twoPi / (double) Params::numVoices;
-        const Point<float> p (c.x + R * (float) std::cos (a), c.y + R * (float) std::sin (a));
+        const double base = phase + v * MathConstants<double>::halfPi;
+        const double toward = (v % 2 == 0 ? 0.55 : -0.55) * pairPull;   // partner sits a quarter turn away
+        const double wob = chaos * 0.6 * std::sin (jitter * (3.1 + v * 1.7)) ;
+        const float rr = R + 13.0f + chaos * 9.0f * (float) std::sin (jitter * (5.3 + v * 2.1));
+        const auto p = at (rr, (float) (base + toward + wob));
         const auto col = Palette::voiceType (types[v]);
         const float lv = jlimit (0.0f, 1.0f, levels[v] * 1.4f);
-        const float r = 5.0f + 2.5f * lv;
+        const float r = 4.5f + 2.5f * lv;
         if (lv > 0.02f)
         {
             g.setColour (col.withAlpha (0.25f * lv));
@@ -152,6 +217,126 @@ void GravityView::paint (Graphics& g)
         g.setColour (col.withAlpha (0.8f));
         g.drawEllipse (Rectangle<float> (r * 2.0f, r * 2.0f).withCentre (p), 1.2f);
     }
+
+    // knob body: knurled skirt + brushed metal cap + pointer
+    const auto body = Rectangle<float> ((R - 1.5f) * 2.0f, (R - 1.5f) * 2.0f).withCentre (c);
+    g.setColour (Colours::black.withAlpha (0.55f));
+    g.fillEllipse (body.translated (0.0f, 3.0f));
+    g.setGradientFill (ColourGradient (Colour (0xff34353c), c.x - R * 0.2f, c.y - R * 0.5f, Colour (0xff0d0e11), c.x + R * 0.4f, c.y + R, true));
+    g.fillEllipse (body);
+    g.setColour (Colours::black);
+    g.drawEllipse (body, 1.0f);
+    const float dashes[] = { 1.0f, 2.6f };
+    Path skirt;
+    skirt.addEllipse (body.reduced (3.0f));
+    Path dashed;
+    PathStrokeType (2.0f).createDashedStroke (dashed, skirt, dashes, 2);
+    g.setColour (Colours::white.withAlpha (0.09f));
+    g.fillPath (dashed);
+    const auto cap = Rectangle<float> (R * 1.04f, R * 1.04f).withCentre (c);
+    g.setGradientFill (ColourGradient (Colour (0xffd8d9dd), c.x - R * 0.2f, c.y - R * 0.35f, Colour (0xff3c3d43), c.x + R * 0.3f, c.y + R * 0.6f, true));
+    g.fillEllipse (cap);
+    g.setColour (Colours::black.withAlpha (0.6f));
+    g.drawEllipse (cap, 1.0f);
+    g.setColour (Colours::white);
+    g.drawLine (Line<float> (at (R * 0.15f, ang (value)), at (R - 6.0f, ang (value))), 3.4f);
+
+    // value
+    g.setColour (zoneCol[Params::gravityZoneIndex (value)]);
+    g.setFont (Fonts::mono (12.0f));
+    g.drawText (Params::format (*Params::findDef ("gravity"), value * 100.0f), Rectangle<float> (220.0f, 16.0f).withCentre ({ c.x, c.y + R + 62.0f }),
+                Justification::centred, false);
+    if (editor == nullptr && std::abs (live - value) > 0.004f)
+    {
+        g.setColour (Palette::textDim);
+        g.setFont (Fonts::mono (10.5f));
+        g.drawText ("live " + String (roundToInt (live * 100.0f)) + " %", Rectangle<float> (220.0f, 14.0f).withCentre ({ c.x, c.y + R + 78.0f }),
+                    Justification::centred, false);
+    }
+}
+
+void GravityView::mouseDown (const MouseEvent& e)
+{
+    if (e.mods.isPopupMenu()) { showMenu(); return; }
+    if (e.mods.isCommandDown()) { attachment->setValueAsCompleteGesture (param->convertFrom0to1 (param->getDefaultValue())); return; }
+    dragStart = value;
+    attachment->beginGesture();
+}
+
+void GravityView::mouseDrag (const MouseEvent& e)
+{
+    if (e.mods.isPopupMenu() || e.mods.isCommandDown()) return;
+    const float fine = e.mods.isShiftDown() ? 0.2f : 1.0f;
+    const float v = jlimit (0.0f, 1.0f, dragStart - (float) e.getDistanceFromDragStartY() / 260.0f * fine);
+    attachment->setValueAsPartOfGesture (param->convertFrom0to1 (v));
+}
+
+void GravityView::mouseUp (const MouseEvent& e)
+{
+    if (! e.mods.isPopupMenu() && ! e.mods.isCommandDown()) attachment->endGesture();
+}
+
+void GravityView::mouseWheelMove (const MouseEvent& e, const MouseWheelDetails& w)
+{
+    const float step = (e.mods.isShiftDown() ? 0.002f : 0.01f) * (w.deltaY > 0 ? 1.0f : -1.0f);
+    attachment->setValueAsCompleteGesture (param->convertFrom0to1 (jlimit (0.0f, 1.0f, value + step)));
+}
+
+void GravityView::mouseDoubleClick (const MouseEvent&)
+{
+    editor = std::make_unique<TextEditor>();
+    addAndMakeVisible (*editor);
+    editor->setBounds (Rectangle<int> (90, 22).withCentre (centre().translated (0.0f, 58.0f + 62.0f).toInt()));
+    editor->setFont (Fonts::mono (12.0f));
+    editor->setJustification (Justification::centred);
+    editor->setText (String (roundToInt (value * 100.0f)), false);
+    editor->selectAll();
+    editor->grabKeyboardFocus();
+    SafePointer<GravityView> safe (this);
+    editor->onReturnKey = [safe]
+    {
+        if (safe == nullptr) return;
+        const float v = safe->editor->getText().retainCharacters ("0123456789.").getFloatValue();
+        safe->attachment->setValueAsCompleteGesture (jlimit (0.0f, 100.0f, v));
+        MessageManager::callAsync ([safe] { if (safe) safe->editor.reset(); });
+    };
+    editor->onEscapeKey = [safe] { MessageManager::callAsync ([safe] { if (safe) safe->editor.reset(); }); };
+    editor->onFocusLost = editor->onEscapeKey;
+}
+
+void GravityView::showMenu()
+{
+    PopupMenu m, mods;
+    m.addSectionHeader ("GRAVITY");
+    m.addItem (1, "Reset to default");
+    const int path = roundToInt (proc.getParamReal ("gravity_path"));
+    PopupMenu pm;
+    pm.addItem (11, "Auto - pairs, then one ring from the middle", true, path == 0);
+    pm.addItem (12, "Pairs - 1-2 and 3-4 pull on each other", true, path == 1);
+    pm.addItem (13, "Ring - all four in one loop", true, path == 2);
+    m.addSubMenu ("Path", pm);
+    for (int s = 1; s < Mod::numSources; ++s) mods.addItem (1000 + s, Mod::sourceNames()[s]);
+    m.addSubMenu ("Modulate with", mods);
+    for (int slot : proc.slotsForDestination ("gravity"))
+        m.addItem (6000 + slot, "Remove " + Mod::sourceNames()[(int) proc.getParamReal (Params::modID (slot, "src"))]);
+    m.showMenuAsync (PopupMenu::Options().withTargetComponent (this), [safe = SafePointer<GravityView> (this)] (int r)
+    {
+        if (safe == nullptr || r == 0) return;
+        auto& pr = safe->proc;
+        if (r == 1) safe->attachment->setValueAsCompleteGesture (safe->param->convertFrom0to1 (safe->param->getDefaultValue()));
+        else if (r >= 11 && r <= 13) pr.setParamReal ("gravity_path", (float) (r - 11));
+        else if (r >= 6000) pr.removeModulation (r - 6000);
+        else if (r >= 1000) pr.addModulation (r - 1000, "gravity", 0.25f);
+    });
+}
+
+bool GravityView::isInterestedInDragSource (const SourceDetails& d) { return d.description.toString().startsWith ("src:"); }
+
+void GravityView::itemDropped (const SourceDetails& d)
+{
+    dropHover = false;
+    proc.addModulation (d.description.toString().fromFirstOccurrenceOf ("src:", false, false).getIntValue(), "gravity", 0.25f);
+    repaint();
 }
 
 //==============================================================================
@@ -208,28 +393,28 @@ DronePage::DronePage (ResoOpusProcessor& p) : Page (p)
         columns[v] = col;
     }
 
-    // GRAVITY (phase 1-2: orbit of the voices)
+    // GRAVITY
     auto* gpanel = panel ("GRAVITY", Palette::gravity, { gw + gap, 0, width - 2 * (gw + gap), gh });
     gravity = new GravityView (proc);
     owned.add (gravity);
     gravity->setBounds (0, ModulePanel::headerHeight + 2, gpanel->getWidth(), gh - ModulePanel::headerHeight - 2);
     gpanel->addAndMakeVisible (gravity);
 
-    // MASTER: transpose all, output volume, FILL
+    // MASTER: transpose all, DUST, output volume; FILL in the header
     const int mw = 300, dh = height - gh - gap;
-    auto* master = panel ("MASTER", Palette::master, { width - mw, gh + gap, mw, dh });
-    auto* pitch = knob ("pitch", "PITCH", Palette::master, range ("-24", "+24", true));
-    auto* vol = knob ("master_vol", "VOLUME", Palette::master, range ("-inf", "+12"));
-    master->addAndMakeVisible (pitch);
-    master->addAndMakeVisible (vol);
-    pitch->setTopLeftPosition (14, 50);
-    vol->setTopLeftPosition (106, 50);
-    auto* fill = new SelectorPill ("FILL", [] { return String ("Scale..."); }, [this] (SelectorPill& pill) { showFillMenu (&pill); });
-    fill->setTooltip ("FILL: spreads the four voices over a scale (degrees 1-3-5-7), then fine-tune them by ear");
-    owned.add (fill);
-    fill->setSize (84, 44);
-    master->addAndMakeVisible (fill);
-    fill->setTopLeftPosition (204, 76);
+    auto* master = new MasterPanel (*this);
+    owned.add (master);
+    master->setBounds (width - mw, gh + gap, mw, dh);
+    addAndMakeVisible (master);
+    const char* mIds[] = { "pitch", "dust", "master_vol" };
+    const char* mNames[] = { "PITCH", "DUST", "VOLUME" };
+    const Knob::Style mSt[] = { range ("-24", "+24", true), range ("CLEAN", "LO-FI"), range ("-inf", "+12") };
+    for (int i = 0; i < 3; ++i)
+    {
+        auto* k = knob (mIds[i], mNames[i], Palette::master, mSt[i]);
+        master->addAndMakeVisible (k);
+        k->setTopLeftPosition (6 + i * 98, 44);
+    }
 
     // detail of the selected voice
     detailPanel = panel ("VOICE 1", Palette::choir, { 0, gh + gap, width - mw - gap, dh });

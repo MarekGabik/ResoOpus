@@ -75,7 +75,15 @@ void ResoOpusProcessor::prepareToPlay (double sampleRate, int)
 
     osIndex = jlimit (0, 2, (int) globalRaw[GP::oversampling]->load());
     for (int v = 0; v < Params::numVoices; ++v)
+    {
         voices[v].prepare (sr * (1 << osIndex), 0x51ed2701u + (uint32_t) v * 7919u);
+        drift[v].seed (0x9e37u + (uint32_t) v * 104729u);
+        voiceMod[v] = 0.0f;
+    }
+    hiss[0].seed (0x1234567u); hiss[1].seed (0x7654321u);
+    hiss[0].reset(); hiss[1].reset();
+    lastMono = 0.0f;
+    networkPrimed = false;
     matrix.reset();
     keyboardState.reset();
     for (auto& t : touch) t = Touch();
@@ -247,6 +255,8 @@ void ResoOpusProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& mi
     if (resetRequest.exchange (false))
     {
         for (auto& c : voices) c.reset();
+        for (auto& m : voiceMod) m = 0.0f;
+        lastMono = 0.0f;
         for (auto& d : dc) d.reset();
         for (auto& o : oversamplers) if (o) o->reset();
         releaseAll();
@@ -356,6 +366,10 @@ void ResoOpusProcessor::processChunk (AudioBuffer<float>& out, int start, int le
 
     // 4. voice settings
     const int touchMode = (int) curG[GP::touch];
+    const float gravity = curG[GP::gravity] / 100.0f, dust = curG[GP::dust] / 100.0f;
+    liveGravity.store (gravity, std::memory_order_relaxed);
+    // slow tuning drift: a little beating in STILL, more with DUST (cents)
+    const float driftCents = 4.0f * std::min (1.0f, gravity / 0.25f) + 8.0f * dust;
     const double bend = (double) (pitchBend * curG[GP::pb_range]);
     for (int v = 0; v < Params::numVoices; ++v)
     {
@@ -368,7 +382,9 @@ void ResoOpusProcessor::processChunk (AudioBuffer<float>& out, int start, int le
         if (s.type != lastType[v]) { if (lastType[v] >= 0 && voices[v].isSilent()) voices[v].reset(); lastType[v] = s.type; }
         const bool choir = s.type == VP::Choir;
         const double base = (t.keyRoot >= 0.0 ? t.keyRoot : (double) p[VP::tune]) + (double) curG[GP::pitch];
-        s.rootMidi = snapNote (base) + bend + (choir ? (double) Params::tideSemitones (p[VP::tide] / 100.0f) : 0.0);
+        const float dr = drift[v].process (::dsp::RandomGen::Perlin, 0.11 + 0.03 * v, 4.0f, seconds, false, 0.0);
+        s.rootMidi = snapNote (base) + bend + (choir ? (double) Params::tideSemitones (p[VP::tide] / 100.0f) : 0.0)
+                     + (double) (dr * driftCents / 100.0f);
         s.pull = choir ? Params::tidePull (p[VP::tide] / 100.0f) : 0.0f;
         s.sirenRate = p[VP::siren_rate];
         s.sirenFm = p[VP::siren_fm] / 100.0f;
@@ -415,13 +431,17 @@ void ResoOpusProcessor::processChunk (AudioBuffer<float>& out, int start, int le
     // 5. voices (oversampled)
     float* outL = out.getWritePointer (0) + start;
     float* outR = out.getWritePointer (1) + start;
-    auto renderVoices = [this] (float* L, float* R, int count)
     {
-        std::fill (L, L + count, 0.0f);
-        std::fill (R, R + count, 0.0f);
-        for (int v = 0; v < Params::numVoices; ++v)
-            voices[v].render (settings[v], L, R, count);
-    };
+        const int path = (int) curG[GP::gravity_path];
+        const float ring = path == GP::PathPairs ? 0.0f : (path == GP::PathRing ? 1.0f : Params::gravityRing (gravity));
+        const int count = len << osIndex;
+        auto set = [this, count] (::dsp::Ramp& r, float t) { if (networkPrimed) r.set (t, count); else r.reset (t); };
+        set (devRamp, Params::gravityDeviation (gravity));
+        set (ringRamp, ring);
+        set (fbRamp, Params::gravityFeedback (gravity));
+        set (dustRamp, 6.0f * dust);   // Hz of leakage between the voices
+        networkPrimed = true;
+    }
     if (osIndex == 0)
         renderVoices (outL, outR, len);
     else
@@ -444,11 +464,47 @@ void ResoOpusProcessor::processChunk (AudioBuffer<float>& out, int start, int le
         if (silentGain < silentTargetNow) silentGain = std::min (silentTargetNow, silentGain + silentStep);
         else if (silentGain > silentTargetNow) silentGain = std::max (silentTargetNow, silentGain - silentStep);
         const float g = master * silentGain;
-        float l = dc[0].process (outL[i]) * g, r = dc[1].process (outR[i]) * g;
+        const float breath = dust * 0.002f;   // background noise, up to -54 dBFS
+        float l = (dc[0].process (outL[i]) + breath * hiss[0].process (-0.5f)) * g;
+        float r = (dc[1].process (outR[i]) + breath * hiss[1].process (-0.5f)) * g;
         if (! std::isfinite (l)) l = 0.0f;
         if (! std::isfinite (r)) r = 0.0f;
         outL[i] = softLimit (l);
         outR[i] = softLimit (r);
+    }
+}
+
+// GRAVITY: every voice is frequency-modulated by its partner (pairs 1-2, 3-4) and/or the next voice (ring 1-2-3-4-1),
+// one sample late, plus the instrument's own output in TURBULENCE and COLLAPSE. DUST leaks all voices into each other.
+void ResoOpusProcessor::renderVoices (float* L, float* R, int count)
+{
+    std::fill (L, L + count, 0.0f);
+    std::fill (R, R + count, 0.0f);
+    bool on[Params::numVoices];
+    bool any = false;
+    for (int v = 0; v < Params::numVoices; ++v) { on[v] = voices[v].begin (settings[v], count); any = any || on[v]; }
+    if (! any)
+    {
+        for (auto& m : voiceMod) m = 0.0f;
+        lastMono = 0.0f;
+        for (int k = 0; k < count; ++k) { devRamp.next(); ringRamp.next(); fbRamp.next(); dustRamp.next(); }
+        return;
+    }
+    for (int k = 0; k < count; ++k)
+    {
+        const float dev = devRamp.next(), ring = ringRamp.next(), dustDev = dustRamp.next();
+        const float fb = fbRamp.next() * lastMono;
+        const float total = voiceMod[0] + voiceMod[1] + voiceMod[2] + voiceMod[3];
+        float now[Params::numVoices];
+        for (int v = 0; v < Params::numVoices; ++v)
+        {
+            if (! on[v]) { now[v] = 0.0f; continue; }
+            const float in = (1.0f - ring) * voiceMod[v ^ 1] + ring * voiceMod[(v + 1) % Params::numVoices] + fb;
+            const double fmHz = (double) (dev * in + dustDev * (total - voiceMod[v]));
+            now[v] = voices[v].tick (fmHz, L[k], R[k]);
+        }
+        for (int v = 0; v < Params::numVoices; ++v) voiceMod[v] = now[v];
+        lastMono = jlimit (-1.5f, 1.5f, (L[k] + R[k]) * 1.2f);
     }
 }
 
