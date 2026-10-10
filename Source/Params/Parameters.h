@@ -91,9 +91,9 @@ namespace Params
         const float g = juce::jlimit (0.0f, 1.0f, g01);
         if (g < 0.25f) return 0.0f;
         if (g < 0.55f) { const float t = (g - 0.25f) / 0.3f; return 40.0f * t * t; }
-        if (g < 0.85f) { const float t = (g - 0.55f) / 0.3f; return 40.0f + 200.0f * t * t; }
+        if (g < 0.85f) { const float t = (g - 0.55f) / 0.3f; return 40.0f + 360.0f * t * std::sqrt (t); }   // stronger just before COLLAPSE
         const float t = (g - 0.85f) / 0.15f;
-        return 240.0f + 760.0f * t * t;
+        return 400.0f + 600.0f * t * t;
     }
     // Share of the ring (all four voices in one loop) vs the pairs, for PATH = Auto
     inline float gravityRing (float g01) { return juce::jlimit (0.0f, 1.0f, (g01 - 0.55f) / 0.15f); }

@@ -197,13 +197,15 @@ void GravityView::paint (Graphics& g)
     g.setColour (Colours::white.withAlpha (0.07f));
     g.drawEllipse (Rectangle<float> ((R + 13.0f) * 2.0f, (R + 13.0f) * 2.0f).withCentre (c), 1.0f);
     const float pairPull = jlimit (0.0f, 1.0f, (live - 0.2f) / 0.35f), chaos = jlimit (0.0f, 1.0f, (live - 0.8f) / 0.2f);
+    // TURBULENCE shakes the orbit along one (vertical) axis; COLLAPSE scatters it in every direction
+    const float shake = jlimit (0.0f, 1.0f, (live - 0.55f) / 0.3f) * (1.0f - chaos);
     for (int v = 0; v < Params::numVoices; ++v)
     {
         const double base = phase + v * MathConstants<double>::halfPi;
         const double toward = (v % 2 == 0 ? 0.55 : -0.55) * pairPull;   // partner sits a quarter turn away
         const double wob = chaos * 0.6 * std::sin (jitter * (3.1 + v * 1.7)) ;
         const float rr = R + 13.0f + chaos * 9.0f * (float) std::sin (jitter * (5.3 + v * 2.1));
-        const auto p = at (rr, (float) (base + toward + wob));
+        const auto p = at (rr, (float) (base + toward + wob)).translated (0.0f, shake * 8.0f * (float) std::sin (jitter * (8.0 + v * 1.3)));
         const auto col = Palette::voiceType (types[v]);
         const float lv = jlimit (0.0f, 1.0f, levels[v] * 1.4f);
         const float r = 4.5f + 2.5f * lv;
