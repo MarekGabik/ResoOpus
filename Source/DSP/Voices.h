@@ -388,6 +388,7 @@ public:
     bool isActive() const { return env.isActive(); }
     bool isReleasing() const { return env.getStage() == Envelope::Release; }
     float getLevel() const { return env.getValue(); }
+    float getFilterEnv() const { return fenv.getValue() * velScale; }
     int getNote() const { return note; }
     double getPitch() const { return pitch; }
 

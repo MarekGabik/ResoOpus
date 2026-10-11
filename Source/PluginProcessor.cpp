@@ -90,6 +90,7 @@ void ResoOpusProcessor::prepareToPlay (double sampleRate, int)
     space.prepare (sr);
     for (int i = 0; i < maxLead; ++i) leads[i].prepare (sr * (1 << osIndex), 0x7a11u + (uint32_t) i * 131u);
     leadSusNum = 0; arpNote = -1; lastLeadPitch = -1.0;
+    lfos[0].reset (0.0); lfos[1].reset (0.0); lfoRng.seed (0x51f0u); motionRnd.seed (0x7e57u); chunkPpq = hostPpq = 0.0;
     leadNum = arpNum = 0;
     arpPos = 0.0; arpGate = false;
     for (auto& f : filters) { f.prepare (sr * (1 << osIndex)); f.reset(); }
@@ -154,6 +155,7 @@ int ResoOpusProcessor::plateNote (int voice) const
 void ResoOpusProcessor::noteOn (int note, float vel)
 {
     lastVelocity = vel;
+    noteTrigger = true;
     int v = -1;
     const bool leadOn = globalRaw[GP::lead_on]->load() > 0.5f;
     if (globalRaw[GP::drone_on]->load() < 0.5f)
@@ -311,7 +313,12 @@ void ResoOpusProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& mi
 
     if (auto* ph = getPlayHead())
         if (auto pos = ph->getPosition())
+        {
             if (auto bpm = pos->getBpm()) hostBpm = jlimit (20.0, 999.0, *bpm);
+            hostPlaying = pos->getIsPlaying();
+            if (auto ppq = pos->getPpqPosition()) hostPpq = *ppq;
+        }
+    chunkPpq = hostPpq;
 
     const int wantOs = jlimit (0, 2, (int) globalRaw[GP::oversampling]->load());
     if (wantOs != osIndex)
@@ -350,6 +357,41 @@ void ResoOpusProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& mi
     cpuLoad = cpuLoad.load() * 0.9f + load * 0.1f;
 }
 
+// LFO 1 / 2 and RANDOM, once per chunk. In tempo they follow the song position while the host plays.
+void ResoOpusProcessor::runMotion (double seconds)
+{
+    const double beatsNow = chunkPpq;
+    chunkPpq += seconds * hostBpm / 60.0;
+    for (int l = 0; l < 2; ++l)
+    {
+        const int base = l == 0 ? GP::lfo1_rate : GP::lfo2_rate;
+        const auto raw = [this, base] (int i) { return globalRaw[base + i]->load(); };
+        const bool sync = raw (2) > 0.5f;
+        const double beats = Mod::divisionBeats ((int) raw (3));
+        const double hz = sync ? hostBpm / 60.0 / beats : (double) raw (0);
+        const double start = (double) raw (4) / 360.0;
+        const double before = lfos[l].getPhase();
+        if (noteTrigger && raw (5) > 0.5f) lfos[l].setPhase (start);
+        else if (sync && hostPlaying) lfos[l].setPhase (beatsNow / beats + start);
+        else lfos[l].advance (hz, seconds);
+        const int shape = (int) raw (1);
+        if (lfos[l].getPhase() < before || (noteTrigger && raw (5) > 0.5f)) lfoHold[l] = lfoRng.next();   // S&H: new step every cycle
+        sources[Mod::Lfo1 + l] = shape >= 5 ? lfoHold[l] : ::dsp::Lfo::shape (shape, lfos[l].getPhase());
+    }
+    {
+        const bool sync = globalRaw[GP::rnd_sync]->load() > 0.5f;
+        const double beats = Mod::divisionBeats ((int) globalRaw[GP::rnd_div]->load());
+        const double hz = sync ? hostBpm / 60.0 / beats : (double) globalRaw[GP::rnd_rate]->load();
+        static const int modes[] = { ::dsp::RandomGen::Perlin, ::dsp::RandomGen::SampleHold, ::dsp::RandomGen::Noise };
+        const int mode = modes[jlimit (0, 2, (int) globalRaw[GP::rnd_mode]->load())];
+        const double hostPhase = beatsNow / beats;
+        sources[Mod::Random] = motionRnd.process (mode, hz, globalRaw[GP::rnd_slew]->load(), seconds,
+                                                  sync && hostPlaying, hostPhase - std::floor (hostPhase));
+    }
+    sources[Mod::LeadEnv] = leads[leadLast].isActive() ? leads[leadLast].getFilterEnv() : 0.0f;
+    noteTrigger = false;
+}
+
 void ResoOpusProcessor::processChunk (AudioBuffer<float>& out, int start, int len)
 {
     const double seconds = len / sr;
@@ -363,6 +405,7 @@ void ResoOpusProcessor::processChunk (AudioBuffer<float>& out, int start, int le
     sources[Mod::Pressure] = anyPressure;
     sources[Mod::PitchBend] = pitchBend;
     sources[Mod::Constant] = 1.0f;
+    runMotion (seconds);
 
     // 2. matrix
     for (int s = 0; s < Params::numModSlots; ++s)

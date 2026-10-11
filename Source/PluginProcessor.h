@@ -168,6 +168,14 @@ private:
     ModMatrix matrix;
     ModMatrix::Slot slots[Params::numModSlots];
     float sources[Mod::numSources] {};
+    // MOTION sources
+    ::dsp::Lfo lfos[2];
+    ::dsp::Rng lfoRng;
+    float lfoHold[2] {};
+    ::dsp::RandomGen motionRnd;
+    double hostPpq = 0.0, chunkPpq = 0.0;
+    bool hostPlaying = false, noteTrigger = false;
+    void runMotion (double seconds);
     float modOut[Params::numModSlots] {};
     float modSum[Mod::maxDestCode + 1] {};
     bool modTouched[Mod::maxDestCode + 1] {};

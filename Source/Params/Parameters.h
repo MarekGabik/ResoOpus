@@ -112,7 +112,7 @@ namespace Params
 namespace Mod
 {
     // Source list is append-only (stored as choice index)
-    enum Source { None = 0, Velocity, ModWheel, Pressure, PitchBend, Constant, numSources };
+    enum Source { None = 0, Velocity, ModWheel, Pressure, PitchBend, Constant, Lfo1, Lfo2, Random, LeadEnv, numSources };
 
     const juce::StringArray& sourceNames();
     juce::String shortSourceName (int src);
@@ -130,6 +130,7 @@ namespace Mod
     constexpr int maxDestCode = (globalBlock + 1) * blockSize - 1;
 
     const juce::StringArray& functionNames();
+    double divisionBeats (int index);     // LFO / RANDOM sync divisions in quarter notes
     enum Function { FnNone = 0, Scale, Offset, LowClip, HighClip, Exponential, NormExponential,
                     LowPass, HighPass, Slew, LowSlew, HighSlew, SampleHold, Bounce };
 }
@@ -166,6 +167,9 @@ namespace GP
         lead_flt_cutoff, lead_flt_res, lead_flt_env, lead_flt_key, lead_flt_model, lead_flt_mode,
         lead_fenv_attack, lead_fenv_decay, lead_fenv_sustain, lead_fenv_release,
         flt2_on, flt2_cutoff, flt2_res, flt2_drive, flt2_mode, flt2_model, flt_route,
+        lfo1_rate, lfo1_shape, lfo1_sync, lfo1_div, lfo1_phase, lfo1_retrig,
+        lfo2_rate, lfo2_shape, lfo2_sync, lfo2_div, lfo2_phase, lfo2_retrig,
+        rnd_rate, rnd_mode, rnd_slew, rnd_sync, rnd_div,
         count
     };
     enum PlayMode { Plates = 0, Keys };

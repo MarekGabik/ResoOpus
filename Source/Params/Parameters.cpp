@@ -184,6 +184,30 @@ const std::vector<ParamDef>& Params::globalDefs()
         d.push_back (C ("flt_route", "Filter Routing", { "Serial", "Parallel", "Split", "Stereo" }, 0,
                         "Serial: A then B (e.g. low pass + high pass = a band). Parallel: A and B side by side, mixed. "
                         "Split: the drone through A, the LEAD through B. Stereo: A on the left, B on the right"));
+        // MOTION: two LFOs and a random source (drag their header arrow onto any knob)
+        static const StringArray divisions { "8 bars", "4 bars", "2 bars", "1 bar", "1/2", "1/4", "1/8", "1/16", "1/4 T", "1/8 T", "1/4 D", "1/8 D" };
+        for (int l = 1; l <= 2; ++l)
+        {
+            static String ids[2][6], names[2][6];
+            const String p = "lfo" + String (l) + "_", n = "LFO " + String (l) + " ";
+            const char* suffix[6] = { "rate", "shape", "sync", "div", "phase", "retrig" };
+            const char* label[6] = { "Rate", "Shape", "Sync", "Division", "Phase", "Retrigger" };
+            for (int i = 0; i < 6; ++i) { ids[l - 1][i] = p + suffix[i]; names[l - 1][i] = n + label[i]; }
+            auto id = [l] (int i) { return ids[l - 1][i].toRawUTF8(); };
+            auto nm = [l] (int i) { return names[l - 1][i].toRawUTF8(); };
+            d.push_back (LogF (id (0), nm (0), 0.01f, 40.0f, l == 1 ? 0.5f : 0.13f, Unit::Hz, "Speed of the LFO (free running)"));
+            d.push_back (C (id (1), nm (1), { "Sine", "Triangle", "Saw Up", "Saw Down", "Square", "S&H" }, l == 1 ? 0 : 1,
+                            "Shape: sine, triangle, rising or falling saw, square, sample & hold (a new random step every cycle)"));
+            d.push_back (B (id (2), nm (2), false, "Locks the LFO to the song tempo (DIVISION)"));
+            d.push_back (C (id (3), nm (3), divisions, 3, "Length of one LFO cycle in the song tempo"));
+            d.push_back (F (id (4), nm (4), 0.0f, 360.0f, 0.0f, Unit::Plain, "Start phase (degrees) after RETRIGGER and in the tempo grid"));
+            d.push_back (B (id (5), nm (5), false, "Every played note restarts the LFO at PHASE"));
+        }
+        d.push_back (LogF ("rnd_rate", "Random Rate", 0.01f, 20.0f, 0.3f, Unit::Hz, "How often the random source moves"));
+        d.push_back (C ("rnd_mode", "Random Mode", { "Drift", "Steps", "Noise" }, 0, "Drift: smooth wandering. Steps: a new random value every cycle. Noise: fast jitter"));
+        d.push_back (F ("rnd_slew", "Random Slew", 0.0f, 10.0f, 0.0f, Unit::Scale10, "Smooths the jumps of STEPS"));
+        d.push_back (B ("rnd_sync", "Random Sync", false, "Locks RANDOM to the song tempo (DIVISION)"));
+        d.push_back (C ("rnd_div", "Random Division", divisions, 5, "Length of one RANDOM step in the song tempo"));
         return d;
     }();
     return defs;
@@ -522,9 +546,15 @@ float Params::parse (const ParamDef& d, const String& text, float fallback)
 }
 
 //==============================================================================
+double Mod::divisionBeats (int index)
+{
+    static const double b[] = { 32.0, 16.0, 8.0, 4.0, 2.0, 1.0, 0.5, 0.25, 2.0 / 3.0, 1.0 / 3.0, 1.5, 0.75 };
+    return b[juce::jlimit (0, 11, index)];
+}
+
 const StringArray& Mod::sourceNames()
 {
-    static const StringArray s { "None", "Velocity", "Mod Wheel", "Pressure", "Pitch Bend", "Constant" };
+    static const StringArray s { "None", "Velocity", "Mod Wheel", "Pressure", "Pitch Bend", "Constant", "LFO 1", "LFO 2", "Random", "Lead Env" };
     return s;
 }
 
@@ -532,11 +562,11 @@ String Mod::shortSourceName (int src) { return sourceNames()[jlimit (0, numSourc
 
 Colour Mod::sourceColour (int src)
 {
-    static const uint32 c[] = { 0xff5e5f68, 0xffffb86b, 0xff7fd4ff, 0xffe6e6ea, 0xff8f8cff, 0xff9a9ba4 };
+    static const uint32 c[] = { 0xff5e5f68, 0xffffb86b, 0xff7fd4ff, 0xffe6e6ea, 0xff8f8cff, 0xff9a9ba4, 0xff5ee0c8, 0xff4cb2ff, 0xffff9a4d, 0xffa5e844 };
     return Colour (c[jlimit (0, numSources - 1, src)]);
 }
 
-bool Mod::isBipolar (int src) { return src == PitchBend; }
+bool Mod::isBipolar (int src) { return src == PitchBend || src == Lfo1 || src == Lfo2 || src == Random; }
 
 int Mod::destCode (const String& id)
 {

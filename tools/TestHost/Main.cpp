@@ -184,7 +184,10 @@ static void testParameters()
                                     "lead_vib_delay", "lead_touch_vib", "lead_level", "lead_pan", "arp_on", "arp_mode", "arp_rate", "arp_octaves", "arp_latch", "flt_model",
                                     "drone_on", "lead_voices", "lead_vel", "lead_flt_cutoff", "lead_flt_res", "lead_flt_env", "lead_flt_key", "lead_flt_model",
                                     "lead_flt_mode", "lead_fenv_attack", "lead_fenv_decay", "lead_fenv_sustain", "lead_fenv_release",
-                                    "flt2_on", "flt2_cutoff", "flt2_res", "flt2_drive", "flt2_mode", "flt2_model", "flt_route" };
+                                    "flt2_on", "flt2_cutoff", "flt2_res", "flt2_drive", "flt2_mode", "flt2_model", "flt_route",
+                                    "lfo1_rate", "lfo1_shape", "lfo1_sync", "lfo1_div", "lfo1_phase", "lfo1_retrig",
+                                    "lfo2_rate", "lfo2_shape", "lfo2_sync", "lfo2_div", "lfo2_phase", "lfo2_retrig",
+                                    "rnd_rate", "rnd_mode", "rnd_slew", "rnd_sync", "rnd_div" };
     ok = (int) Params::globalDefs().size() == GP::count;
     for (int i = 0; i < globalOrder.size() && ok; ++i) ok = globalOrder[i] == Params::globalDefs()[(size_t) i].id;
     check (ok, "global table matches the GP index constants (" + String ((int) Params::globalDefs().size()) + ")");
@@ -605,6 +608,58 @@ static void testGravity()
         const float before = p->liveGravity.load();
         render (*p, 0.2, { { 0.0, MidiMessage::channelPressureChange (1, 127) } });
         check (p->liveGravity.load() > before + 0.3f, "aftertouch pulls GRAVITY up (" + String (before * 100.0f, 0) + " -> " + String (p->liveGravity.load() * 100.0f, 0) + " %)");
+    }
+    // MOTION: LFOs, RANDOM and the LEAD envelope as sources (read back through the modulated GRAVITY)
+    auto trace = [] (ResoOpusProcessor& p, double seconds, double step)
+    {
+        std::vector<float> v;
+        for (double t = 0.0; t < seconds; t += step) { render (p, step); v.push_back (p.liveGravity.load()); }
+        return v;
+    };
+    {
+        auto p = makeProc (sr);
+        gravityPatch (*p, 50.0f);
+        setParam (*p, "lfo1_shape", 4.0f); setParam (*p, "lfo1_sync", 1.0f); setParam (*p, "lfo1_div", 5.0f);   // square, 1/4 at 120 BPM = 2 Hz
+        p->addModulation (Mod::Lfo1, "gravity", 0.3f);
+        const auto v = trace (*p, 2.0, 0.025);
+        int flips = 0;
+        for (size_t i = 1; i < v.size(); ++i) if (std::abs (v[i] - v[i - 1]) > 0.2f) ++flips;
+        const float lo = *std::min_element (v.begin(), v.end()), hi = *std::max_element (v.begin(), v.end());
+        check (flips >= 7 && flips <= 9 && hi - lo > 0.5f, "LFO 1 square in tempo 1/4 at 120 BPM swings GRAVITY " + String (lo * 100.0f, 0) + "-"
+               + String (hi * 100.0f, 0) + " % with " + String (flips) + " edges in 2 s (8 expected)");
+    }
+    {
+        auto p = makeProc (sr);
+        gravityPatch (*p, 50.0f);
+        setParam (*p, "lfo2_shape", 0.0f); setParam (*p, "lfo2_rate", 0.2f); setParam (*p, "lfo2_retrig", 1.0f); setParam (*p, "lfo2_phase", 90.0f);
+        p->addModulation (Mod::Lfo2, "gravity", 0.3f);
+        render (*p, 1.7);
+        render (*p, 0.03, { { 0.0, MidiMessage::noteOn (1, 60, 0.8f) } });
+        const float atNote = p->liveGravity.load();
+        check (atNote > 0.75f, "LFO 2 RETRIGGER: a note restarts it at PHASE 90 deg = the top (GRAVITY " + String (atNote * 100.0f, 0) + " %)");
+    }
+    {
+        auto p = makeProc (sr);
+        gravityPatch (*p, 50.0f);
+        setParam (*p, "rnd_mode", 1.0f); setParam (*p, "rnd_rate", 6.0f);
+        p->addModulation (Mod::Random, "gravity", 0.3f);
+        const auto v = trace (*p, 1.5, 0.025);
+        int steps = 0;
+        for (size_t i = 1; i < v.size(); ++i) if (std::abs (v[i] - v[i - 1]) > 0.01f) ++steps;
+        check (steps >= 6, "RANDOM Steps at 6 Hz jumps GRAVITY to new values (" + String (steps) + " steps in 1.5 s)");
+    }
+    {
+        auto p = makeProc (sr);
+        gravityPatch (*p, 20.0f);
+        setParam (*p, "lead_on", 1.0f); setParam (*p, "plates_base", 84.0f);
+        setParam (*p, "lead_fenv_attack", 0.01f); setParam (*p, "lead_fenv_decay", 0.3f); setParam (*p, "lead_fenv_sustain", 0.0f); setParam (*p, "lead_vel", 0.0f);
+        p->addModulation (Mod::LeadEnv, "gravity", 0.6f);
+        setParam (*p, Params::modID (0, "bi"), 0.0f);
+        render (*p, 0.05, { { 0.0, MidiMessage::noteOn (1, 57, 0.8f) } });
+        const float peak = p->liveGravity.load();
+        render (*p, 1.5);
+        const float later = p->liveGravity.load();
+        check (peak > later + 0.3f, "LEAD ENV lifts GRAVITY on a lead note and lets it fall with DECAY (" + String (peak * 100.0f, 0) + " -> " + String (later * 100.0f, 0) + " %)");
     }
 }
 
@@ -1661,6 +1716,17 @@ int main (int argc, char* argv[])
             if ((id.startsWith ("flt2_") && id != "flt2_on") || id == "flt_route") { setParam (*p, "flt2_on", 1.0f); setParam (*p, "flt2_cutoff", 900.0f); setParam (*p, "flt2_res", 5.0f); }
             if (id == "flt_route") { setParam (*p, "lead_on", 1.0f); setParam (*p, "flt2_mode", 0.0f); }
             if (id == "flt2_cutoff") setParam (*p, "flt2_mode", 0.0f);
+            // MOTION parameters only matter when the source modulates something (here the tuning of voice 1)
+            if (id.startsWith ("lfo") || id.startsWith ("rnd_"))
+            {
+                const int src = id.startsWith ("lfo1") ? Mod::Lfo1 : (id.startsWith ("lfo2") ? Mod::Lfo2 : Mod::Random);
+                p->addModulation (src, "v1_tune", 0.2f);
+                if (id.endsWith ("_phase")) setParam (*p, id.upToFirstOccurrenceOf ("_", true, false) + "retrig", 1.0f);
+                if (id.endsWith ("_div")) setParam (*p, id.upToFirstOccurrenceOf ("_", true, false) + "sync", 1.0f);
+                if (id.startsWith ("lfo") && (id.endsWith ("_shape") || id.endsWith ("_rate") || id.endsWith ("_sync") || id.endsWith ("_div") || id.endsWith ("_retrig")))
+                    setParam (*p, id.upToFirstOccurrenceOf ("_", true, false) + "phase", 90.0f);
+                if (id == "rnd_slew") setParam (*p, "rnd_mode", 1.0f);
+            }
             if (id.startsWith ("echo_") && id != "echo_mix") setParam (*p, "echo_mix", 50.0f);
             if (id == "echo_self") setParam (*p, "echo_mod", 60.0f);
             if (id == "echo_voices") setParam (*p, "gravity", 0.0f);
