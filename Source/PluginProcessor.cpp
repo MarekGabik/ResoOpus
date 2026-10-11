@@ -93,6 +93,7 @@ void ResoOpusProcessor::prepareToPlay (double sampleRate, int)
     leadNum = arpNum = 0;
     arpPos = 0.0; arpGate = false;
     for (auto& f : filters) { f.prepare (sr * (1 << osIndex)); f.reset(); }
+    for (auto& f : filtersB) { f.prepare (sr * (1 << osIndex)); f.reset(); }
     filterPrimed = false;
     echoPrevLen = 0;
     hiss[0].seed (0x1234567u); hiss[1].seed (0x7654321u);
@@ -112,6 +113,7 @@ void ResoOpusProcessor::setOversampling (int index)
     for (auto& c : voices) c.setSampleRate (sr * (1 << osIndex));
     for (auto& l : leads) l.setSampleRate (sr * (1 << osIndex));
     for (auto& f : filters) f.prepare (sr * (1 << osIndex));
+    for (auto& f : filtersB) f.prepare (sr * (1 << osIndex));
     for (auto& o : oversamplers) if (o) o->reset();
     pendingLatency = computeLatency();
     triggerAsyncUpdate();
@@ -292,6 +294,7 @@ void ResoOpusProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& mi
         for (auto& m : voiceMod) m = 0.0f;
         lastMono = 0.0f;
         for (auto& f : filters) f.reset();
+        for (auto& f : filtersB) f.reset();
         echo.reset();
         space.reset();
         echoPrevLen = 0;
@@ -526,22 +529,35 @@ void ResoOpusProcessor::processChunk (AudioBuffer<float>& out, int start, int le
             const float g = (float) std::tan (MathConstants<double>::pi * fc / osRate);
             if (filterPrimed) cutoffRamp[c].set (g, count); else cutoffRamp[c].reset (g);
         }
-        if (filterPrimed) { resRamp.set (curG[GP::flt_res] / 10.0f, count); driveRamp.set (curG[GP::flt_drive] / 10.0f, count); }
-        else { resRamp.reset (curG[GP::flt_res] / 10.0f); driveRamp.reset (curG[GP::flt_drive] / 10.0f); }
+        for (int c = 0; c < 2; ++c)
+        {
+            const double fc = std::min (0.45 * osRate, (double) curG[GP::flt2_cutoff] * (c == 0 ? 1.0 - spread : 1.0 + spread));
+            const float g = (float) std::tan (MathConstants<double>::pi * fc / osRate);
+            if (filterPrimed) cutoffRampB[c].set (g, count); else cutoffRampB[c].reset (g);
+        }
+        auto setR = [this, count] (::dsp::Ramp& r, float t) { if (filterPrimed) r.set (t, count); else r.reset (t); };
+        setR (resRamp, curG[GP::flt_res] / 10.0f);
+        setR (driveRamp, curG[GP::flt_drive] / 10.0f);
+        setR (resRampB, curG[GP::flt2_res] / 10.0f);
+        setR (driveRampB, curG[GP::flt2_drive] / 10.0f);
         filterPrimed = true;
     }
     if (osIndex == 0)
     {
-        renderVoices (outL, outR, len);
-        applyFilter (outL, outR, len);
+        float* lL = mixBuf.getWritePointer (0);
+        float* lR = mixBuf.getWritePointer (1);
+        renderVoices (outL, outR, lL, lR, len);
+        applyFilter (outL, outR, lL, lR, len);
     }
     else
     {
         auto& os = *oversamplers[osIndex - 1];
         juce::dsp::AudioBlock<const float> zin (zeros.getArrayOfReadPointers(), 2, (size_t) len);
         auto up = os.processSamplesUp (zin);
-        renderVoices (up.getChannelPointer (0), up.getChannelPointer (1), (int) up.getNumSamples());
-        applyFilter (up.getChannelPointer (0), up.getChannelPointer (1), (int) up.getNumSamples());
+        float* lL = mixBuf.getWritePointer (0);
+        float* lR = mixBuf.getWritePointer (1);
+        renderVoices (up.getChannelPointer (0), up.getChannelPointer (1), lL, lR, (int) up.getNumSamples());
+        applyFilter (up.getChannelPointer (0), up.getChannelPointer (1), lL, lR, (int) up.getNumSamples());
         float* chans[2] = { outL, outR };
         juce::dsp::AudioBlock<float> down (chans, 2, (size_t) len);
         os.processSamplesDown (down);
@@ -581,10 +597,12 @@ void ResoOpusProcessor::processChunk (AudioBuffer<float>& out, int start, int le
 
 // GRAVITY: every voice is frequency-modulated by its partner (pairs 1-2, 3-4) and/or the next voice (ring 1-2-3-4-1),
 // one sample late, plus the instrument's own output in TURBULENCE and COLLAPSE. DUST leaks all voices into each other.
-void ResoOpusProcessor::renderVoices (float* L, float* R, int count)
+void ResoOpusProcessor::renderVoices (float* L, float* R, float* leadL, float* leadR, int count)
 {
     std::fill (L, L + count, 0.0f);
     std::fill (R, R + count, 0.0f);
+    std::fill (leadL, leadL + count, 0.0f);
+    std::fill (leadR, leadR + count, 0.0f);
     bool on[Params::numVoices];
     bool any = false;
     for (int v = 0; v < Params::numVoices; ++v) { on[v] = voices[v].begin (settings[v], count); any = any || on[v]; }
@@ -620,8 +638,8 @@ void ResoOpusProcessor::renderVoices (float* L, float* R, int count)
         for (int v = 0; v < Params::numVoices; ++v) voiceMod[v] = now[v];
         if (anyLead)
             for (int i = 0; i < maxLead; ++i)
-                if (leadOnNow[i]) leads[i].tick (L[k], R[k]);
-        lastMono = jlimit (-1.5f, 1.5f, (L[k] + R[k]) * 1.2f);
+                if (leadOnNow[i]) leads[i].tick (leadL[k], leadR[k]);
+        lastMono = jlimit (-1.5f, 1.5f, (L[k] + R[k] + leadL[k] + leadR[k]) * 1.2f);
     }
 }
 
@@ -760,16 +778,44 @@ void ResoOpusProcessor::runArp (int len)
     if (arpPos >= stepLen) arpPos = 0.0;
 }
 
-void ResoOpusProcessor::applyFilter (float* L, float* R, int count)
+void ResoOpusProcessor::applyFilter (float* L, float* R, const float* leadL, const float* leadR, int count)
 {
-    const int mode = (int) curG[GP::flt_mode];
-    const int model = (int) curG[GP::flt_model];
+    const int mode = (int) curG[GP::flt_mode], modeB = (int) curG[GP::flt2_mode];
+    const int model = (int) curG[GP::flt_model], modelB = (int) curG[GP::flt2_model];
     if (model != filterModel) { filterModel = model; for (auto& f : filters) f.reset(); }   // each model keeps its own state
+    if (modelB != filterModelB) { filterModelB = modelB; for (auto& f : filtersB) f.reset(); }
+    const bool useB = curG[GP::flt2_on] > 0.5f;
+    const int route = useB ? (int) curG[GP::flt_route] : -1;
     for (int k = 0; k < count; ++k)
     {
         const float gl = cutoffRamp[0].next(), gr = cutoffRamp[1].next(), res = resRamp.next(), drive = driveRamp.next();
-        L[k] = filters[0].process (L[k], gl, res, drive, mode, model);
-        R[k] = filters[1].process (R[k], gr, res, drive, mode, model);
+        const float bl = cutoffRampB[0].next(), br = cutoffRampB[1].next(), resB = resRampB.next(), driveB = driveRampB.next();
+        float xl = L[k] + leadL[k], xr = R[k] + leadR[k];
+        switch (route)
+        {
+            case GP::RouteSerial:
+                xl = filtersB[0].process (filters[0].process (xl, gl, res, drive, mode, model), bl, resB, driveB, modeB, modelB);
+                xr = filtersB[1].process (filters[1].process (xr, gr, res, drive, mode, model), br, resB, driveB, modeB, modelB);
+                break;
+            case GP::RouteParallel:
+                xl = 0.7f * (filters[0].process (xl, gl, res, drive, mode, model) + filtersB[0].process (xl, bl, resB, driveB, modeB, modelB));
+                xr = 0.7f * (filters[1].process (xr, gr, res, drive, mode, model) + filtersB[1].process (xr, br, resB, driveB, modeB, modelB));
+                break;
+            case GP::RouteSplit:
+                xl = filters[0].process (L[k], gl, res, drive, mode, model) + filtersB[0].process (leadL[k], bl, resB, driveB, modeB, modelB);
+                xr = filters[1].process (R[k], gr, res, drive, mode, model) + filtersB[1].process (leadR[k], br, resB, driveB, modeB, modelB);
+                break;
+            case GP::RouteStereo:
+                xl = filters[0].process (xl, gl, res, drive, mode, model);
+                xr = filtersB[1].process (xr, br, resB, driveB, modeB, modelB);
+                break;
+            default:   // FILTER B off
+                xl = filters[0].process (xl, gl, res, drive, mode, model);
+                xr = filters[1].process (xr, gr, res, drive, mode, model);
+                break;
+        }
+        L[k] = xl;
+        R[k] = xr;
     }
 }
 

@@ -175,6 +175,15 @@ const std::vector<ParamDef>& Params::globalDefs()
         d.push_back (LogF ("lead_fenv_decay", "Lead Filter Decay", 0.001f, 30.0f, 0.4f, Unit::Seconds, "Filter envelope decay"));
         d.push_back (F ("lead_fenv_sustain", "Lead Filter Sustain", 0.0f, 100.0f, 30.0f, Unit::Percent, "Filter envelope sustain level"));
         d.push_back (LogF ("lead_fenv_release", "Lead Filter Release", 0.001f, 30.0f, 0.6f, Unit::Seconds, "Filter envelope release"));
+        d.push_back (B ("flt2_on", "Filter B", false, "Second filter. ROUTING sets how it works with FILTER A"));
+        d.push_back (LogF ("flt2_cutoff", "Filter B Cutoff", 20.0f, 20000.0f, 250.0f, Unit::Hz, "Cutoff of FILTER B"));
+        d.push_back (F ("flt2_res", "Filter B Resonance", 0.0f, 10.0f, 0.0f, Unit::Scale10, "Resonance of FILTER B"));
+        d.push_back (F ("flt2_drive", "Filter B Drive", 0.0f, 10.0f, 0.0f, Unit::Scale10, "Drive of FILTER B"));
+        d.push_back (C ("flt2_mode", "Filter B Mode", { "Low Pass", "Band Pass", "High Pass" }, 2, "Low pass, band pass or high pass"));
+        d.push_back (C ("flt2_model", "Filter B Model", { "Growl", "Ladder", "Diode", "Scream", "Silk" }, 4, "Character of FILTER B"));
+        d.push_back (C ("flt_route", "Filter Routing", { "Serial", "Parallel", "Split", "Stereo" }, 0,
+                        "Serial: A then B (e.g. low pass + high pass = a band). Parallel: A and B side by side, mixed. "
+                        "Split: the drone through A, the LEAD through B. Stereo: A on the left, B on the right"));
         return d;
     }();
     return defs;

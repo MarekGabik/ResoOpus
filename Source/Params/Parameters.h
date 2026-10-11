@@ -165,12 +165,14 @@ namespace GP
         drone_on, lead_voices, lead_vel,
         lead_flt_cutoff, lead_flt_res, lead_flt_env, lead_flt_key, lead_flt_model, lead_flt_mode,
         lead_fenv_attack, lead_fenv_decay, lead_fenv_sustain, lead_fenv_release,
+        flt2_on, flt2_cutoff, flt2_res, flt2_drive, flt2_mode, flt2_model, flt_route,
         count
     };
     enum PlayMode { Plates = 0, Keys };
     enum Touch { TouchVelocity = 0, TouchAftertouch, TouchBoth };
     enum Snap { SnapFree = 0, SnapChromatic, SnapScale };
     enum Path { PathAuto = 0, PathPairs, PathRing };
+    enum Route { RouteSerial = 0, RouteParallel, RouteSplit, RouteStereo };
 }
 
 namespace MP

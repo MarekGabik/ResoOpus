@@ -183,7 +183,8 @@ static void testParameters()
                                     "lead_attack", "lead_decay", "lead_sustain", "lead_release", "lead_glide", "lead_vib", "lead_vib_rate",
                                     "lead_vib_delay", "lead_touch_vib", "lead_level", "lead_pan", "arp_on", "arp_mode", "arp_rate", "arp_octaves", "arp_latch", "flt_model",
                                     "drone_on", "lead_voices", "lead_vel", "lead_flt_cutoff", "lead_flt_res", "lead_flt_env", "lead_flt_key", "lead_flt_model",
-                                    "lead_flt_mode", "lead_fenv_attack", "lead_fenv_decay", "lead_fenv_sustain", "lead_fenv_release" };
+                                    "lead_flt_mode", "lead_fenv_attack", "lead_fenv_decay", "lead_fenv_sustain", "lead_fenv_release",
+                                    "flt2_on", "flt2_cutoff", "flt2_res", "flt2_drive", "flt2_mode", "flt2_model", "flt_route" };
     ok = (int) Params::globalDefs().size() == GP::count;
     for (int i = 0; i < globalOrder.size() && ok; ++i) ok = globalOrder[i] == Params::globalDefs()[(size_t) i].id;
     check (ok, "global table matches the GP index constants (" + String ((int) Params::globalDefs().size()) + ")");
@@ -703,6 +704,51 @@ static void testEffects()
                    String (models[m]) + ": low pass -" + String (roundToInt (open - lo)) + " dB at 3 kHz, high pass -" + String (roundToInt (lowOpen - hpLow))
                    + " dB at 110 Hz, band pass at full resonance " + String (bp10.first - bp0.first, 1) + " dB, extremes finite");
         }
+    }
+    {
+        // FILTER B and ROUTING
+        auto chanDb = [sr] (const AudioBuffer<float>& out, int ch, double f)
+        {
+            AudioBuffer<float> one (2, out.getNumSamples());
+            one.copyFrom (0, 0, out, ch, 0, out.getNumSamples());
+            one.copyFrom (1, 0, out, ch, 0, out.getNumSamples());
+            const auto db = spectrum (one, (int) (0.5 * sr), 15);
+            const double binHz = sr / 32768.0;
+            double m = -300.0;
+            for (int d = -3; d <= 3; ++d) m = std::max (m, db[(size_t) (std::lround (f / binHz) + d)]);
+            return m;
+        };
+        auto routed = [sr] (int route, std::vector<std::pair<const char*, float>> set, bool withLead)
+        {
+            auto p = makeProc (sr);
+            soloVoice1 (*p, 45.0f);   // 110 Hz saw
+            setParam (*p, "flt2_on", 1.0f); setParam (*p, "flt_route", (float) route); setParam (*p, "flt_spread", 0.0f);
+            for (auto& kv : set) setParam (*p, kv.first, kv.second);
+            if (! withLead) return render (*p, 2.0);
+            setParam (*p, "lead_on", 1.0f); setParam (*p, "lead_wave", 0.0f); setParam (*p, "lead_mix", 0.0f); setParam (*p, "lead_vib", 0.0f);
+            setParam (*p, "lead_sustain", 100.0f); setParam (*p, "plates_base", 84.0f);
+            return render (*p, 2.0, note (70, 0.0, 1.95));   // 466 Hz: not a harmonic of the drone
+        };
+        const auto serial = routed (GP::RouteSerial, { { "flt_cutoff", 1000.0f }, { "flt2_mode", 2.0f }, { "flt2_cutoff", 400.0f } }, false);
+        const auto none = routed (GP::RouteSerial, { { "flt2_on", 0.0f } }, false);
+        const double low = chanDb (none, 0, 110.0) - chanDb (serial, 0, 110.0), high = chanDb (none, 0, 3080.0) - chanDb (serial, 0, 3080.0);
+        check (low > 18.0 && high > 15.0, "ROUTING Serial: A low pass 1 kHz + B high pass 400 Hz = a band (110 Hz -" + String (low, 0) + " dB, 3 kHz -" + String (high, 0) + " dB)");
+        const auto split = routed (GP::RouteSplit, { { "flt_cutoff", 20000.0f }, { "flt2_mode", 2.0f }, { "flt2_cutoff", 3000.0f } }, true);
+        const auto splitOff = routed (GP::RouteSplit, { { "flt2_on", 0.0f } }, true);
+        const double leadCut = chanDb (splitOff, 0, 466.16) - chanDb (split, 0, 466.16), droneKept = chanDb (splitOff, 0, 110.0) - chanDb (split, 0, 110.0);
+        check (leadCut > 20.0 && std::abs (droneKept) < 1.5, "ROUTING Split: B (high pass 3 kHz) removes the LEAD at 466 Hz (" + String (leadCut, 0)
+               + " dB), the drone through A stays (" + String (droneKept, 1) + " dB)");
+        const auto stereo = routed (GP::RouteStereo, { { "flt_cutoff", 300.0f }, { "flt2_mode", 0.0f }, { "flt2_cutoff", 20000.0f } }, false);
+        const double lr = chanDb (stereo, 1, 3080.0) - chanDb (stereo, 0, 3080.0);
+        check (lr > 30.0, "ROUTING Stereo: A (300 Hz) on the left, B (open) on the right: 3 kHz differs " + String (lr, 0) + " dB");
+        bool stable = true;
+        for (int r = 0; r < 4; ++r)
+        {
+            auto out = routed (r, { { "flt_cutoff", 800.0f }, { "flt_res", 10.0f }, { "flt_drive", 10.0f }, { "flt2_res", 10.0f }, { "flt2_drive", 10.0f },
+                                    { "flt2_cutoff", 1200.0f }, { "flt2_model", 1.0f }, { "flt2_mode", 1.0f } }, true);
+            stable = stable && allFinite (out) && peakDb (out) < 0.0;
+        }
+        check (stable, "every ROUTING with both filters at full resonance and drive: finite, below 0 dBFS");
     }
     {
         // ECHO: a 30 ms pluck comes back after TIME 1 on the left
@@ -1612,6 +1658,9 @@ int main (int argc, char* argv[])
             if (id == "gravity_path") setParam (*p, "gravity", 60.0f);
             if (id.startsWith ("flt_") && id != "flt_cutoff") setParam (*p, "flt_cutoff", 900.0f);
             if (id == "flt_mode" || id == "flt_drive") setParam (*p, "flt_res", 5.0f);
+            if ((id.startsWith ("flt2_") && id != "flt2_on") || id == "flt_route") { setParam (*p, "flt2_on", 1.0f); setParam (*p, "flt2_cutoff", 900.0f); setParam (*p, "flt2_res", 5.0f); }
+            if (id == "flt_route") { setParam (*p, "lead_on", 1.0f); setParam (*p, "flt2_mode", 0.0f); }
+            if (id == "flt2_cutoff") setParam (*p, "flt2_mode", 0.0f);
             if (id.startsWith ("echo_") && id != "echo_mix") setParam (*p, "echo_mix", 50.0f);
             if (id == "echo_self") setParam (*p, "echo_mod", 60.0f);
             if (id == "echo_voices") setParam (*p, "gravity", 0.0f);

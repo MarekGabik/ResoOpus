@@ -116,8 +116,8 @@ private:
     dsp::DcBlocker dc[2];
 
     // GRAVITY network and DUST
-    void renderVoices (float* L, float* R, int count);
-    void applyFilter (float* L, float* R, int count);
+    void renderVoices (float* L, float* R, float* leadL, float* leadR, int count);   // drone and LEAD into separate buffers
+    void applyFilter (float* L, float* R, const float* leadL, const float* leadR, int count);   // FILTER A / B by ROUTING, sums the LEAD in
     dsp::Ramp devRamp, ringRamp, fbRamp, dustRamp;
     bool networkPrimed = false;
     float voiceMod[Params::numVoices] {};   // each voice as a modulator (previous sample)
@@ -126,9 +126,10 @@ private:
     dsp::ColouredNoise hiss[2];
 
     // effects
-    dsp::AnalogFilter filters[2];
+    dsp::AnalogFilter filters[2], filtersB[2];
+    int filterModelB = 4;
     int filterModel = 0;
-    dsp::Ramp cutoffRamp[2], resRamp, driveRamp;
+    dsp::Ramp cutoffRamp[2], resRamp, driveRamp, cutoffRampB[2], resRampB, driveRampB;
     bool filterPrimed = false;
     dsp::Echo echo;
     dsp::Space space;
