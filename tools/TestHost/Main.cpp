@@ -181,7 +181,9 @@ static void testParameters()
                                     "space_algo", "space_x", "space_y", "space_z", "space_blend",
                                     "lead_on", "lead_wave", "lead_octave", "lead_osc2", "lead_mix", "lead_sync", "lead_sub",
                                     "lead_attack", "lead_decay", "lead_sustain", "lead_release", "lead_glide", "lead_vib", "lead_vib_rate",
-                                    "lead_vib_delay", "lead_touch_vib", "lead_level", "lead_pan", "arp_on", "arp_mode", "arp_rate", "arp_octaves", "arp_latch", "flt_model" };
+                                    "lead_vib_delay", "lead_touch_vib", "lead_level", "lead_pan", "arp_on", "arp_mode", "arp_rate", "arp_octaves", "arp_latch", "flt_model",
+                                    "drone_on", "lead_voices", "lead_vel", "lead_flt_cutoff", "lead_flt_res", "lead_flt_env", "lead_flt_key", "lead_flt_model",
+                                    "lead_flt_mode", "lead_fenv_attack", "lead_fenv_decay", "lead_fenv_sustain", "lead_fenv_release" };
     ok = (int) Params::globalDefs().size() == GP::count;
     for (int i = 0; i < globalOrder.size() && ok; ++i) ok = globalOrder[i] == Params::globalDefs()[(size_t) i].id;
     check (ok, "global table matches the GP index constants (" + String ((int) Params::globalDefs().size()) + ")");
@@ -906,6 +908,96 @@ static void testLead()
         }
         const double res = db[(size_t) std::lround (f0 / binHz)] - worst;
         check (res > 85.0, "lead saw at 1976 Hz, 2x: aliases " + String (res, 1) + " dB below (> 85)");
+    }
+
+    std::cout << "LEAD modes, poly, filter per note" << std::endl;
+    auto bandDb = [sr] (const AudioBuffer<float>& out, double f, int start, int order = 15)
+    {
+        const auto db = spectrum (out, start, order);
+        const double binHz = sr / (double) (1 << order);
+        double m = -300.0;
+        for (int d = -3; d <= 3; ++d) m = std::max (m, db[(size_t) (std::lround (f / binHz) + d)]);
+        return m;
+    };
+    {
+        // LEAD only: the drone fades out, the plate C3 plays the lead at 261.6 Hz
+        auto p = makeProc (sr);
+        setParam (*p, "drone_on", 0.0f); setParam (*p, "lead_on", 1.0f);
+        setParam (*p, "dust", 0.0f); setParam (*p, "space_blend", 0.0f); setParam (*p, "echo_mix", 0.0f);
+        setParam (*p, "lead_vib", 0.0f); setParam (*p, "lead_sustain", 100.0f); setParam (*p, "lead_mix", 0.0f);
+        auto quiet = render (*p, 1.0);
+        auto out = render (*p, 2.0, note (60, 0.0, 1.9));
+        const double f = peakFrequency (out, sr, 200.0, 320.0, (int) (0.3 * sr));
+        check (rmsDb (quiet, (int) (0.5 * sr)) < -100.0 && std::abs (cents (f, 261.626)) < 2.0,
+               "Drone off + LEAD: no drone (" + String (rmsDb (quiet, (int) (0.5 * sr)), 0) + " dB), the plate C3 plays the lead (" + String (cents (f, 261.626), 2) + " c)");
+    }
+    auto chord = [&] (int voicesMode)
+    {
+        auto p = makeProc (sr);
+        leadPatch (*p);
+        setParam (*p, "plates_base", 84.0f);
+        setParam (*p, "lead_wave", 0.0f);   // sines: one peak per note
+        setParam (*p, "lead_voices", (float) voicesMode);
+        auto out = render (*p, 1.5, { { 0.0, MidiMessage::noteOn (1, 48, 0.8f) }, { 0.0, MidiMessage::noteOn (1, 52, 0.8f) }, { 0.0, MidiMessage::noteOn (1, 55, 0.8f) } });
+        return std::vector<double> { bandDb (out, 130.81, (int) (0.4 * sr)), bandDb (out, 164.81, (int) (0.4 * sr)), bandDb (out, 196.0, (int) (0.4 * sr)) };
+    };
+    {
+        const auto poly = chord (3), legato = chord (1);
+        const double spread = std::max ({ poly[0], poly[1], poly[2] }) - std::min ({ poly[0], poly[1], poly[2] });
+        check (spread < 3.0 && legato[2] - legato[0] > 40.0,
+               "Poly 8 plays the whole chord C-E-G (within " + String (spread, 1) + " dB), Legato only the last key (C " + String (legato[0] - legato[2], 0) + " dB)");
+    }
+    {
+        auto p = makeProc (sr);
+        leadPatch (*p);
+        setParam (*p, "plates_base", 84.0f);
+        setParam (*p, "lead_voices", 2.0f);   // Poly 4 with 6 keys: the oldest notes are stolen
+        std::vector<Ev> ev;
+        for (int i = 0; i < 6; ++i) ev.push_back ({ 0.05 * i, MidiMessage::noteOn (1, 48 + 3 * i, 0.9f) });
+        auto out = render (*p, 2.0, ev);
+        check (allFinite (out) && peakDb (out) < 0.0, "Poly 4 with six keys steals voices cleanly (peak " + String (peakDb (out), 1) + " dBFS)");
+    }
+    {
+        // filter per note: 600 Hz low pass takes the 28th harmonic of a 110 Hz saw down; the envelope opens it
+        auto saw = [&] (float cutoff, float envAmt)
+        {
+            auto p = makeProc (sr);
+            leadPatch (*p);
+            setParam (*p, "plates_base", 84.0f);
+            setParam (*p, "lead_wave", 3.0f); setParam (*p, "lead_flt_key", 0.0f);
+            setParam (*p, "lead_flt_cutoff", cutoff); setParam (*p, "lead_flt_env", envAmt);
+            setParam (*p, "lead_fenv_attack", 0.001f); setParam (*p, "lead_fenv_decay", 0.25f); setParam (*p, "lead_fenv_sustain", 0.0f);
+            return render (*p, 2.0, note (45, 0.0, 1.9, 1.0f));
+        };
+        const auto open = saw (20000.0f, 0.0f), closed = saw (600.0f, 0.0f), env = saw (300.0f, 100.0f);
+        const double drop = bandDb (open, 3080.0, (int) (0.5 * sr)) - bandDb (closed, 3080.0, (int) (0.5 * sr));
+        const double early = bandDb (env, 3080.0, (int) (0.01 * sr), 12), late = bandDb (env, 3080.0, (int) (1.2 * sr), 12);
+        check (drop > 20.0 && early - late > 20.0, "lead filter: 600 Hz takes 3 kHz down " + String (drop, 0) + " dB, the envelope opens it at the start ("
+               + String (early - late, 0) + " dB brighter than later)");
+    }
+    {
+        auto level = [&] (float vel)
+        {
+            auto p = makeProc (sr);
+            leadPatch (*p);
+            setParam (*p, "plates_base", 84.0f);
+            setParam (*p, "lead_vel", 100.0f);
+            return rmsDb (render (*p, 1.0, note (57, 0.0, 0.9, vel)), (int) (0.3 * sr));
+        };
+        const double d = level (1.0f) - level (0.25f);
+        check (d > 8.0, "VELOCITY 100 %: soft notes are quieter (" + String (d, 1) + " dB)");
+    }
+    {
+        // sustain pedal: the lead keeps sounding while the pedal is down and lets go when it comes up
+        auto p = makeProc (sr);
+        leadPatch (*p);
+        setParam (*p, "plates_base", 84.0f);
+        setParam (*p, "lead_release", 0.1f);
+        auto held = render (*p, 1.0, { { 0.0, MidiMessage::noteOn (1, 57, 0.8f) }, { 0.1, MidiMessage::controllerEvent (1, 64, 127) },
+                                       { 0.2, MidiMessage::noteOff (1, 57) } });
+        auto after = render (*p, 1.0, { { 0.0, MidiMessage::controllerEvent (1, 64, 0) } });
+        check (rmsDb (held, (int) (0.7 * sr)) > -40.0 && rmsDb (after, (int) (0.6 * sr)) < -90.0,
+               "sustain pedal holds the lead and releases it when it comes up");
     }
 }
 

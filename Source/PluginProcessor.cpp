@@ -88,7 +88,8 @@ void ResoOpusProcessor::prepareToPlay (double sampleRate, int)
     }
     echo.prepare (sr);
     space.prepare (sr);
-    lead.prepare (sr * (1 << osIndex));
+    for (int i = 0; i < maxLead; ++i) leads[i].prepare (sr * (1 << osIndex), 0x7a11u + (uint32_t) i * 131u);
+    leadSusNum = 0; arpNote = -1; lastLeadPitch = -1.0;
     leadNum = arpNum = 0;
     arpPos = 0.0; arpGate = false;
     for (auto& f : filters) { f.prepare (sr * (1 << osIndex)); f.reset(); }
@@ -109,7 +110,7 @@ void ResoOpusProcessor::setOversampling (int index)
 {
     osIndex = index;
     for (auto& c : voices) c.setSampleRate (sr * (1 << osIndex));
-    lead.setSampleRate (sr * (1 << osIndex));
+    for (auto& l : leads) l.setSampleRate (sr * (1 << osIndex));
     for (auto& f : filters) f.prepare (sr * (1 << osIndex));
     for (auto& o : oversamplers) if (o) o->reset();
     pendingLatency = computeLatency();
@@ -153,6 +154,11 @@ void ResoOpusProcessor::noteOn (int note, float vel)
     lastVelocity = vel;
     int v = -1;
     const bool leadOn = globalRaw[GP::lead_on]->load() > 0.5f;
+    if (globalRaw[GP::drone_on]->load() < 0.5f)
+    {
+        if (leadOn) leadNoteOn (note, vel);   // LEAD only: every key, the plates too
+        return;
+    }
     if ((int) globalRaw[GP::play_mode]->load() == GP::Plates)
     {
         int n = roundToInt (globalRaw[GP::plates_base]->load());
@@ -204,7 +210,8 @@ void ResoOpusProcessor::releaseAll()
 {
     leadNum = 0;
     if (globalRaw[GP::arp_latch]->load() < 0.5f) arpNum = 0;
-    lead.noteOff();
+    leadSusNum = 0;
+    leadStopAll();
     for (int v = 0; v < Params::numVoices; ++v) { touch[v].gate = false; sustained[v] = false; }
 }
 
@@ -233,13 +240,18 @@ void ResoOpusProcessor::handleMidi (const MidiMessage& m)
             const bool was = sustain;
             sustain = v >= 0.5f;
             if (was && ! sustain)
+            {
                 for (int k = 0; k < Params::numVoices; ++k)
                     if (sustained[k]) { touch[k].gate = false; sustained[k] = false; }
+                const int n = leadSusNum;
+                leadSusNum = 0;
+                for (int i = 0; i < n; ++i) leadNoteOff (leadSus[i]);
+            }
         }
         else if (cc == 120 || cc == 123)
         {
             releaseAll();
-            if (cc == 120) { for (auto& c : voices) c.reset(); lead.reset(); arpNum = 0; }
+            if (cc == 120) { for (auto& c : voices) c.reset(); for (auto& l : leads) l.reset(); arpNum = 0; }
         }
     }
 }
@@ -416,8 +428,19 @@ void ResoOpusProcessor::processChunk (AudioBuffer<float>& out, int start, int le
         const float ang = (jlimit (-1.0f, 1.0f, curG[GP::lead_pan]) + 1.0f) * MathConstants<float>::pi * 0.25f;
         L.gainL = gain * std::cos (ang) * MathConstants<float>::sqrt2;
         L.gainR = gain * std::sin (ang) * MathConstants<float>::sqrt2;
-        if (curG[GP::lead_on] < 0.5f && lead.isActive()) lead.noteOff();
-        liveLead.store (lead.isActive() ? (float) lead.getPitch() + 12.0f * L.octave : -1.0f, std::memory_order_relaxed);
+        L.velSens = curG[GP::lead_vel] / 100.0f;
+        L.cutoff = curG[GP::lead_flt_cutoff]; L.res = curG[GP::lead_flt_res] / 10.0f;
+        L.fenvAmount = curG[GP::lead_flt_env] / 100.0f; L.keyTrack = curG[GP::lead_flt_key] / 100.0f;
+        L.filterModel = (int) curG[GP::lead_flt_model]; L.filterMode = (int) curG[GP::lead_flt_mode];
+        L.filterOn = L.cutoff < 19900.0f || std::abs (L.fenvAmount) > 0.001f || L.filterMode != 0;
+        L.fAttack = curG[GP::lead_fenv_attack]; L.fDecay = curG[GP::lead_fenv_decay];
+        L.fSustain = curG[GP::lead_fenv_sustain] / 100.0f; L.fRelease = curG[GP::lead_fenv_release];
+        if (curG[GP::lead_voices] >= 2.0f) { L.gainL *= 0.7f; L.gainR *= 0.7f; }   // chords sum up
+        if (curG[GP::lead_on] < 0.5f && anyLeadActive()) leadStopAll();
+        // Poly 4: voices 5-8 let go when switching down
+        const int maxV = curG[GP::lead_voices] >= 3.0f ? maxLead : (curG[GP::lead_voices] >= 2.0f ? 4 : 1);
+        for (int i = maxV; i < maxLead; ++i) if (leads[i].isActive() && ! leads[i].isReleasing()) leads[i].noteOff();
+        liveLead.store (leads[leadLast].isActive() ? (float) leads[leadLast].getPitch() + 12.0f * L.octave : -1.0f, std::memory_order_relaxed);
     }
     // slow tuning drift: a little beating in STILL, more with DUST (cents)
     const float driftCents = 4.0f * std::min (1.0f, gravity / 0.25f) + 8.0f * dust;
@@ -429,7 +452,7 @@ void ResoOpusProcessor::processChunk (AudioBuffer<float>& out, int start, int le
         const float* p = curV[v];
         if (! t.gate && t.keyRoot >= 0.0 && voices[v].isSilent()) t.keyRoot = -1.0;   // KEYS: back to TUNE after the release
 
-        s.type = (int) p[VP::type];
+        s.type = curG[GP::drone_on] > 0.5f ? (int) p[VP::type] : VP::Off;   // drone off: the voices fade out (20 ms)
         if (s.type != lastType[v]) { if (lastType[v] >= 0 && voices[v].isSilent()) voices[v].reset(); lastType[v] = s.type; }
         const bool choir = s.type == VP::Choir;
         const double base = (t.keyRoot >= 0.0 ? t.keyRoot : (double) p[VP::tune]) + (double) curG[GP::pitch];
@@ -565,8 +588,15 @@ void ResoOpusProcessor::renderVoices (float* L, float* R, int count)
     bool on[Params::numVoices];
     bool any = false;
     for (int v = 0; v < Params::numVoices; ++v) { on[v] = voices[v].begin (settings[v], count); any = any || on[v]; }
-    lead.begin (leadSettings, count);
-    if (! any && ! lead.isActive())
+    bool leadOnNow[maxLead];
+    bool anyLead = false;
+    for (int i = 0; i < maxLead; ++i)
+    {
+        leads[i].begin (leadSettings, count);
+        leadOnNow[i] = leads[i].isActive();
+        anyLead = anyLead || leadOnNow[i];
+    }
+    if (! any && ! anyLead)
     {
         for (auto& m : voiceMod) m = 0.0f;
         lastMono = 0.0f;
@@ -588,7 +618,9 @@ void ResoOpusProcessor::renderVoices (float* L, float* R, int count)
             now[v] = voices[v].tick (fmHz, L[k], R[k]);
         }
         for (int v = 0; v < Params::numVoices; ++v) voiceMod[v] = now[v];
-        lead.tick (L[k], R[k]);
+        if (anyLead)
+            for (int i = 0; i < maxLead; ++i)
+                if (leadOnNow[i]) leads[i].tick (L[k], R[k]);
         lastMono = jlimit (-1.5f, 1.5f, (L[k] + R[k]) * 1.2f);
     }
 }
@@ -615,7 +647,7 @@ void ResoOpusProcessor::leadNoteOn (int note, float vel)
         if (! wasHeld) { arpPos = 0.0; arpStep = 0; arpDir = 1; arpGate = false; }
         return;
     }
-    lead.noteOn ((double) note, vel, wasHeld);
+    leadPlay (note, vel, wasHeld);
 }
 
 void ResoOpusProcessor::leadNoteOff (int note)
@@ -623,7 +655,7 @@ void ResoOpusProcessor::leadNoteOff (int note)
     int found = -1;
     for (int i = 0; i < leadNum; ++i) if (leadHeld[i] == note) found = i;
     if (found < 0) return;
-    if (sustain) return;
+    if (sustain) { if (leadSusNum < 16) leadSus[leadSusNum++] = note; return; }
     for (int j = found; j < leadNum - 1; ++j) { leadHeld[j] = leadHeld[j + 1]; leadVel[j] = leadVel[j + 1]; }
     --leadNum;
     if (globalRaw[GP::arp_on]->load() > 0.5f)
@@ -635,8 +667,61 @@ void ResoOpusProcessor::leadNoteOff (int note)
         arpNum = n;
         return;
     }
-    if (leadNum == 0) lead.noteOff();
-    else lead.noteOn ((double) leadHeld[leadNum - 1], leadVel[leadNum - 1], true);
+    if (leadMode() >= 2) { leadStop (note); return; }
+    if (leadNum == 0) leads[0].noteOff();
+    else leads[0].noteOn ((double) leadHeld[leadNum - 1], leadVel[leadNum - 1], true);   // back to the previous key
+}
+
+bool ResoOpusProcessor::anyLeadActive() const
+{
+    for (auto& l : leads) if (l.isActive()) return true;
+    return false;
+}
+
+void ResoOpusProcessor::leadPlay (int note, float vel, bool legato)
+{
+    const int mode = leadMode();
+    if (mode < 2)
+    {
+        // Mono restarts the envelopes on every note (glides if GLIDE is set), Legato only slides overlapping notes
+        leads[0].noteOn ((double) note, vel, mode == 1 && legato);
+        leadLast = 0;
+        lastLeadPitch = (double) note;
+        return;
+    }
+    const int maxV = mode >= 3 ? maxLead : 4;
+    int pick = -1;
+    for (int i = 0; i < maxV && pick < 0; ++i) if (leads[i].isActive() && leads[i].getNote() == note) pick = i;
+    for (int i = 0; i < maxV && pick < 0; ++i) if (! leads[i].isActive()) pick = i;
+    if (pick < 0)
+    {
+        float quietest = 2.0f;
+        for (int i = 0; i < maxV; ++i)
+            if (leads[i].isReleasing() && leads[i].getLevel() < quietest) { quietest = leads[i].getLevel(); pick = i; }
+    }
+    if (pick < 0)
+    {
+        uint32_t oldest = 0xffffffffu;
+        for (int i = 0; i < maxV; ++i) if (leadAge[i] < oldest) { oldest = leadAge[i]; pick = i; }
+    }
+    const double from = curG[GP::lead_glide] > 0.0005f && lastLeadPitch >= 0.0 ? lastLeadPitch : -1.0;
+    leads[pick].noteOn ((double) note, vel, false, from);
+    leadAge[pick] = ++leadClock;
+    leadLast = pick;
+    lastLeadPitch = (double) note;
+}
+
+void ResoOpusProcessor::leadStop (int note)
+{
+    if (leadMode() < 2) { leads[0].noteOff(); return; }
+    for (auto& l : leads) if (l.isActive() && ! l.isReleasing() && l.getNote() == note) l.noteOff();
+}
+
+void ResoOpusProcessor::leadStopAll()
+{
+    for (auto& l : leads) l.noteOff();
+    arpGate = false;
+    arpNote = -1;
 }
 
 // ARP: steps through the pattern at the song tempo; each step retriggers the envelope and lets go at half the step
@@ -645,12 +730,12 @@ void ResoOpusProcessor::runArp (int len)
     const bool on = curG[GP::arp_on] > 0.5f && curG[GP::lead_on] > 0.5f;
     if (! on)
     {
-        if (arpWasOn) { lead.noteOff(); arpGate = false; }
+        if (arpWasOn) { leadStopAll(); }
         arpWasOn = false;
         return;
     }
     arpWasOn = true;
-    if (arpNum == 0) { if (arpGate) { lead.noteOff(); arpGate = false; } return; }
+    if (arpNum == 0) { if (arpGate) { leadStop (arpNote); arpGate = false; } return; }
     static const double beats[] = { 1.0, 0.5, 1.0 / 3.0, 0.25, 1.0 / 6.0, 0.125 };
     const double stepLen = sr * 60.0 / hostBpm * beats[jlimit (0, 5, (int) curG[GP::arp_rate])];
     const int octaves = 1 + (int) curG[GP::arp_octaves];
@@ -664,12 +749,14 @@ void ResoOpusProcessor::runArp (int len)
         else if (mode == 2) { const int span = std::max (1, 2 * total - 2); const int pp = arpStep % span; idx = pp < total ? pp : span - pp; }
         else idx = (int) (arpRng.next01() * (float) total) % total;
         const int note = arpNotes[idx % arpNum] + 12 * (idx / arpNum);
-        lead.noteOn ((double) note, leadNum > 0 ? leadVel[leadNum - 1] : 0.8f, false);
+        if (arpGate) leadStop (arpNote);
+        leadPlay (note, leadNum > 0 ? leadVel[leadNum - 1] : 0.8f, false);
+        arpNote = note;
         arpGate = true;
         ++arpStep;
     }
     arpPos += len;
-    if (arpGate && arpPos >= 0.5 * stepLen) { lead.noteOff(); arpGate = false; }
+    if (arpGate && arpPos >= 0.5 * stepLen) { leadStop (arpNote); arpGate = false; }
     if (arpPos >= stepLen) arpPos = 0.0;
 }
 

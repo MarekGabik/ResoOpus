@@ -140,8 +140,22 @@ private:
     // LEAD and ARP
     void leadNoteOn (int note, float vel);
     void leadNoteOff (int note);
+    // LEAD voice pool: Mono / Legato use voice 0, Poly 4 / Poly 8 allocate (same key = same voice, else a free one,
+    // else steal the quietest releasing or the oldest)
+    int leadMode() const { return (int) globalRaw[GP::lead_voices]->load(); }
+    void leadPlay (int note, float vel, bool legato);
+    void leadStop (int note);            // releases the voice(s) playing this note
+    void leadStopAll();
+    bool anyLeadActive() const;
     void runArp (int len);
-    ::dsp::LeadVoice lead;
+    static constexpr int maxLead = 8;
+    ::dsp::LeadVoice leads[maxLead];
+    uint32_t leadAge[maxLead] {};
+    uint32_t leadClock = 0;
+    int leadLast = 0;
+    double lastLeadPitch = -1.0;
+    int leadSus[16] {}; int leadSusNum = 0;     // lead keys let go while the sustain pedal was down
+    int arpNote = -1;
     ::dsp::LeadSettings leadSettings;
     int leadHeld[16] {}; float leadVel[16] {}; int leadNum = 0;
     int arpNotes[16] {}; int arpNum = 0;        // the pattern (held or latched keys, ascending)

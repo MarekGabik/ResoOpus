@@ -162,6 +162,9 @@ namespace GP
         lead_glide, lead_vib, lead_vib_rate, lead_vib_delay, lead_touch_vib, lead_level, lead_pan,
         arp_on, arp_mode, arp_rate, arp_octaves, arp_latch,
         flt_model,
+        drone_on, lead_voices, lead_vel,
+        lead_flt_cutoff, lead_flt_res, lead_flt_env, lead_flt_key, lead_flt_model, lead_flt_mode,
+        lead_fenv_attack, lead_fenv_decay, lead_fenv_sustain, lead_fenv_release,
         count
     };
     enum PlayMode { Plates = 0, Keys };

@@ -159,6 +159,22 @@ const std::vector<ParamDef>& Params::globalDefs()
         d.push_back (C ("flt_model", "Filter Model", { "Growl", "Ladder", "Diode", "Scream", "Silk" }, 0,
                         "Character of the filter. Growl: dirty 12 dB that growls. Ladder: round 24 dB transistor ladder that sings. "
                         "Diode: rubbery squelch, bites more than it rings. Scream: harsh 12 dB, screeches when pushed. Silk: clean and smooth"));
+        d.push_back (B ("drone_on", "Drone", true,
+                        "The four drone voices. Off with the LEAD on = LEAD only: every key, the plates too, plays the LEAD"));
+        d.push_back (C ("lead_voices", "Lead Voices", { "Mono", "Legato", "Poly 4", "Poly 8" }, 1,
+                        "Mono: one note, every note restarts the envelopes. Legato: one note, overlapping notes only slide. Poly: chords and melodies over the drone"));
+        d.push_back (F ("lead_vel", "Lead Velocity", 0.0f, 100.0f, 60.0f, Unit::Percent, "How much velocity sets the level and the filter envelope of each note"));
+        d.push_back (LogF ("lead_flt_cutoff", "Lead Cutoff", 20.0f, 20000.0f, 20000.0f, Unit::Hz, "Cutoff of the filter of every lead note"));
+        d.push_back (F ("lead_flt_res", "Lead Resonance", 0.0f, 10.0f, 0.0f, Unit::Scale10, "Resonance of the lead filter"));
+        d.push_back (F ("lead_flt_env", "Lead Filter Env", -100.0f, 100.0f, 0.0f, Unit::Percent,
+                        "How far the filter envelope moves the cutoff of each note (100 % = 6 octaves up, negative = down)"));
+        d.push_back (F ("lead_flt_key", "Lead Key Track", 0.0f, 100.0f, 50.0f, Unit::Percent, "The cutoff follows the played note (100 % = one octave per octave)"));
+        d.push_back (C ("lead_flt_model", "Lead Filter Model", { "Growl", "Ladder", "Diode", "Scream", "Silk" }, 1, "Character of the lead filter (same models as FILTER)"));
+        d.push_back (C ("lead_flt_mode", "Lead Filter Mode", { "Low Pass", "Band Pass", "High Pass" }, 0, "Low pass, band pass or high pass for every lead note"));
+        d.push_back (LogF ("lead_fenv_attack", "Lead Filter Attack", 0.001f, 10.0f, 0.005f, Unit::Seconds, "Filter envelope attack"));
+        d.push_back (LogF ("lead_fenv_decay", "Lead Filter Decay", 0.001f, 30.0f, 0.4f, Unit::Seconds, "Filter envelope decay"));
+        d.push_back (F ("lead_fenv_sustain", "Lead Filter Sustain", 0.0f, 100.0f, 30.0f, Unit::Percent, "Filter envelope sustain level"));
+        d.push_back (LogF ("lead_fenv_release", "Lead Filter Release", 0.001f, 30.0f, 0.6f, Unit::Seconds, "Filter envelope release"));
         return d;
     }();
     return defs;
