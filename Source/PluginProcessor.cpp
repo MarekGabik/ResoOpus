@@ -475,6 +475,7 @@ void ResoOpusProcessor::processChunk (AudioBuffer<float>& out, int start, int le
         L.gainL = gain * std::cos (ang) * MathConstants<float>::sqrt2;
         L.gainR = gain * std::sin (ang) * MathConstants<float>::sqrt2;
         L.velSens = curG[GP::lead_vel] / 100.0f;
+        L.sym = curG[GP::lead_sym] / 100.0f;
         L.cutoff = curG[GP::lead_flt_cutoff]; L.res = curG[GP::lead_flt_res] / 10.0f;
         L.fenvAmount = curG[GP::lead_flt_env] / 100.0f; L.keyTrack = curG[GP::lead_flt_key] / 100.0f;
         L.filterModel = (int) curG[GP::lead_flt_model]; L.filterMode = (int) curG[GP::lead_flt_mode];
@@ -518,6 +519,11 @@ void ResoOpusProcessor::processChunk (AudioBuffer<float>& out, int start, int le
         s.twinMix = p[VP::twin_mix] / 100.0f;
         s.sub = p[VP::sub] / 100.0f;
         s.vibrato = p[VP::vibrato] / 100.0f;
+        s.sym = p[VP::sym] / 100.0f;
+        s.character = p[VP::character] / 100.0f;
+        s.qRatio = p[VP::q_ratio]; s.qIndex = p[VP::q_index] / 100.0f; s.qFb = p[VP::q_fb] / 100.0f;
+        s.qTrack = p[VP::q_track] / 100.0f; s.qFine = p[VP::q_fine];
+        s.nTable = (int) p[VP::n_table]; s.nPos = p[VP::n_pos] / 100.0f; s.nScan = p[VP::n_scan] / 100.0f; s.nDrift = p[VP::n_drift] / 100.0f;
         for (int i = 0; i < Params::numOscs; ++i)
         {
             s.intervals[i] = p[VP::int1 + i];

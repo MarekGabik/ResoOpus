@@ -34,8 +34,10 @@ const std::vector<ParamDef>& Params::voiceDefs()
     static const std::vector<ParamDef> defs = []
     {
         std::vector<ParamDef> d;
-        d.push_back (C ("type", "Type", { "Off", "Choir", "Siren", "Pulsar" }, 1,
-                        "Off: the voice is silent. Choir: five saw oscillators tuned as a chord. Siren: sirens, birds, monsters and noise. Pulsar: one tone from soft to sharp that blooms with its envelope"));
+        d.push_back (C ("type", "Type", { "Off", "Choir", "Siren", "Pulsar", "Quasar", "Nebula" }, 1,
+                        "Off: the voice is silent. Choir: five saw oscillators tuned as a chord. Siren: sirens, birds, monsters and noise. "
+                        "Pulsar: one tone from soft to sharp that blooms with its envelope. Quasar: two-operator FM, bells and metal. "
+                        "Nebula: wavetables (voices, organ, glass) you move through"));
         d.push_back (F ("tune", "Tune", 12.0f, 108.0f, 50.0f, Unit::Note,
                         "Pitch of the voice (the root of its chord). Free and microtonal; Shift-drag for cents, double-click to type a note like D2+12"));
         static const char* intNames[] = { "Osc 1", "Osc 2", "Osc 3", "Osc 4", "Osc 5" };
@@ -74,6 +76,20 @@ const std::vector<ParamDef>& Params::voiceDefs()
         d.push_back (F ("sub", "Sub", 0.0f, 100.0f, 0.0f, Unit::Percent, "A soft tone one octave below"));
         d.push_back (F ("vibrato", "Vibrato", 0.0f, 100.0f, 0.0f, Unit::Percent,
                         "Pitch vibrato up to 50 cents; every voice has its own slightly different speed, so they never wobble together"));
+        // appended in v0.2 (IDs keep their order)
+        d.push_back (F ("sym", "Symmetry", 0.0f, 100.0f, 50.0f, Unit::Percent, "Symmetry of the PULSAR shape; for the square it is the pulse width"));
+        d.push_back (F ("character", "Character", -100.0f, 100.0f, 0.0f, Unit::Percent,
+                        "Middle = clean. Right = analog: every oscillator a little different and drifting, rounder edges, warm saturation. "
+                        "Left = digital: fewer bits and a lower sample rate, aliasing as a colour"));
+        d.push_back (F ("q_ratio", "Ratio", 0.5f, 8.0f, 2.0f, Unit::Plain, "QUASAR: frequency of the modulator against the tone (whole numbers = harmonic, others = bells and metal)", 0.5f));
+        d.push_back (F ("q_index", "Index", 0.0f, 100.0f, 30.0f, Unit::Percent, "QUASAR: depth of the FM, from a pure sine to bright and noisy"));
+        d.push_back (F ("q_fb", "Feedback", 0.0f, 100.0f, 0.0f, Unit::Percent, "QUASAR: the modulator modulates itself: from sine towards saw and noise"));
+        d.push_back (F ("q_track", "Track", 0.0f, 100.0f, 50.0f, Unit::Percent, "QUASAR: how much the INDEX follows the level of the voice (quiet = darker)"));
+        d.push_back (F ("q_fine", "Fine", -50.0f, 50.0f, 0.0f, Unit::Plain, "QUASAR: detunes the modulator by cents: slow beating and shimmer"));
+        d.push_back (C ("n_table", "Table", { "Vocal", "Organ", "Glass" }, 0, "NEBULA: family of wavetables: vowels and hums, organ registrations, digital glass and bells"));
+        d.push_back (F ("n_pos", "Position", 0.0f, 100.0f, 0.0f, Unit::Percent, "NEBULA: where in the table you are; moves smoothly between the waves"));
+        d.push_back (F ("n_scan", "Scan", -100.0f, 100.0f, 30.0f, Unit::Percent, "NEBULA: the level of the voice moves the POSITION (playing it walks through the table)"));
+        d.push_back (F ("n_drift", "Drift", 0.0f, 100.0f, 20.0f, Unit::Percent, "NEBULA: the POSITION wanders slowly on its own"));
         return d;
     }();
     return defs;
@@ -208,6 +224,7 @@ const std::vector<ParamDef>& Params::globalDefs()
         d.push_back (F ("rnd_slew", "Random Slew", 0.0f, 10.0f, 0.0f, Unit::Scale10, "Smooths the jumps of STEPS"));
         d.push_back (B ("rnd_sync", "Random Sync", false, "Locks RANDOM to the song tempo (DIVISION)"));
         d.push_back (C ("rnd_div", "Random Division", divisions, 5, "Length of one RANDOM step in the song tempo"));
+        d.push_back (F ("lead_sym", "Lead Symmetry", 0.0f, 100.0f, 50.0f, Unit::Percent, "Symmetry of the LEAD shape; for the square it is the pulse width"));
         return d;
     }();
     return defs;

@@ -2,6 +2,7 @@
 
 #include "Primitives.h"
 #include "Effects.h"
+#include "Wavetables.h"
 
 // Voice engines. Allocation-free, no JUCE dependency, run at the oversampled rate.
 namespace dsp
@@ -107,6 +108,17 @@ struct VoiceSettings
     float twin = 7.0f;            // semitones of the second tone
     float twinMix = 0.0f, sub = 0.0f;      // 0..1
     float vibrato = 0.0f;         // 0..1 = 0..50 cents
+    float sym = 0.5f;             // symmetry of the shape / pulse width 0..1
+
+    // every type
+    float character = 0.0f;       // -1 digital .. 0 clean .. +1 analog
+
+    // QUASAR (two-operator FM)
+    float qRatio = 2.0f, qIndex = 0.3f, qFb = 0.0f, qTrack = 0.5f, qFine = 0.0f;   // ratio, 0..1, 0..1, 0..1, cents
+
+    // NEBULA (wavetables)
+    int nTable = 0;
+    float nPos = 0.0f, nScan = 0.3f, nDrift = 0.2f;   // 0..1, -1..1, 0..1
 };
 
 // One voice: the three engines share the envelope, gain and pan; the type picks the engine.
@@ -130,6 +142,8 @@ public:
         twinOsc.reset (r.next01());
         subOsc.reset (r.next01());
         vibRate = 4.4 + 0.45 * (double) (seed % 7u) / 6.0 * 4.0;   // every voice its own speed (4.4-6.2 Hz)
+        for (int i = 0; i < 6; ++i) { oscStatic[i] = r.next(); oscDrift[i].seed (seed * 17u + (uint32_t) i * 7u + 3u); }
+        wt = &Wavetables::get();
         reset();
     }
 
@@ -140,6 +154,7 @@ public:
         modPhase = 0.0;
         modSmooth = 0.0f;
         for (auto& y : last) y = 0.0f;
+        lpZ = 0.0f; holdVal = 0.0f; holdCount = 0; qPrev = 0.0f;
     }
 
     void setSampleRate (double fs) { sr = fs; primed = false; }
@@ -166,8 +181,11 @@ public:
         // OFF fades out with the engine that was playing; a type change re-initialises the ramps
         engine = s.type == 0 ? lastEngine : s.type;
         if (engine != lastEngine) { primed = false; lastEngine = engine; }
+        beginCharacter (n);
         if (engine == 2) beginSiren (n);
         else if (engine == 3) beginPulsar (n);
+        else if (engine == 4) beginQuasar (n);
+        else if (engine == 5) beginNebula (n);
         else beginChoir (n);
         primed = true;
         return true;
@@ -179,9 +197,16 @@ public:
         if (! active) return 0.0f;
         const double fmDt = fmHz / sr;
         float x = 0.0f, unit = 0.0f;
-        if (engine == 2) unit = x = tickSiren (fmDt);
-        else if (engine == 3) unit = x = tickPulsar (fmDt);
-        else { x = tickChoir (fmDt); unit = x * unitScale; }
+        if (engine == 2) unit = x = character (tickSiren (fmDt));
+        else if (engine == 3) unit = x = character (tickPulsar (fmDt));
+        else if (engine == 4) unit = x = character (tickQuasar (fmDt));
+        else if (engine == 5) unit = x = character (tickNebula (fmDt));
+        else
+        {
+            const float c = tickChoir (fmDt);
+            unit = character (c * unitScale);
+            x = unitScale > 0.0f ? unit / unitScale : 0.0f;
+        }
         const float amp = level * level;
         L += x * gL.next() * amp;
         R += x * gR.next() * amp;
@@ -202,7 +227,7 @@ private:
         for (int i = 0; i < 5; ++i) if (s.on[i]) ++count;
         const float norm = count > 0 ? 0.42f / std::sqrt ((float) count) : 0.0f;
         unitScale = count > 0 ? 1.0f / std::sqrt ((float) count) : 0.0f;
-        for (int i = 0; i < 5; ++i) ramp (inc[i], (float) hzToDt (s.rootMidi + (double) s.intervals[i], s.a4), n);
+        for (int i = 0; i < 5; ++i) ramp (inc[i], (float) hzToDt (s.rootMidi + (double) s.intervals[i] + scatter[i], s.a4), n);
         ramp (pullR, s.pull * 1.6f, n);
         ramp (gL, s.gainL * norm, n);
         ramp (gR, s.gainR * norm, n);
@@ -237,7 +262,7 @@ private:
     // A flip-flop divider adds a sub-harmonic (tone / N); white noise for wind and surf.
     void beginSiren (int n)
     {
-        ramp (inc[0], (float) hzToDt (s.rootMidi, s.a4), n);
+        ramp (inc[0], (float) hzToDt (s.rootMidi + scatter[0], s.a4), n);
         ramp (inc[1], s.sirenFm * 3.0f, n);           // octaves of sweep
         ramp (inc[2], s.sirenAm, n);
         ramp (inc[3], s.sirenNoise, n);
@@ -271,7 +296,7 @@ private:
     // BLOOM couples the envelope into the oscillator: it starts flat and dull and blooms into pitch and edge.
     void beginPulsar (int n)
     {
-        ramp (inc[0], (float) s.rootMidi, n);
+        ramp (inc[0], (float) (s.rootMidi + scatter[0]), n);
         ramp (inc[1], s.sharp, n);
         ramp (inc[2], s.bloom, n);
         ramp (inc[3], s.twinMix, n);
@@ -293,12 +318,12 @@ private:
         // up to 60 cents flat and a third less edge while the voice is quiet; plus the voice's own vibrato
         const double midi = (double) root - (double) (bloom * (1.0f - lv) * 0.6f) + (double) vib * std::sin (twoPi * vibPhase);
         const float shape = 1.0f + 3.0f * std::min (1.0f, sharp * (1.0f - 0.33f * bloom * (1.0f - lv)));
-        pulsar.setShape (shape, 0.5f);
+        pulsar.setShape (shape, s.sym);
         bool w; double wx;
         float x = pulsar.tick (hzToDt (midi, s.a4) + fmDt, w, wx) * (1.0f - 0.4f * mix);
         if (mix > 0.0005f)
         {
-            twinOsc.setShape (shape, 0.5f);
+            twinOsc.setShape (shape, s.sym);
             x += 0.7f * mix * twinOsc.tick (hzToDt (midi + (double) s.twin, s.a4) + fmDt, w, wx);
         }
         if (subLvl > 0.0005f)
@@ -309,8 +334,109 @@ private:
         return x;
     }
 
+    // CHARACTER: analog = every oscillator detuned a little and drifting on its own, a touch of even harmonics,
+    // soft saturation and rounder edges; digital = sample-rate reduction (aliasing on purpose) and fewer bits
+    void beginCharacter (int n)
+    {
+        const double seconds = n / sr;
+        const float a = std::max (0.0f, s.character);
+        for (int i = 0; i < 6; ++i)
+        {
+            const float d = oscDrift[i].process (RandomGen::Perlin, 0.05 + 0.03 * i, 0.0f, seconds, false, 0.0);
+            scatter[i] = (double) (a * (4.0f * oscStatic[i] + 6.0f * d)) / 100.0;   // semitones
+        }
+        ramp (charR, s.character, n);
+        const double fc = 16000.0 * (1.0 - 0.7 * (double) a);
+        lpC = (float) (1.0 - std::exp (-twoPi * std::min (0.45 * sr, fc) / sr));
+        const float d = std::max (0.0f, -s.character);
+        holdN = 1 + (int) (d * d * 28.0f * (float) (sr / 96000.0));
+        quant = std::exp2 (15.0f - 12.0f * d);
+    }
+
+    float character (float x)
+    {
+        const float c = charR.next();
+        if (c > 0.001f)
+        {
+            float y = x + 0.18f * c * (x * x - 0.3f);
+            y = tanhFast (y * (1.0f + 1.5f * c)) / (1.0f + 0.6f * c);
+            lpZ += (lpC + (1.0f - lpC) * (1.0f - c)) * (y - lpZ);   // the rounding grows with the amount
+            return lpZ;
+        }
+        if (c < -0.001f)
+        {
+            if (++holdCount >= holdN) { holdCount = 0; holdVal = x; }
+            const float y = holdN > 1 ? holdVal : x;
+            const float q = std::round (y * quant) / quant;
+            const float d = -c;
+            return x + std::min (1.0f, d * 4.0f) * (q - x);   // fades in from clean over the first quarter
+        }
+        lpZ = x;
+        return x;
+    }
+
+    // QUASAR: two sine operators, the modulator at RATIO (+ FINE cents) of the tone, phase modulation with INDEX,
+    // modulator self-feedback, the index follows the level with TRACK and is limited so the sidebands stay below
+    // Nyquist (no aliasing however deep)
+    void beginQuasar (int n)
+    {
+        ramp (inc[0], (float) (s.rootMidi + scatter[0]), n);
+        ramp (inc[1], s.qIndex, n);
+        ramp (inc[2], s.qFb, n);
+        ramp (gL, s.gainL * 0.42f, n);
+        ramp (gR, s.gainR * 0.42f, n);
+    }
+
+    float tickQuasar (double fmDt)
+    {
+        const double midi = (double) inc[0].next();
+        const float idx = inc[1].next(), fb = inc[2].next();
+        stepLevel();
+        const double dtc = hzToDt (midi, s.a4) + fmDt;
+        const double dtm = dtc * (double) s.qRatio * std::exp2 ((double) s.qFine / 1200.0);
+        cPhase += dtc; cPhase -= std::floor (cPhase);
+        mPhase += dtm; mPhase -= std::floor (mPhase);
+        const float m = (float) std::sin (twoPi * mPhase + 2.0 * (double) (fb * qPrev));
+        qPrev = 0.5f * (qPrev + m);
+        float I = 8.0f * idx * (1.0f - s.qTrack + s.qTrack * level);
+        I = std::min (I, (float) std::max (0.0, 0.45 / std::max (1.0e-6, std::abs (dtm)) - 2.0));
+        return (float) std::sin (twoPi * cPhase + (double) (I * m));
+    }
+
+    // NEBULA: a wavetable family; POSITION moves through the frames, SCAN lets the level move it, DRIFT wanders
+    void beginNebula (int n)
+    {
+        ramp (inc[0], (float) (s.rootMidi + scatter[0]), n);
+        ramp (inc[1], s.nPos, n);
+        ramp (inc[2], s.nScan, n);
+        const float wander = oscDrift[5].process (RandomGen::Perlin, 0.06, 0.0f, n / sr, false, 0.0);
+        ramp (inc[3], s.nDrift * 0.35f * wander, n);
+        ramp (gL, s.gainL * 0.42f, n);
+        ramp (gR, s.gainR * 0.42f, n);
+    }
+
+    float tickNebula (double fmDt)
+    {
+        const double midi = (double) inc[0].next();
+        const float pos = inc[1].next(), scan = inc[2].next(), wander = inc[3].next();
+        stepLevel();
+        const double dt = hzToDt (midi, s.a4) + fmDt;
+        nPhase += dt;
+        nPhase -= std::floor (nPhase);
+        const float p = clampf (pos + scan * 0.8f * (level - 0.5f) + wander, 0.0f, 1.0f);
+        return wt->read (std::min (2, std::max (0, s.nTable)), p, nPhase, Wavetables::levelFor (dt));
+    }
+
     double sr = 96000.0;
     VoiceSettings s;
+    const Wavetables* wt = nullptr;
+    double scatter[6] {};
+    float oscStatic[6] {};
+    RandomGen oscDrift[6];
+    Ramp charR;
+    float lpZ = 0.0f, lpC = 1.0f, holdVal = 0.0f, quant = 32768.0f, qPrev = 0.0f;
+    int holdCount = 0, holdN = 1;
+    double cPhase = 0.0, mPhase = 0.0, nPhase = 0.0;
     BlepSaw saws[5];
     BlepSquare tone, sub;
     ShapeOsc pulsar, twinOsc, subOsc;
@@ -340,6 +466,7 @@ struct LeadSettings
     float vibrato = 0.0f, vibRate = 5.0f, vibDelay = 0.4f, touchVib = 0.0f, pressure = 0.0f;   // 0..1, Hz, s, 0..1, 0..1
     float gainL = 0.5f, gainR = 0.5f;
     float velSens = 0.6f;                  // 0..1: velocity -> level and filter envelope
+    float sym = 0.5f;                      // symmetry of the shape / pulse width
     // filter per note
     bool filterOn = false;                 // off when wide open with no envelope (bypassed, no colour)
     float cutoff = 20000.0f, res = 0.0f, fenvAmount = 0.0f, keyTrack = 0.5f;   // Hz, 0..1, -1..1 (x 6 octaves), 0..1
@@ -382,6 +509,7 @@ public:
             env.noteOn (false);
             fenv.noteOn (false);
             sinceOn = 0.0;
+            pcount = 0;
         }
     }
     void noteOff() { env.noteOff(); fenv.noteOff(); }
@@ -403,28 +531,34 @@ public:
         velScale = (1.0f - s.velSens) + s.velSens * velocity;
         const float amp = 0.32f * velScale;
         if (primed) { gL.set (s.gainL * amp, n); gR.set (s.gainR * amp, n); } else { gL.reset (s.gainL * amp); gR.reset (s.gainR * amp); primed = true; }
-        o1.setShape (s.wave, 0.5f);
-        o2.setShape (s.wave, 0.5f);
+        o1.setShape (s.wave, s.sym);
+        o2.setShape (s.wave, s.sym);
         osub.setShape (0.0f, 0.5f);
         baseOct = std::log2 ((double) std::max (20.0f, s.cutoff));
+        osc2Ratio = std::exp2 ((double) s.osc2 / 12.0);
     }
 
     void tick (float& L, float& R)
     {
         if (! env.isActive()) { gL.next(); gR.next(); return; }
         pitch += glideC * (target - pitch);
-        sinceOn += 1.0 / sr;
-        vibPhase += s.vibRate / sr;
-        vibPhase -= std::floor (vibPhase);
-        const double fadeIn = s.vibDelay <= 0.001f ? 1.0 : std::min (1.0, sinceOn / (double) s.vibDelay);
-        const double vibSemis = ((double) s.vibrato * fadeIn + (double) (s.touchVib * s.pressure)) * std::sin (twoPi * vibPhase);
-        const double m = pitch + 12.0 * (double) s.octave + vibSemis;
-        auto dt = [this] (double midi) { return std::min (0.45, s.a4 * std::exp2 ((midi - 69.0) / 12.0) / sr); };
+        // pitch, vibrato and the oscillator increments every 4 samples (vibrato < 12 Hz, glide is smooth anyway)
+        if ((pcount++ & 3) == 0)
+        {
+            sinceOn += 4.0 / sr;
+            vibPhase += 4.0 * s.vibRate / sr;
+            vibPhase -= std::floor (vibPhase);
+            const double fadeIn = s.vibDelay <= 0.001f ? 1.0 : std::min (1.0, sinceOn / (double) s.vibDelay);
+            const double vibSemis = ((double) s.vibrato * fadeIn + (double) (s.touchVib * s.pressure)) * std::sin (twoPi * vibPhase);
+            m = pitch + 12.0 * (double) s.octave + vibSemis;
+            dt1 = s.a4 * std::exp2 ((m - 69.0) / 12.0) / sr;
+        }
         bool wrapped = false; double wrapX = 0.0;
-        const float x1 = o1.tick (dt (m), wrapped, wrapX);
-        const float x2 = s.sync && wrapped ? o2.tickSynced (dt (m + s.osc2), wrapX, 0.0) : o2.tick (dt (m + s.osc2), w2, x2w);
+        const float x1 = o1.tick (std::min (0.45, dt1), wrapped, wrapX);
+        const double d2 = std::min (0.45, dt1 * osc2Ratio);
+        const float x2 = s.sync && wrapped ? o2.tickSynced (d2, wrapX, 0.0) : o2.tick (d2, w2, x2w);
         float x = x1 * (1.0f - 0.5f * s.mix) + x2 * s.mix * 0.8f;
-        if (s.sub > 0.0005f) x += 0.7f * s.sub * osub.tick (dt (m - 12.0), w2, x2w);
+        if (s.sub > 0.0005f) x += 0.7f * s.sub * osub.tick (std::min (0.45, dt1 * 0.5), w2, x2w);
         const float e = env.next();
         const float fe = fenv.next();
         if (s.filterOn)
@@ -445,6 +579,8 @@ public:
 
 private:
     double sr = 96000.0, pitch = 60.0, target = 60.0, glideC = 1.0, vibPhase = 0.0, sinceOn = 0.0, x2w = 0.0, baseOct = 14.0;
+    double m = 60.0, dt1 = 0.0, osc2Ratio = 1.0;
+    unsigned pcount = 0;
     bool w2 = false, primed = false;
     float velocity = 0.0f, velScale = 1.0f, gTarget = 0.5f, gNow = 0.5f;
     int note = -1;

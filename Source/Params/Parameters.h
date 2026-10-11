@@ -144,9 +144,10 @@ namespace VP
         tide, attack, release, volume, pan, hold,
         siren_rate, siren_fm, siren_am, siren_div, siren_noise, siren_wave,
         sharp, bloom, twin, twin_mix, sub, vibrato,
+        sym, character, q_ratio, q_index, q_fb, q_track, q_fine, n_table, n_pos, n_scan, n_drift,
         count
     };
-    enum Type { Off = 0, Choir, Siren, Pulsar };
+    enum Type { Off = 0, Choir, Siren, Pulsar, Quasar, Nebula };
 }
 
 namespace GP
@@ -170,6 +171,7 @@ namespace GP
         lfo1_rate, lfo1_shape, lfo1_sync, lfo1_div, lfo1_phase, lfo1_retrig,
         lfo2_rate, lfo2_shape, lfo2_sync, lfo2_div, lfo2_phase, lfo2_retrig,
         rnd_rate, rnd_mode, rnd_slew, rnd_sync, rnd_div,
+        lead_sym,
         count
     };
     enum PlayMode { Plates = 0, Keys };

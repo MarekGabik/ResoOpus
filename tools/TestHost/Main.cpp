@@ -171,7 +171,8 @@ static void testParameters()
     const StringArray voiceOrder { "type", "tune", "int1", "int2", "int3", "int4", "int5", "on1", "on2", "on3", "on4", "on5",
                                    "tide", "attack", "release", "volume", "pan", "hold",
                                    "siren_rate", "siren_fm", "siren_am", "siren_div", "siren_noise", "siren_wave", "sharp", "bloom",
-                                   "twin", "twin_mix", "sub", "vibrato" };
+                                   "twin", "twin_mix", "sub", "vibrato",
+                                   "sym", "character", "q_ratio", "q_index", "q_fb", "q_track", "q_fine", "n_table", "n_pos", "n_scan", "n_drift" };
     bool ok = (int) Params::voiceDefs().size() == VP::count && voiceOrder.size() == VP::count;
     for (int i = 0; i < voiceOrder.size() && ok; ++i) ok = voiceOrder[i] == Params::voiceDefs()[(size_t) i].id;
     check (ok, "voice table matches the VP index constants (" + String ((int) Params::voiceDefs().size()) + " per voice)");
@@ -187,7 +188,7 @@ static void testParameters()
                                     "flt2_on", "flt2_cutoff", "flt2_res", "flt2_drive", "flt2_mode", "flt2_model", "flt_route",
                                     "lfo1_rate", "lfo1_shape", "lfo1_sync", "lfo1_div", "lfo1_phase", "lfo1_retrig",
                                     "lfo2_rate", "lfo2_shape", "lfo2_sync", "lfo2_div", "lfo2_phase", "lfo2_retrig",
-                                    "rnd_rate", "rnd_mode", "rnd_slew", "rnd_sync", "rnd_div" };
+                                    "rnd_rate", "rnd_mode", "rnd_slew", "rnd_sync", "rnd_div", "lead_sym" };
     ok = (int) Params::globalDefs().size() == GP::count;
     for (int i = 0; i < globalOrder.size() && ok; ++i) ok = globalOrder[i] == Params::globalDefs()[(size_t) i].id;
     check (ok, "global table matches the GP index constants (" + String ((int) Params::globalDefs().size()) + ")");
@@ -519,6 +520,91 @@ static double inharmonicDb (const AudioBuffer<float>& out, double sr, int start,
         if (! near (f1) && ! near (f2)) off += pw;
     }
     return 10.0 * std::log10 (off / total + 1e-30);
+}
+
+// v0.2 oscillators: SYMMETRY, CHARACTER, QUASAR, NEBULA
+static void testNewOscillators()
+{
+    std::cout << "SYMMETRY, CHARACTER, QUASAR, NEBULA" << std::endl;
+    const double sr = 48000.0;
+    auto spec = [sr] (const AudioBuffer<float>& out)
+    {
+        const auto db = spectrum (out, (int) (0.5 * sr), 15);
+        const double binHz = sr / 32768.0;
+        return [db, binHz] (double f) { double m = -300.0; for (int d = -3; d <= 3; ++d) m = std::max (m, db[(size_t) (std::lround (f / binHz) + d)]); return m; };
+    };
+    {
+        auto square = [&] (float sym)
+        {
+            auto p = makeProc (sr);
+            soloVoice1 (*p, 45.0f, VP::Pulsar);
+            setParam (*p, "v1_sharp", 100.0f); setParam (*p, "v1_sym", sym);
+            auto at = spec (render (*p, 2.0));
+            return at (220.0) - at (110.0);
+        };
+        const double half = square (50.0f), quarter = square (25.0f);
+        check (quarter - half > 20.0, "SYMMETRY 25 % turns the square into a pulse: 2nd harmonic " + String (half, 0) + " -> " + String (quarter, 0) + " dB");
+    }
+    {
+        auto choir = [&] (float character)
+        {
+            auto p = makeProc (sr);
+            soloVoice1 (*p, 45.0f);
+            setParam (*p, "v1_character", character);
+            return render (*p, 2.0);
+        };
+        const auto clean = choir (0.0f), analog = choir (100.0f), digital = choir (-100.0f);
+        const double rounder = spec (clean) (3080.0) - spec (analog) (3080.0);
+        const double cleanIn = inharmonicDb (clean, sr, (int) (0.5 * sr), 110.0, 110.0), digiIn = inharmonicDb (digital, sr, (int) (0.5 * sr), 110.0, 110.0);
+        check (rounder > 3.0 && digiIn - cleanIn > 20.0 && allFinite (analog) && allFinite (digital),
+               "CHARACTER: analog rounds the highs (3 kHz -" + String (rounder, 1) + " dB), digital adds aliasing (" + String (cleanIn, 0) + " -> " + String (digiIn, 0) + " dB off the harmonics)");
+    }
+    auto quasar = [&] (float midi, float ratio, float index)
+    {
+        auto p = makeProc (sr);
+        soloVoice1 (*p, midi, VP::Quasar);
+        setParam (*p, "v1_q_ratio", ratio); setParam (*p, "v1_q_index", index); setParam (*p, "v1_q_track", 0.0f);
+        return render (*p, 2.0);
+    };
+    {
+        const auto pure = quasar (45.0f, 1.0f, 0.0f), bright = quasar (45.0f, 1.0f, 60.0f);
+        const double h3pure = spec (pure) (330.0) - spec (pure) (110.0), h3bright = spec (bright) (330.0) - spec (bright) (110.0);
+        const auto bell = quasar (45.0f, 1.41f, 50.0f);
+        const double inBell = inharmonicDb (bell, sr, (int) (0.5 * sr), 110.0, 110.0);
+        check (h3pure < -60.0 && h3bright > -20.0 && inBell > -15.0,
+               "QUASAR: INDEX 0 = pure sine (3rd harmonic " + String (h3pure, 0) + " dB), INDEX 60 = bright (" + String (h3bright, 0)
+               + " dB), RATIO 1.41 = a bell off the harmonics (" + String (inBell, 0) + " dB)");
+        const auto high = quasar (95.0f, 3.0f, 100.0f);
+        const double f0 = 440.0 * std::pow (2.0, 26.0 / 12.0);
+        const double alias = inharmonicDb (high, sr, (int) (0.5 * sr), f0, f0);
+        check (allFinite (high) && alias < -60.0, "QUASAR at 1976 Hz, RATIO 3, INDEX 100: the index limit keeps aliasing at " + String (alias, 0) + " dB");
+    }
+    {
+        bool differ = true, level = true, clean = true;
+        String detail;
+        for (int t = 0; t < 3; ++t)
+        {
+            auto nebula = [&] (float midi, float pos)
+            {
+                auto p = makeProc (sr);
+                soloVoice1 (*p, midi, VP::Nebula);
+                setParam (*p, "v1_n_table", (float) t); setParam (*p, "v1_n_pos", pos);
+                setParam (*p, "v1_n_scan", 0.0f); setParam (*p, "v1_n_drift", 0.0f);
+                return render (*p, 2.0);
+            };
+            const auto a = nebula (45.0f, 0.0f), b = nebula (45.0f, 100.0f);
+            double most = 0.0;
+            auto sa = spec (a), sb = spec (b);
+            for (int h = 1; h <= 20; ++h) most = std::max (most, std::abs (sa (110.0 * h) - sb (110.0 * h)));
+            differ = differ && most > 6.0;
+            level = level && std::abs (rmsDb (a, (int) (0.5 * sr)) - rmsDb (b, (int) (0.5 * sr))) < 8.0;
+            const double f0 = 440.0 * std::pow (2.0, 26.0 / 12.0);
+            const double alias = inharmonicDb (nebula (95.0f, 100.0f), sr, (int) (0.5 * sr), f0, f0);
+            clean = clean && alias < -70.0;
+            detail << String (alias, 0) << " (diff " << String (most, 0) << ", lvl " << String (rmsDb (a, (int) (0.5 * sr)) - rmsDb (b, (int) (0.5 * sr)), 1) << ") ";
+        }
+        check (differ && level && clean, "NEBULA Vocal / Organ / Glass: POSITION changes the spectrum, the level stays within 8 dB, no aliasing at 1976 Hz (" + detail.trim() + " dB)");
+    }
 }
 
 static void testGravity()
@@ -1332,12 +1418,13 @@ static void testPresets()
     }
 }
 
-static double cpuPercent (int os, bool allChoir, double seconds = 6.0)
+static double cpuPercent (int os, bool allChoir, double seconds = 6.0, int type = -1, bool polyLead = false)
 {
     auto p = makeProc (48000.0, 256);
     setParam (*p, "oversampling", (float) os);
     for (int v = 0; v < Params::numVoices; ++v)
     {
+        if (type >= 0) { setParam (*p, Params::voiceID (v, "type"), (float) type); setParam (*p, Params::voiceID (v, "character"), 60.0f); }
         if (allChoir)
         {
             setParam (*p, Params::voiceID (v, "type"), (float) VP::Choir);
@@ -1346,7 +1433,14 @@ static double cpuPercent (int os, bool allChoir, double seconds = 6.0)
         }
         setParam (*p, Params::voiceID (v, "hold"), 80.0f);
     }
-    render (*p, 0.5, {}, 256);
+    std::vector<Ev> chord;
+    if (polyLead)
+    {
+        setParam (*p, "lead_on", 1.0f); setParam (*p, "lead_voices", 3.0f); setParam (*p, "plates_base", 84.0f);
+        setParam (*p, "lead_flt_cutoff", 2000.0f); setParam (*p, "lead_flt_env", 40.0f); setParam (*p, "lead_sustain", 100.0f);
+        for (int i = 0; i < 8; ++i) chord.push_back ({ 0.0, MidiMessage::noteOn (1, 48 + 3 * i, 0.8f) });
+    }
+    render (*p, 0.5, chord, 256);
     double best = 1e9;
     for (int run = 0; run < 3; ++run)
     {
@@ -1364,6 +1458,9 @@ static void testCpu()
     check (def < timing (4.0), "default patch, 2x: " + String (def, 2) + " % of one core");
     check (full < timing (8.0), "4 CHOIR voices x 5 saws with pull, 2x: " + String (full, 2) + " % of one core");
     check (full4 < timing (15.0), "4 CHOIR voices x 5 saws with pull, 4x: " + String (full4, 2) + " % of one core");
+    const double quasar = cpuPercent (1, false, 6.0, VP::Quasar), nebula = cpuPercent (1, false, 6.0, VP::Nebula), poly = cpuPercent (1, false, 6.0, -1, true);
+    check (quasar < timing (6.0) && nebula < timing (6.0), "4 QUASAR / 4 NEBULA voices with CHARACTER, 2x: " + String (quasar, 2) + " / " + String (nebula, 2) + " % of one core");
+    check (poly < timing (8.0), "default patch + LEAD Poly 8 with eight notes and filters, 2x: " + String (poly, 2) + " % of one core");
 
     auto p = makeProc (48000.0, 256);
     for (int v = 0; v < Params::numVoices; ++v) setParam (*p, Params::voiceID (v, "hold"), 0.0f);
@@ -1740,6 +1837,9 @@ int main (int argc, char* argv[])
             if (v >= 0 && (id.endsWith ("sharp") || id.endsWith ("bloom") || id.endsWith ("twin") || id.endsWith ("twin_mix")
                            || id.endsWith ("_sub") || id.endsWith ("vibrato"))) setParam (*p, Params::voiceID (v, "type"), (float) VP::Pulsar);
             if (id.endsWith ("_twin")) setParam (*p, id + "_mix", 60.0f);
+            if (v >= 0 && id.endsWith ("_sym")) { setParam (*p, Params::voiceID (v, "type"), (float) VP::Pulsar); setParam (*p, Params::voiceID (v, "sharp"), 100.0f); }
+            if (v >= 0 && id.contains ("_q_")) setParam (*p, Params::voiceID (v, "type"), (float) VP::Quasar);
+            if (v >= 0 && id.contains ("_n_")) setParam (*p, Params::voiceID (v, "type"), (float) VP::Nebula);
             if (v >= 0 && (id.contains ("_int") || id.contains ("_on") || id.endsWith ("tide"))) setParam (*p, Params::voiceID (v, "type"), (float) VP::Choir);
             setParam (*p, "snap", id.startsWith ("snap_") ? 2.0f : 0.0f);
             for (int k = 0; k < Params::numVoices; ++k) setParam (*p, Params::voiceID (k, "attack"), 0.3f);
@@ -1805,6 +1905,7 @@ int main (int argc, char* argv[])
     testTide();
     testSiren();
     testPulsar();
+    testNewOscillators();
     testGravity();
     testDust();
     testEffects();
