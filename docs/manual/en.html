@@ -55,7 +55,7 @@
       <h1>Reso<span class="q">Opus</span></h1>
       <p class="lede">A drone synthesizer for cinematic, ambient and experimental soundscapes. Four hand-tuned, microtonal voices in five types play as soon as the plugin is on a track. In the centre sits the GRAVITY knob, which leads from pure tuning to chaos. Add a polyphonic LEAD with a filter per note, two filters with routing, an echo, a space and a MOD page with two LFOs, a random source, a modulation envelope and a modulation matrix. Play the drone only, the lead only, or both.</p>
       <div class="meta">
-        <span>VST3 · Windows / macOS</span><span>AU · macOS</span><span>instrument · drone + lead (up to 8 notes)</span><span>Ableton Live 11 / 12</span><span>4 voices · 5 types · 24 modulations · 65 presets</span>
+        <span>VST3 · Windows / macOS</span><span>AU · macOS</span><span>instrument · drone + lead (up to 8 notes)</span><span>Ableton Live 11 / 12</span><span>4 voices · 5 types · 24 modulations · 70 presets</span>
       </div>
     </header>
 
@@ -68,11 +68,11 @@
       <tbody>
         <tr><td>DRONE</td><td>Four voices (type, tuning, HOLD, PAN, volume, scope), GRAVITY, the selected voice's detail, MASTER (PITCH, DUST, GRIT, VOLUME, FILL).</td></tr>
         <tr><td>LEAD</td><td>The melodic layer: oscillators, a filter with its envelope per note, amp envelope, polyphony, glide, vibrato, ARP.</td></tr>
-        <tr><td>FX</td><td>FILTER A and B with routing, ECHO and SPACE.</td></tr>
+        <tr><td>FX</td><td>FILTER A and B with routing, ECHO, MOTION and SPACE.</td></tr>
         <tr><td>MOD</td><td>LFO 1, LFO 2, RANDOM, MOD ENV and the matrix of all modulations.</td></tr>
       </tbody>
     </table></div>
-    <div class="chain"><span>4 voices</span><i>⇄</i><span class="me">GRAVITY · DUST</span><i>+</i><span>LEAD (1–8 notes)</span><i>→</i><span>FILTER A / B</span><i>→</i><span>ECHO</span><i>→</i><span>SPACE</span><i>→</i><span>MASTER → limiter</span></div>
+    <div class="chain"><span>4 voices</span><i>⇄</i><span class="me">GRAVITY · DUST</span><i>+</i><span>LEAD (1–8 notes)</span><i>→</i><span>FILTER A / B</span><i>→</i><span>MOTION</span><i>→</i><span>ECHO</span><i>→</i><span>SPACE</span><i>→</i><span>MASTER → limiter</span></div>
     <h3>Drone, lead, or both</h3>
     <p>The <strong>DRONE</strong> and <strong>LEAD</strong> tabs in the top bar carry power switches (gold = playing):</p>
     <div class="table-wrap"><table>
@@ -267,7 +267,7 @@
     </table></div>
     <p>At full resonance Band Pass keeps its level: a narrow band doesn't vanish, it sings. The LEAD filter has the same seven models.</p>
     <h3>ECHO</h3>
-    <figure class="shot"><img src="img/echo.jpg" alt="ECHO" width="1172" height="546" loading="lazy"></figure>
+    <figure class="shot"><img src="img/echo.jpg" alt="ECHO" width="780" height="546" loading="lazy"></figure>
     <p>Five modes (<strong>MODE</strong>) on the same knobs. The knob names change with what they do in each mode.</p>
     <div class="table-wrap"><table>
       <thead><tr><th>MODE</th><th>TIME 1 · TIME 2 · MOD</th><th>Sound</th></tr></thead>
@@ -283,8 +283,21 @@
       <li><strong>FEEDBACK</strong>: above ~55 % the echo starts to sing on its own. The loop has a ceiling, so the level never runs away. Tape and LO-FI hiss fade with the echo, so it falls silent in silence.</li>
       <li><strong>TO VOICES</strong>: the echo returns into the voices as FM. See GRAVITY.</li>
     </ul>
+    <h3>MOTION</h3>
+    <figure class="shot"><img src="img/motion-fx.jpg" alt="MOTION" width="780" height="546" loading="lazy"><figcaption>MOTION with the Orbiting Choir preset: ORBIT, the sound slowly circles around your head.</figcaption></figure>
+    <p>Movement in space. Switched on with <strong>ON</strong>; it sits after the filters and before ECHO and SPACE, so the echo and the tail travel with it. <strong>RATE</strong> 0.02–10 Hz, or with <strong>SYNC</strong> a <strong>DIVISION</strong> in tempo (locked to the song grid while the transport runs), <strong>DEPTH</strong>, a third knob per mode and <strong>MIX</strong>. RATE, DEPTH, X and MIX can all be modulated in the matrix.</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>MODE</th><th>X</th><th>What it does</th></tr></thead>
+      <tbody>
+        <tr><td>ORBIT</td><td>WIDTH</td><td>The sound circles around the listener. The far ear hears it a little later (up to 0.65 ms) and darker, behind you it gets quieter and darker, and the changing distance bends the pitch slightly (Doppler). The stereo width of the input stays. Best on headphones.</td></tr>
+        <tr><td>PHASER</td><td>FEEDBACK</td><td>Six all-pass stages per side, the notches swing ±3 octaves around 400 Hz, the right side a quarter behind the left.</td></tr>
+        <tr><td>ENSEMBLE</td><td>SPREAD</td><td>Three copies swing slowly (RATE) and quickly (6.2 Hz) a third apart, like the chorus of old string machines. SPREAD places them across the stereo field.</td></tr>
+        <tr><td>TREMOLO</td><td>STEREO</td><td>The level pulses with a rounded sine. STEREO 0 = both sides together, 100 = the sides alternate.</td></tr>
+        <tr><td>ROTOR</td><td>SPEED</td><td>A rotating speaker: a horn above 800 Hz and a drum below, both swinging (Doppler and level) for two microphones. SPEED below the middle is slow, above it fast, and the rotors change speed with the inertia of the real thing (horn ~0.8 s, drum ~3.5 s). RATE is not used. Try the mod wheel on SPEED (the Rotor Organ preset).</td></tr>
+      </tbody>
+    </table></div>
     <h3>SPACE</h3>
-    <figure class="shot"><img src="img/space.jpg" alt="SPACE" width="1172" height="546" loading="lazy"></figure>
+    <figure class="shot"><img src="img/space.jpg" alt="SPACE" width="784" height="546" loading="lazy"></figure>
     <div class="table-wrap"><table>
       <thead><tr><th>Algorithm</th><th>X · Y · Z</th><th>Sound</th></tr></thead>
       <tbody>
@@ -461,7 +474,7 @@
 
 
     <h2 id="presets"><span class="num">12</span>Factory presets</h2>
-    <p>65 presets in seven categories. Open the browser by clicking the preset name, or step with the ◀ ▶ arrows.</p>
+    <p>70 presets in seven categories. Open the browser by clicking the preset name, or step with the ◀ ▶ arrows.</p>
     <div class="table-wrap"><table>
       <thead><tr><th>Preset</th><th>What for, what to turn</th></tr></thead>
       <tbody>
@@ -484,6 +497,8 @@
         <tr><td>Nebula Organ</td><td>NEBULA with the ORGAN table: the mod wheel pulls the stops from a flute to the full organ.</td></tr>
         <tr><td>Tape Monastery</td><td>Two choirs through ECHO TAPE: two heads on one tape loop, every repeat darker and wobbling. WOW = a worn tape, FEEDBACK above 85 % lets the loop sing.</td></tr>
         <tr><td>Throat Singers</td><td>A growling low choir through the VOWEL filter: LFO 1 slowly opens the throat from U over O to A and back. RESONANCE sharpens the vowels, MODE BAND makes a woman of it.</td></tr>
+        <tr><td>Orbiting Choir</td><td>MOTION ORBIT: the choirs slowly circle around your head, darker and further away behind you. Best on headphones; RATE = how fast, WIDTH = how far apart the ears hear it.</td></tr>
+        <tr><td>Rotor Organ</td><td>NEBULA organ stops through MOTION ROTOR: a slowly turning speaker. Push the mod wheel up and it speeds up with the inertia of the real thing.</td></tr>
         <tr class="cat"><td colspan="2">Cinematic</td></tr>
         <tr><td>Slow Bloom</td><td>Silent until you play: every plate blooms over seconds and fades for twelve.</td></tr>
         <tr><td>Microtonal Glass</td><td>Choirs a few cents apart, slow beating like a glass harmonica.</td></tr>
@@ -499,6 +514,7 @@
         <tr><td>Poly Strings</td><td>LEAD in Poly 8 as a slow string pad over a quiet drone. Play chords outside the plates.</td></tr>
         <tr><td>Vowel Choir</td><td>Play the plates: MOD ENV opens the vowel from O towards E while the chord swells. A distant choir of women; hold longer for brighter vowels.</td></tr>
         <tr><td>Silver Halls</td><td>Bright major choirs, chorused repeats from ECHO MOD and the airy AURORA shimmer above them. For hopeful, open scenes; OCT UP (X) adds light.</td></tr>
+        <tr><td>String Machine</td><td>Bright choirs in octaves through MOTION ENSEMBLE: three swinging copies like the chorus of old string machines, wide and lush. SPREAD = how wide.</td></tr>
         <tr class="cat"><td colspan="2">Textures</td></tr>
         <tr><td>Night Sirens</td><td>A slow wailing siren over a choir and a distant two-tone siren with noise.</td></tr>
         <tr><td>Shortwave</td><td>Radio between stations: noisy sirens through a SCREAM band pass. CUTOFF = the dial.</td></tr>
@@ -513,6 +529,7 @@
         <tr><td>Broken Transmission</td><td>A chopped siren over a low choir through ECHO LO-FI: the repeats lose bits and sample rate and crumble, COMET adds a worn tape. DEGRADE = how broken.</td></tr>
         <tr><td>Singing Bowls</td><td>Soft pulsars ring three bowl tones through SATURN, STEPS lets them wander by pentatonic notes. Plates strike the bowls, ROOM (Z) for a bigger space.</td></tr>
         <tr><td>Rising Stairs</td><td>Play the plates: every RUNNER repeat climbs a fifth and melts into a room, a staircase into the sky. PITCH clicks into other intervals from −12 to +12.</td></tr>
+        <tr><td>Phase Drift</td><td>MOTION PHASER sweeps slowly through two bright choirs: the notches drift like clouds, left and right a quarter apart. FEEDBACK (X) sharpens them.</td></tr>
         <tr class="cat"><td colspan="2">Orbits</td></tr>
         <tr><td>Gravity Well</td><td>Pressing harder pulls GRAVITY into TURBULENCE; let go and the voices settle.</td></tr>
         <tr><td>Collapse</td><td>All voices in a ring past the edge: the loop pulses on its own. GRAVITY below 85 % tames it.</td></tr>
@@ -537,6 +554,7 @@
         <tr><td>Morse Beacon</td><td>A siren chopped into beeps, a slow beacon and a low drone. RATE = code speed.</td></tr>
         <tr><td>Heartbeat</td><td>A low siren chopped slowly with a sub-harmonic: a deep pulse like a heart or an engine.</td></tr>
         <tr><td>Ping-Pong Arp</td><td>Hold a chord outside the plates: the latched arpeggio bounces left and right in ECHO PING-PONG (375 ms = a dotted eighth at 120 BPM).</td></tr>
+        <tr><td>Tremolo Waves</td><td>MOTION TREMOLO in tempo (1/8): the drone pulses and the sides alternate (STEREO 100 %). DEPTH = gentle waves or hard chops.</td></tr>
       </tbody>
     </table></div>
 

@@ -174,6 +174,7 @@ namespace GP
         lead_sym, grit,
         menv_attack, menv_decay, menv_sustain, menv_release,
         echo_mode,
+        mot_on, mot_mode, mot_rate, mot_sync, mot_div, mot_depth, mot_x, mot_mix,
         count
     };
     enum PlayMode { Plates = 0, Keys };

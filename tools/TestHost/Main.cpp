@@ -1346,6 +1346,116 @@ static void testEffectLevels()
     }
 }
 
+// MOTION: ORBIT, PHASER, ENSEMBLE, TREMOLO, ROTOR on a steady 220 Hz sine (or a 2 kHz one for the rotor horn)
+static void testMotion()
+{
+    std::cout << "MOTION" << std::endl;
+    const double sr = 48000.0;
+    auto run = [sr] (int mode, std::vector<std::pair<const char*, float>> set, double seconds, float tuneMidi = 57.0f)
+    {
+        auto p = makeProc (sr);
+        soloVoice1 (*p, tuneMidi, VP::Quasar);
+        setParam (*p, "v1_q_index", 0.0f); setParam (*p, "v1_pan", 0.0f);
+        setParam (*p, "space_blend", 0.0f); setParam (*p, "echo_mix", 0.0f);
+        setParam (*p, "mot_on", mode >= 0 ? 1.0f : 0.0f); setParam (*p, "mot_mode", (float) std::max (0, mode));
+        for (auto& kv : set) setParam (*p, kv.first, kv.second);
+        return render (*p, seconds);
+    };
+    // balance (L over R) and level of the sum in windows of `win` seconds, after 2 s
+    auto windows = [sr] (const AudioBuffer<float>& s, double win, double from = 2.0)
+    {
+        std::vector<std::pair<double, double>> w;
+        const int n = (int) (win * sr);
+        for (int a = (int) (from * sr); a + n <= s.getNumSamples(); a += n)
+        {
+            double l = 0, r = 0;
+            for (int i = a; i < a + n; ++i) { l += s.getSample (0, i) * s.getSample (0, i); r += s.getSample (1, i) * s.getSample (1, i); }
+            w.push_back ({ 10.0 * std::log10 ((l + 1e-20) / (r + 1e-20)), 10.0 * std::log10 ((l + r) / (2.0 * n) + 1e-20) });
+        }
+        return w;
+    };
+    auto swing = [] (const std::vector<std::pair<double, double>>& w, bool level)
+    {
+        double lo = 1e9, hi = -1e9;
+        for (auto& x : w) { const double v = level ? x.second : x.first; lo = std::min (lo, v); hi = std::max (hi, v); }
+        return hi - lo;
+    };
+    const auto off = run (-1, {}, 6.0);
+    {
+        const auto o = run (0, { { "mot_rate", 0.5f }, { "mot_depth", 80.0f }, { "mot_x", 70.0f } }, 6.0);
+        const auto w = windows (o, 0.1);
+        check (swing (w, false) > 20.0 && swing (w, true) < 3.0 && clickDb (o, 2.0, sr) < -70.0,
+               "MOTION ORBIT: the sound travels from side to side (" + String (swing (w, false), 1) + " dB between the ears) at an even level ("
+               + String (swing (w, true), 1) + " dB), no clicks");
+    }
+    {
+        const auto ph = run (1, { { "mot_rate", 0.5f }, { "mot_depth", 80.0f }, { "mot_x", 60.0f } }, 6.0);
+        const auto w = windows (ph, 0.1);
+        check (swing (w, true) > 6.0 && clickDb (ph, 2.0, sr) < -70.0, "MOTION PHASER: the notches sweep through a 220 Hz tone (" + String (swing (w, true), 1) + " dB), no clicks");
+    }
+    {
+        auto spread = [sr] (const AudioBuffer<float>& s)
+        {
+            const auto db = spectrum (s, (int) (2.0 * sr), 15);
+            const double binHz = sr / 32768.0;
+            double centre = 0, near = 0;
+            for (long k = std::lround (190.0 / binHz); k <= std::lround (250.0 / binHz); ++k) { const double pw = std::pow (10.0, db[(size_t) k] / 10.0); if (std::abs (k * binHz - 220.0) < 2.0) centre += pw; else near += pw; }
+            return 10.0 * std::log10 (near / (centre + 1e-30) + 1e-30);
+        };
+        const double before = spread (off), after = spread (run (2, { { "mot_rate", 0.6f }, { "mot_depth", 80.0f } }, 6.0));
+        check (after > before + 8.0, "MOTION ENSEMBLE: three swinging copies spread the tone (" + String (before, 0) + " -> " + String (after, 0) + " dB beside 220 Hz)");
+    }
+    {
+        const auto together = windows (run (3, { { "mot_rate", 4.0f }, { "mot_depth", 80.0f }, { "mot_x", 0.0f } }, 4.0), 0.02);
+        const auto apart = windows (run (3, { { "mot_rate", 4.0f }, { "mot_depth", 80.0f }, { "mot_x", 100.0f } }, 4.0), 0.02);
+        check (swing (together, true) > 6.0 && swing (together, false) < 1.0 && swing (apart, false) > 10.0,
+               "MOTION TREMOLO: the level pulses (" + String (swing (together, true), 1) + " dB), X 0 = both sides together, X 100 = alternating ("
+               + String (swing (apart, false), 1) + " dB)");
+    }
+    {
+        // ROTOR: the horn (a 2 kHz tone) is bent by the Doppler, faster with X
+        auto bend = [&] (float x)
+        {
+            const auto o = run (4, { { "mot_depth", 100.0f }, { "mot_x", x } }, 6.0, 95.0f);   // B5 ~ 1976 Hz
+            const auto db = spectrum (o, (int) (3.0 * sr), 15);
+            const double binHz = sr / 32768.0;
+            double centre = 0, near = 0;
+            for (long k = std::lround (1900.0 / binHz); k <= std::lround (2050.0 / binHz); ++k) { const double pw = std::pow (10.0, db[(size_t) k] / 10.0); if (std::abs (k * binHz - 1975.5) < 3.0) centre += pw; else near += pw; }
+            return 10.0 * std::log10 (near / (centre + 1e-30) + 1e-30);
+        };
+        const double slow = bend (0.0f), fastB = bend (100.0f);
+        check (slow > -25.0 && fastB > slow + 3.0, "MOTION ROTOR: the horn bends a 2 kHz tone (slow " + String (slow, 1) + " dB, fast " + String (fastB, 1) + " dB beside it)");
+    }
+    {
+        // in tempo: 1/4 at 120 BPM = two orbits a second -> four crossings of the middle; counted from a quarter
+        // orbit after a crossing (2.125 s), so none falls on the edge of the count
+        const auto o = run (0, { { "mot_sync", 1.0f }, { "mot_div", 5.0f }, { "mot_depth", 90.0f } }, 4.5);
+        const auto w = windows (o, 0.01, 2.125);
+        int crossings = 0;
+        for (size_t i = 1; i < w.size() && i < 200; ++i) if ((w[i - 1].first < 0.0) != (w[i].first < 0.0)) ++crossings;
+        check (crossings == 8, "MOTION in tempo 1/4 at 120 BPM: the orbit crosses the middle " + String (crossings) + " times in 2 s (8 expected)");
+    }
+    {
+        // MIX 0 = untouched, and every mode at the extremes stays finite and bounded
+        const auto none = run (0, { { "mot_mix", 0.0f } }, 2.0);
+        double diff = 0.0;
+        for (int c = 0; c < 2; ++c) for (int i = 0; i < none.getNumSamples(); ++i) diff = std::max (diff, (double) std::abs (none.getSample (c, i) - off.getSample (c, i)));
+        bool ok = true;
+        double worst = -200.0;
+        for (int m = 0; m < 5; ++m)
+        {
+            auto p = makeProc (sr);
+            setParam (*p, "mot_on", 1.0f); setParam (*p, "mot_mode", (float) m);
+            setParam (*p, "mot_rate", 10.0f); setParam (*p, "mot_depth", 100.0f); setParam (*p, "mot_x", 100.0f);
+            setParam (*p, "flt_res", 10.0f); setParam (*p, "flt_drive", 10.0f); setParam (*p, "flt_cutoff", 800.0f);
+            auto out = render (*p, 8.0);
+            ok = ok && allFinite (out);
+            worst = std::max (worst, peakDb (out));
+        }
+        check (diff < 1.0e-6 && ok && worst < 0.0, "MOTION: MIX 0 leaves the sound untouched; every mode at full RATE, DEPTH and X: finite, peak " + String (worst, 1) + " dBFS");
+    }
+}
+
 static void testLead()
 {
     std::cout << "LEAD and ARP" << std::endl;
@@ -2173,6 +2283,9 @@ int main (int argc, char* argv[])
         save ("filters", areaOf ("FILTER A").getUnion (areaOf ("FILTER B")));
         save ("echo", areaOf ("ECHO"));
         save ("space", areaOf ("SPACE"));
+        preset ("Orbiting Choir");
+        live (1.5);
+        save ("motion-fx", areaOf ("MOTION"));
         editor->showPage (0);
 
         preset ("Lunar Tide");
@@ -2202,6 +2315,46 @@ int main (int argc, char* argv[])
         editor->setPresetBrowser (false);
         ed.reset();
         std::cout << "done" << std::endl;
+        return 0;
+    }
+    if (argc > 1 && String (argv[1]) == "--motion")
+    {
+        // every MOTION mode on a steady 220 Hz sine and on the default drone
+        static const char* names[] = { "ORBIT", "PHASER", "ENSEMBLE", "TREMOLO", "ROTOR" };
+        const double sr = 48000.0;
+        auto run = [] (int mode, float rate, float depth, float x, bool sine, double seconds)
+        {
+            auto p = makeProc();
+            if (sine) { soloVoice1 (*p, 57.0f, VP::Quasar); setParam (*p, "v1_q_index", 0.0f); setParam (*p, "v1_pan", 0.0f); }
+            setParam (*p, "space_blend", 0.0f); setParam (*p, "echo_mix", 0.0f);
+            setParam (*p, "mot_on", mode >= 0 ? 1.0f : 0.0f); setParam (*p, "mot_mode", (float) std::max (0, mode));
+            setParam (*p, "mot_rate", rate); setParam (*p, "mot_depth", depth); setParam (*p, "mot_x", x);
+            return render (*p, seconds);
+        };
+        const auto dry = run (-1, 1.0f, 70.0f, 50.0f, false, 8.0);
+        const double dryDb = rmsDb (dry, 3 * 48000, dry.getNumSamples());
+        for (int m = 0; m < 5; ++m)
+        {
+            const auto d = run (m, 0.5f, 80.0f, 70.0f, false, 8.0);
+            const auto s = run (m, 0.5f, 80.0f, 70.0f, true, 8.0);
+            // L/R balance swing over 100 ms windows, and level swing of the sum
+            double minB = 99, maxB = -99, minS = 99, maxS = -99;
+            for (int a = 3 * 48000; a + 4800 <= s.getNumSamples(); a += 4800)
+            {
+                double l = 0, r = 0;
+                for (int i = a; i < a + 4800; ++i) { l += s.getSample (0, i) * s.getSample (0, i); r += s.getSample (1, i) * s.getSample (1, i); }
+                const double b = 10.0 * std::log10 ((l + 1e-20) / (r + 1e-20)), sum = 10.0 * std::log10 ((l + r) / 9600.0 + 1e-20);
+                minB = std::min (minB, b); maxB = std::max (maxB, b); minS = std::min (minS, sum); maxS = std::max (maxS, sum);
+            }
+            const auto db = spectrum (s, 3 * 48000, 15);
+            const double binHz = sr / 32768.0;
+            double centre = 0, near = 0;
+            for (long k = std::lround (190.0 / binHz); k <= std::lround (250.0 / binHz); ++k) { const double pw = std::pow (10.0, db[(size_t) k] / 10.0); if (std::abs (k * binHz - 220.0) < 2.0) centre += pw; else near += pw; }
+            std::cout << names[m] << ":  drone " << String (rmsDb (d, 3 * 48000, d.getNumSamples()) - dryDb, 1) << " dB vs off,  L/R swing "
+                      << String (minB, 1) << " .. " << String (maxB, 1) << " dB,  level swing " << String (maxS - minS, 1) << " dB,  pitch spread "
+                      << String (10.0 * std::log10 (near / (centre + 1e-30) + 1e-30), 1) << " dB,  clicks " << String (clickDb (s, 3.0), 1) << " dB,  peak "
+                      << String (peakDb (d), 1) << std::endl;
+        }
         return 0;
     }
     if (argc > 1 && String (argv[1]) == "--plevels")
@@ -2640,6 +2793,9 @@ int main (int argc, char* argv[])
                 if (id == "rnd_slew") setParam (*p, "rnd_mode", 1.0f);
             }
             if (id.startsWith ("menv_")) { setParam (*p, "flt_cutoff", 900.0f); p->addModulation (Mod::ModEnv, "flt_cutoff", 0.5f); }
+            if (id.startsWith ("mot_") && id != "mot_on") { setParam (*p, "mot_on", 1.0f); setParam (*p, "mot_rate", 2.0f); }
+            if (id == "mot_div") setParam (*p, "mot_sync", 1.0f);
+            if (id == "mot_x") setParam (*p, "mot_mode", 1.0f);   // phaser feedback
             if (id.startsWith ("echo_") && id != "echo_mix") setParam (*p, "echo_mix", 50.0f);
             if (id == "echo_self") setParam (*p, "echo_mod", 60.0f);
             if (id == "echo_voices") setParam (*p, "gravity", 0.0f);
@@ -2726,6 +2882,7 @@ int main (int argc, char* argv[])
     testDust();
     testEffects();
     testEffectLevels();
+    testMotion();
     testLead();
     testPlates();
     testTouchAboveHold();

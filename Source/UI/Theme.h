@@ -41,6 +41,7 @@ namespace Palette
     inline const juce::Colour mixer       { 0xffff9a4d };
     inline const juce::Colour filter      { 0xfff4c95d };
     inline const juce::Colour filterB     { 0xffc7a2ff };   // FILTER B: its knobs and its curve
+    inline const juce::Colour motion      { 0xff7ee0c3 };   // MOTION
     inline const juce::Colour voicing     { 0xffa5e844 };
     inline const juce::Colour fx1         { 0xffff9a4d };
     inline const juce::Colour fx2         { 0xff4aa8ff };

@@ -235,6 +235,22 @@ const std::vector<ParamDef>& Params::globalDefs()
         d.push_back (C ("echo_mode", "Echo Mode", { "Dual", "Tape", "Ping-Pong", "Lo-Fi", "Mod" }, 0,
                         "Dual: two lines feeding each other. Tape: a tape loop with two heads, wow and flutter, darker and saturated "
                         "repeats. Ping-Pong: the repeats bounce left and right. Lo-Fi: a degraded, crunchy digital delay. Mod: chorused repeats"));
+        // MOTION: movement in space after the filters, before ECHO and SPACE
+        {
+            static const StringArray motionDivs { "8 bars", "4 bars", "2 bars", "1 bar", "1/2", "1/4", "1/8", "1/16", "1/4 T", "1/8 T", "1/4 D", "1/8 D" };
+            d.push_back (B ("mot_on", "Motion", false, "Switches MOTION on: movement in space after the filters (before ECHO and SPACE)"));
+            d.push_back (C ("mot_mode", "Motion Mode", { "Orbit", "Phaser", "Ensemble", "Tremolo", "Rotor" }, 0,
+                            "Orbit: the sound circles around you. Phaser: sweeping notches. Ensemble: a triple chorus like old string machines. "
+                            "Tremolo: the level pulses (the sides can alternate). Rotor: a rotating speaker, slow or fast"));
+            d.push_back (LogF ("mot_rate", "Motion Rate", 0.02f, 10.0f, 0.12f, Unit::Hz, "Speed of the movement (free running)"));
+            d.push_back (B ("mot_sync", "Motion Sync", false, "Locks the movement to the song tempo (DIVISION)"));
+            d.push_back (C ("mot_div", "Motion Division", motionDivs, 2, "One cycle of the movement in the song tempo"));
+            d.push_back (F ("mot_depth", "Motion Depth", 0.0f, 100.0f, 70.0f, Unit::Percent, "How far the movement goes"));
+            d.push_back (F ("mot_x", "Motion X", 0.0f, 100.0f, 50.0f, Unit::Percent,
+                            "Orbit: width (time and shadow between the ears). Phaser: feedback. Ensemble: stereo spread. Tremolo: the sides "
+                            "together (0) or alternating (100). Rotor: speed, slow below the middle, fast above it (with inertia)"));
+            d.push_back (F ("mot_mix", "Motion Mix", 0.0f, 100.0f, 100.0f, Unit::Percent, "Dry / moved"));
+        }
         return d;
     }();
     return defs;

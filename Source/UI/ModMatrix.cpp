@@ -23,6 +23,11 @@ String ModMatrixView::displayName (int code) const
     const char* xyz[3] = { "space_x", "space_y", "space_z" };
     for (int k = 0; k < 3; ++k)
         if (code == Mod::destCode (xyz[k])) return String ("Space ") + "XYZ"[k] + " (" + knobNames[algo][k] + ")";
+    if (code == Mod::destCode ("mot_x"))
+    {
+        static const char* xNames[5] = { "Width", "Feedback", "Spread", "Stereo", "Speed" };
+        return String ("Motion X (") + xNames[jlimit (0, 4, (int) proc.getParamReal ("mot_mode"))] + ")";
+    }
     return Mod::destName (code);
 }
 
@@ -463,6 +468,8 @@ PopupMenu ModMatrixView::buildAddMenu()
         for (auto* id : { "space_x", "space_y", "space_z" }) item (fx, id, displayName (Mod::destCode (id)));
         item (fx, "space_blend");
     }
+    fx.addSectionHeader ("MOTION");
+    for (auto* id : { "mot_rate", "mot_depth", "mot_x", "mot_mix" }) item (fx, id, displayName (Mod::destCode (id)));
     dst.addSubMenu ("FX", fx);
 
     section (mod, "LFO 1", { "lfo1_rate", "lfo1_phase" });

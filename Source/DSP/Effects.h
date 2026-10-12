@@ -606,6 +606,183 @@ private:
 };
 
 //==============================================================================
+// MOTION: movement in space, after the filters and before ECHO / SPACE. RATE (free or in tempo), DEPTH, X, MIX.
+//  ORBIT     the sound circles around the listener: equal-power position, the far ear hears it a little later
+//            (up to 0.65 ms) and darker (head shadow), behind it gets quieter and darker and the changing
+//            distance bends the pitch a little (Doppler). The stereo width of the input (side) stays. X = width
+//  PHASER    six all-pass stages per side sweep notches (+-3 octaves around 400 Hz), right a quarter behind the
+//            left; X = feedback
+//  ENSEMBLE  three delayed copies swing slowly (RATE) and quickly (6.2 Hz) a third apart, like the chorus of old
+//            string machines; X = how far apart they sit in the stereo field
+//  TREMOLO   the level pulses with a rounded sine; X = the sides together (0) or alternating (100)
+//  ROTOR     a rotating speaker: a horn above 800 Hz and a drum below, each swinging (Doppler and level) for two
+//            microphones a quarter apart. X = speed, slow below the middle and fast above, reached with the inertia
+//            of the real thing (horn ~0.8 s, drum ~3.5 s); RATE is not used
+class Motion
+{
+public:
+    enum Mode { Orbit = 0, Phaser, Ensemble, Tremolo, Rotor };
+    struct Settings { int mode = Orbit; double rateHz = 0.12; float depth = 0.7f, x = 0.5f, mix = 1.0f; bool lockPhase = false; double phase = 0.0; };
+
+    void prepare (double fs)
+    {
+        sr = fs;
+        for (auto& l : lines) l.prepare ((int) (fs * 0.04));
+        reset();
+    }
+    void reset()
+    {
+        for (auto& l : lines) l.reset();
+        for (auto& f : lp) f.reset();
+        for (auto& c : ap) for (auto& z : c) z = 0.0f;
+        apOut[0] = apOut[1] = 0.0f;
+        phase = fast = horn = drum = 0.0;
+        hornHz = 0.8; drumHz = 0.7;
+        dR.reset (0.0f); xR.reset (0.0f); mR.reset (0.0f);
+        primed = false; lastMode = -1;
+        for (auto& c : coef) c = 1.0f;
+        apA[0] = apA[1] = 0.0f;
+    }
+
+    void process (float* L, float* R, int n, const Settings& s)
+    {
+        if (s.mode != lastMode) { if (lastMode >= 0) { reset(); } lastMode = s.mode; }
+        if (primed) { dR.set (s.depth, n); xR.set (s.x, n); mR.set (s.mix, n); }
+        else { dR.reset (s.depth); xR.reset (s.x); mR.reset (s.mix); primed = true; }
+        if (s.lockPhase) phase = s.phase - std::floor (s.phase);
+        const double inc = s.rateHz / sr;
+        for (int k = 0; k < n; ++k)
+        {
+            const float depth = dR.next(), xx = xR.next(), mix = mR.next();
+            phase += inc; phase -= std::floor (phase);
+            const double th = twoPi * phase;
+            const float dl = L[k], dr = R[k];
+            float wl = dl, wr = dr;
+            const bool update = (count++ & 7) == 0;   // filter coefficients every 8 samples
+            switch (s.mode)
+            {
+                case Orbit:
+                {
+                    const float px = (float) std::sin (th) * depth, py = (float) std::cos (th);
+                    const float mid = 0.5f * (dl + dr), side = 0.5f * (dl - dr);
+                    lines[0].push (mid);
+                    const float a = (px + 1.0f) * 0.25f * (float) pi;
+                    const float gL = 1.41421356f * std::cos (a), gR = 1.41421356f * std::sin (a);
+                    const float behind = std::max (0.0f, -py) * depth;
+                    const double base = 0.0012 * sr + 0.0015 * sr * depth * 0.5 * (1.0 - py);   // further away behind: Doppler
+                    const double itd = 0.00065 * sr * xx * std::abs (px);
+                    float yl = lines[0].read (base + (px > 0.0f ? itd : 0.0)) * gL;
+                    float yr = lines[0].read (base + (px < 0.0f ? itd : 0.0)) * gR;
+                    if (update)
+                    {
+                        // the far ear is shadowed by the head, everything behind is a little darker
+                        const double back = std::pow (0.35, (double) behind);
+                        const double far = std::pow (0.1, (double) (xx * std::abs (px)));
+                        coef[0] = OnePole::coefFor (18000.0 * back * (px > 0.0f ? far : 1.0), sr);
+                        coef[1] = OnePole::coefFor (18000.0 * back * (px < 0.0f ? far : 1.0), sr);
+                    }
+                    const float g = 1.0f - 0.25f * behind;
+                    yl = lp[0].lp (yl, coef[0]) * g;
+                    yr = lp[1].lp (yr, coef[1]) * g;
+                    wl = yl + side; wr = yr - side;
+                    break;
+                }
+                case Phaser:
+                {
+                    if (update)
+                        for (int c = 0; c < 2; ++c)
+                        {
+                            const double f = 400.0 * std::exp2 (3.0 * depth * std::sin (th - c * 0.5 * pi));
+                            const double t = std::tan (pi * std::min (f, 0.45 * sr) / sr);
+                            apA[c] = (float) ((t - 1.0) / (t + 1.0));
+                        }
+                    const float fb = 0.85f * xx;
+                    float in[2] = { dl, dr }, out[2];
+                    for (int c = 0; c < 2; ++c)
+                    {
+                        float v = in[c] + fb * apOut[c];
+                        for (int st = 0; st < 6; ++st)
+                        {
+                            const float y = apA[c] * v + ap[c][st];
+                            ap[c][st] = v - apA[c] * y;
+                            v = y;
+                        }
+                        apOut[c] = ceilingClip (v, 2.0f);
+                        out[c] = 0.65f * (in[c] + v);   // dry + shifted: the notches (a little louder for the lost energy)
+                    }
+                    wl = out[0]; wr = out[1];
+                    break;
+                }
+                case Ensemble:
+                {
+                    fast += 6.2 / sr; fast -= std::floor (fast);
+                    const float mid = 0.5f * (dl + dr), side = 0.5f * (dl - dr);
+                    lines[0].push (mid);
+                    float sl = 0.0f, srr = 0.0f;
+                    for (int j = 0; j < 3; ++j)
+                    {
+                        const double off = j * twoPi / 3.0;
+                        const double d = 0.007 * sr + depth * (0.0022 * sr * std::sin (th + off) + 0.00025 * sr * std::sin (twoPi * fast + off));
+                        const float v = lines[0].read (d);
+                        const float p = (float) (j - 1) * xx;   // -x, 0, +x
+                        sl += v * (1.0f - p);
+                        srr += v * (1.0f + p);
+                    }
+                    wl = sl * 0.42f + side * 0.6f;
+                    wr = srr * 0.42f - side * 0.6f;
+                    break;
+                }
+                case Tremolo:
+                {
+                    auto shape = [] (double a) { return (float) (std::tanh (1.8 * std::sin (a)) / std::tanh (1.8)); };
+                    const float comp = 1.0f / (1.0f - 0.35f * depth);
+                    const float gl = 1.0f - depth * (0.5f - 0.5f * shape (th));
+                    const float gr = 1.0f - depth * (0.5f - 0.5f * shape (th + pi * xx));
+                    wl = dl * gl * comp; wr = dr * gr * comp;
+                    break;
+                }
+                default:   // Rotor
+                {
+                    // X sets the speed (slow 0.8 Hz .. fast 6.8 Hz for the horn), reached with inertia
+                    const double target = 0.8 * std::pow (6.8 / 0.8, (double) clampf ((xx - 0.35f) / 0.3f, 0.0f, 1.0f));
+                    hornHz += (target - hornHz) * (1.0 - std::exp (-1.0 / (0.8 * sr)));
+                    drumHz += (0.85 * target - drumHz) * (1.0 - std::exp (-1.0 / (3.5 * sr)));
+                    horn += hornHz / sr; horn -= std::floor (horn);
+                    drum += drumHz / sr; drum -= std::floor (drum);
+                    const float mid = 0.5f * (dl + dr);
+                    const float c800 = OnePole::coefFor (800.0, sr);
+                    const float low = lp[1].lp (lp[0].lp (mid, c800), c800), high = mid - low;
+                    lines[0].push (high);
+                    float out[2];
+                    for (int c = 0; c < 2; ++c)
+                    {
+                        const double hA = twoPi * horn + c * 0.5 * pi, dA = twoPi * drum + c * 0.5 * pi;
+                        const float h = lines[0].read (0.0003 * sr + 0.0006 * sr * depth * (1.0 + std::sin (hA)))
+                                        * (1.0f - 0.35f * depth * (float) (0.5 - 0.5 * std::cos (hA)));
+                        const float d = low * (1.0f - 0.25f * depth * (float) (0.5 + 0.5 * std::sin (dA)));
+                        out[c] = 1.15f * (h + d);
+                    }
+                    wl = out[0]; wr = out[1];
+                    break;
+                }
+            }
+            L[k] = dl * (1.0f - mix) + wl * mix;
+            R[k] = dr * (1.0f - mix) + wr * mix;
+        }
+    }
+
+private:
+    double sr = 48000.0, phase = 0.0, fast = 0.0, horn = 0.0, drum = 0.0, hornHz = 0.8, drumHz = 0.7;
+    DelayLine lines[1];
+    OnePole lp[2];
+    float coef[2] { 1.0f, 1.0f }, ap[2][6] {}, apA[2] {}, apOut[2] {};
+    Ramp dR, xR, mR;
+    unsigned count = 0;
+    int lastMode = -1;
+    bool primed = false;
+};
+
+//==============================================================================
 // Schroeder all-pass: smears a sound in time without colouring it (diffusion)
 struct Allpass
 {

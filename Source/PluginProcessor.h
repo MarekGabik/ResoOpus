@@ -138,6 +138,9 @@ private:
     dsp::Ramp cutoffRamp[2], resRamp, driveRamp, cutoffRampB[2], resRampB, driveRampB;
     bool filterPrimed = false;
     dsp::Echo echo;
+    dsp::Motion motion;
+    double motionBeats = 0.0;
+    bool motionWasOn = false;   // song position (quarter notes) at the start of the chunk, for MOTION in tempo
     dsp::Space space;
     dsp::Rng fxRng;
     float echoPrev[chunkSize] {};             // last chunk's echo, fed into the voices (TO VOICES)

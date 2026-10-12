@@ -55,7 +55,7 @@
       <h1>Reso<span class="q">Opus</span></h1>
       <p class="lede">Drone syntezátor pro filmové, ambientní a experimentální plochy. Čtyři ručně a mikrotonálně laděné hlasy v pěti typech hrají hned po vložení do stopy. Uprostřed je knob GRAVITY, který vede od čistého ladění k chaosu. K tomu polyfonní LEAD s filtrem pro každou notu, dva filtry s routingem, ozvěna, prostor a stránka MOD se dvěma LFO, náhodným zdrojem, modulační obálkou a maticí modulací. Hrát jde jen drone, jen lead, nebo obojí.</p>
       <div class="meta">
-        <span>VST3 · Windows / macOS</span><span>AU · macOS</span><span>instrument · drone + lead (až 8 hlasů)</span><span>Ableton Live 11 / 12</span><span>4 hlasy · 5 typů · 24 modulací · 65 presetů</span>
+        <span>VST3 · Windows / macOS</span><span>AU · macOS</span><span>instrument · drone + lead (až 8 hlasů)</span><span>Ableton Live 11 / 12</span><span>4 hlasy · 5 typů · 24 modulací · 70 presetů</span>
       </div>
     </header>
 
@@ -68,11 +68,11 @@
       <tbody>
         <tr><td>DRONE</td><td>Čtyři hlasy (typ, ladění, HOLD, PAN, hlasitost, osciloskop), GRAVITY, detail vybraného hlasu, MASTER (PITCH, DUST, GRIT, VOLUME, FILL).</td></tr>
         <tr><td>LEAD</td><td>Melodická vrstva: oscilátory, filtr s obálkou pro každou notu, obálka hlasitosti, polyfonie, glide, vibrato, ARP.</td></tr>
-        <tr><td>FX</td><td>FILTER A a B s routingem, ECHO a SPACE.</td></tr>
+        <tr><td>FX</td><td>FILTER A a B s routingem, ECHO, MOTION a SPACE.</td></tr>
         <tr><td>MOD</td><td>LFO 1, LFO 2, RANDOM, MOD ENV a matice všech modulací.</td></tr>
       </tbody>
     </table></div>
-    <div class="chain"><span>4 hlasy</span><i>⇄</i><span class="me">GRAVITY · DUST</span><i>+</i><span>LEAD (1–8 not)</span><i>→</i><span>FILTER A / B</span><i>→</i><span>ECHO</span><i>→</i><span>SPACE</span><i>→</i><span>MASTER → limiter</span></div>
+    <div class="chain"><span>4 hlasy</span><i>⇄</i><span class="me">GRAVITY · DUST</span><i>+</i><span>LEAD (1–8 not)</span><i>→</i><span>FILTER A / B</span><i>→</i><span>MOTION</span><i>→</i><span>ECHO</span><i>→</i><span>SPACE</span><i>→</i><span>MASTER → limiter</span></div>
     <h3>Drone, lead, nebo obojí</h3>
     <p>V horní liště jsou u záložek <strong>DRONE</strong> a <strong>LEAD</strong> vypínače (zlatá = hraje):</p>
     <div class="table-wrap"><table>
@@ -267,7 +267,7 @@
     </table></div>
     <p>Při plné rezonanci si Band Pass udrží hlasitost, úzké pásmo tedy nezmizí, ale zpívá. Stejných sedm modelů má i filtr LEADu.</p>
     <h3>ECHO</h3>
-    <figure class="shot"><img src="img/echo.jpg" alt="ECHO" width="1172" height="546" loading="lazy"></figure>
+    <figure class="shot"><img src="img/echo.jpg" alt="ECHO" width="780" height="546" loading="lazy"></figure>
     <p>Pět režimů (<strong>MODE</strong>) se stejnými knoby. Popisky knobů se mění podle toho, co v daném režimu dělají.</p>
     <div class="table-wrap"><table>
       <thead><tr><th>MODE</th><th>TIME 1 · TIME 2 · MOD</th><th>Zvuk</th></tr></thead>
@@ -283,8 +283,21 @@
       <li><strong>FEEDBACK</strong>: nad ~55 % začne echo samo zpívat. Smyčka je omezená, takže hlasitost neuteče. Šum pásku a LO-FI se ztiší spolu s ozvěnou, takže echo v tichu úplně utichne.</li>
       <li><strong>TO VOICES</strong>: ozvěna se vrací do hlasů jako FM. Viz GRAVITY.</li>
     </ul>
+    <h3>MOTION</h3>
+    <figure class="shot"><img src="img/motion-fx.jpg" alt="MOTION" width="780" height="546" loading="lazy"><figcaption>MOTION s presetem Orbiting Choir: ORBIT, zvuk pomalu obíhá kolem hlavy.</figcaption></figure>
+    <p>Pohyb v prostoru. Zapíná se tlačítkem <strong>ON</strong> a stojí za filtry, před ECHO a SPACE, takže ozvěna i dozvuk cestují s ním. <strong>RATE</strong> 0,02–10 Hz, nebo se <strong>SYNC</strong> <strong>DIVISION</strong> v tempu (při hrajícím transportu sedí na mřížku skladby), <strong>DEPTH</strong>, třetí knob podle režimu a <strong>MIX</strong>. RATE, DEPTH, X i MIX jdou modulovat v matici.</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>MODE</th><th>X</th><th>Co dělá</th></tr></thead>
+      <tbody>
+        <tr><td>ORBIT</td><td>WIDTH</td><td>Zvuk obíhá kolem posluchače. Vzdálenější ucho ho slyší o kousek později (až 0,65 ms) a tmavší, vzadu je tišší a tmavší a měnící se vzdálenost jemně ohýbá výšku (Doppler). Šířka sterea vstupu zůstává. Nejlépe na sluchátkách.</td></tr>
+        <tr><td>PHASER</td><td>FEEDBACK</td><td>Šest all-pass stupňů na každé straně, zářezy se houpají ±3 oktávy kolem 400 Hz, pravá strana o čtvrt periody za levou.</td></tr>
+        <tr><td>ENSEMBLE</td><td>SPREAD</td><td>Tři kopie se houpají pomalu (RATE) a rychle (6,2 Hz) o třetinu periody od sebe, jako chorus starých smyčcových syntezátorů. SPREAD je rozestaví do sterea.</td></tr>
+        <tr><td>TREMOLO</td><td>STEREO</td><td>Hlasitost pulzuje zaobleným sinusem. STEREO 0 = obě strany spolu, 100 = strany se střídají.</td></tr>
+        <tr><td>ROTOR</td><td>SPEED</td><td>Rotující reproduktor: trychtýř nad 800 Hz a buben pod ním, oba se houpou (Doppler a hlasitost) pro dva mikrofony. SPEED pod polovinou pomalu, nad ní rychle, a otáčky se mění se setrvačností skutečného přístroje (trychtýř ~0,8 s, buben ~3,5 s). RATE se nepoužívá. Zkus mod wheel na SPEED (preset Rotor Organ).</td></tr>
+      </tbody>
+    </table></div>
     <h3>SPACE</h3>
-    <figure class="shot"><img src="img/space.jpg" alt="SPACE" width="1172" height="546" loading="lazy"></figure>
+    <figure class="shot"><img src="img/space.jpg" alt="SPACE" width="784" height="546" loading="lazy"></figure>
     <div class="table-wrap"><table>
       <thead><tr><th>Algoritmus</th><th>X · Y · Z</th><th>Zvuk</th></tr></thead>
       <tbody>
@@ -461,7 +474,7 @@
 
 
     <h2 id="presety"><span class="num">12</span>Tovární presety</h2>
-    <p>65 presetů v sedmi kategoriích. Otevři prohlížeč klikem na název presetu, nebo procházej šipkami ◀ ▶.</p>
+    <p>70 presetů v sedmi kategoriích. Otevři prohlížeč klikem na název presetu, nebo procházej šipkami ◀ ▶.</p>
     <div class="table-wrap"><table>
       <thead><tr><th>Preset</th><th>Na co a co otočit</th></tr></thead>
       <tbody>
@@ -484,6 +497,8 @@
         <tr><td>Nebula Organ</td><td>NEBULA s tabulkou ORGAN: mod wheel vytahuje rejstříky od flétny po plné varhany.</td></tr>
         <tr><td>Tape Monastery</td><td>Dva choiry přes ECHO TAPE: dvě hlavy na jedné páskové smyčce, každé opakování tmavší a houpavé. WOW = opotřebovaná páska, FEEDBACK nad 85 % rozezpívá smyčku.</td></tr>
         <tr><td>Throat Singers</td><td>Vrčící hluboký choir přes filtr VOWEL: LFO 1 pomalu otevírá hrdlo od U přes O k A a zpět. RESONANCE zostří samohlásky, MODE BAND z něj udělá ženu.</td></tr>
+        <tr><td>Orbiting Choir</td><td>MOTION ORBIT: choiry pomalu obíhají kolem hlavy, vzadu tmavší a vzdálenější. Nejlépe na sluchátkách, RATE = jak rychle, WIDTH = jak moc se uši liší.</td></tr>
+        <tr><td>Rotor Organ</td><td>Varhanní rejstříky NEBULA přes MOTION ROTOR: pomalu se točící reproduktor. Mod wheel nahoru a rozjede se na rychlé otáčky se setrvačností skutečného přístroje.</td></tr>
         <tr class="cat"><td colspan="2">Cinematic</td></tr>
         <tr><td>Slow Bloom</td><td>Ticho, dokud nehraješ: každá plate se rozvine během několika sekund a doznívá dvanáct sekund.</td></tr>
         <tr><td>Microtonal Glass</td><td>Choiry pár centů od sebe, pomalé zázněje jako skleněná harmonika.</td></tr>
@@ -499,6 +514,7 @@
         <tr><td>Poly Strings</td><td>LEAD v Poly 8 jako pomalá smyčcová plocha nad tichým dronem. Hraj akordy mimo plates.</td></tr>
         <tr><td>Vowel Choir</td><td>Hraj plates: MOD ENV otevírá samohlásku od O k E, zatímco akord sílí. Vzdálený ženský sbor, delší držení = jasnější samohlásky.</td></tr>
         <tr><td>Silver Halls</td><td>Jasné durové choiry, opakování s chorusem z ECHO MOD a vzdušný třpyt AURORY nad nimi. Na nadějné, otevřené scény, OCT UP (X) přidá světlo.</td></tr>
+        <tr><td>String Machine</td><td>Jasné choiry v oktávách přes MOTION ENSEMBLE: tři houpající se kopie jako chorus starých smyčcových syntezátorů, široké a plné. SPREAD = šířka.</td></tr>
         <tr class="cat"><td colspan="2">Textures</td></tr>
         <tr><td>Night Sirens</td><td>Pomalu kvílící siréna nad choirem a vzdálená dvoutónová siréna se šumem.</td></tr>
         <tr><td>Shortwave</td><td>Rádio mezi stanicemi: šumové sirény přes SCREAM band pass. CUTOFF = ladění.</td></tr>
@@ -513,6 +529,7 @@
         <tr><td>Broken Transmission</td><td>Sekaná siréna nad hlubokým choirem přes ECHO LO-FI: opakování ztrácejí bity a vzorkovací kmitočet a rozpadají se, COMET přidá ohranou pásku. DEGRADE = jak moc rozbité.</td></tr>
         <tr><td>Singing Bowls</td><td>Měkké pulsary rozeznívají v SATURNu tři tóny mís, STEPS je nechá putovat po pentatonice. Plates = úder do mísy, ROOM (Z) větší prostor.</td></tr>
         <tr><td>Rising Stairs</td><td>Hraj plates: každé opakování RUNNERu vystoupá o kvintu a rozpustí se v místnosti, schodiště do nebe. PITCH zapadá i do jiných intervalů od −12 do +12.</td></tr>
+        <tr><td>Phase Drift</td><td>MOTION PHASER pomalu projíždí dvěma jasnými choiry: zářezy plují jako mraky, vlevo a vpravo o čtvrt periody posunuté. FEEDBACK (X) je zostří.</td></tr>
         <tr class="cat"><td colspan="2">Orbits</td></tr>
         <tr><td>Gravity Well</td><td>Tlak prstu stáhne GRAVITY do TURBULENCE, po puštění se hlasy uklidní.</td></tr>
         <tr><td>Collapse</td><td>Všechny hlasy v kruhu za hranou: smyčka pulzuje sama. GRAVITY pod 85 % ji zkrotí.</td></tr>
@@ -537,6 +554,7 @@
         <tr><td>Morse Beacon</td><td>Siréna sekaná na pípnutí, pomalý maják a nízký drone. RATE = rychlost kódu.</td></tr>
         <tr><td>Heartbeat</td><td>Nízká siréna pomalu sekaná s podtónem: hluboký tep jako srdce nebo motor.</td></tr>
         <tr><td>Ping-Pong Arp</td><td>Drž akord mimo plates: zachycené arpeggio skáče vlevo a vpravo v ECHO PING-PONG (375 ms = osmina s tečkou při 120 BPM).</td></tr>
+        <tr><td>Tremolo Waves</td><td>MOTION TREMOLO v tempu (1/8): dron pulzuje a strany se střídají (STEREO 100 %). DEPTH = jemné vlny, nebo tvrdé sekání.</td></tr>
       </tbody>
     </table></div>
 

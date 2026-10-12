@@ -87,6 +87,7 @@ void ResoOpusProcessor::prepareToPlay (double sampleRate, int)
         voiceMod[v] = 0.0f;
     }
     echo.prepare (sr);
+    motion.prepare (sr);
     space.prepare (sr);
     for (int i = 0; i < maxLead; ++i) leads[i].prepare (sr * (1 << osIndex), 0x7a11u + (uint32_t) i * 131u);
     leadSusNum = 0; arpNote = -1; lastLeadPitch = -1.0;
@@ -305,6 +306,7 @@ void ResoOpusProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& mi
         for (auto& f : filters) f.reset();
         for (auto& f : filtersB) f.reset();
         echo.reset();
+        motion.reset();
         space.reset();
         echoPrevLen = 0;
         for (auto& d : dc) d.reset();
@@ -368,6 +370,7 @@ void ResoOpusProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& mi
 void ResoOpusProcessor::runMotion (double seconds)
 {
     const double beatsNow = chunkPpq;
+    motionBeats = beatsNow;
     chunkPpq += seconds * hostBpm / 60.0;
     for (int l = 0; l < 2; ++l)
     {
@@ -640,6 +643,22 @@ void ResoOpusProcessor::processChunk (AudioBuffer<float>& out, int start, int le
 
     // 6. effects at the base rate: DC blocker, ECHO, SPACE
     for (int i = 0; i < len; ++i) { outL[i] = dc[0].process (outL[i]); outR[i] = dc[1].process (outR[i]); }
+    const bool motionOn = curG[GP::mot_on] > 0.5f;
+    if (motionOn && ! motionWasOn) motion.reset();   // nothing old in its lines when it comes back
+    motionWasOn = motionOn;
+    if (motionOn)
+    {
+        // MOTION: after the filters, so ECHO and SPACE carry the movement
+        ::dsp::Motion::Settings ms;
+        const bool sync = curG[GP::mot_sync] > 0.5f;
+        const double beats = Mod::divisionBeats ((int) curG[GP::mot_div]);
+        ms.mode = (int) curG[GP::mot_mode];
+        ms.rateHz = sync ? hostBpm / 60.0 / beats : (double) curG[GP::mot_rate];
+        ms.lockPhase = sync && hostPlaying;
+        ms.phase = motionBeats / beats;
+        ms.depth = curG[GP::mot_depth] / 100.0f; ms.x = curG[GP::mot_x] / 100.0f; ms.mix = curG[GP::mot_mix] / 100.0f;
+        motion.process (outL, outR, len, ms);
+    }
     {
         ::dsp::Echo::Settings es;
         es.time1 = curG[GP::echo_time1]; es.time2 = curG[GP::echo_time2];

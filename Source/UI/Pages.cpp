@@ -895,7 +895,6 @@ FxPage::FxPage (ResoOpusProcessor& p) : Page (p)
     auto sm = [] (String lo, String hi, bool bi = false) { return range (lo, hi, bi, true); };
     const int rowH = 265, gap = 10, y2 = rowH + gap;
 
-    const int half = (width - 8) / 2;
     // FILTER A | ROUTING (what the filters do, live) | FILTER B
     const int side = 360, mid = width - 2 * side - 16;
     filterPanel = panel ("FILTER A", Palette::filter, { 0, 0, side, rowH }, -1, "GROWL 12 dB");
@@ -939,23 +938,37 @@ FxPage::FxPage (ResoOpusProcessor& p) : Page (p)
     filterBControls = { cutB, resB, drvB, modelB, modeB };
 
     // ECHO
-    echoPanel = panel ("ECHO", Palette::mixer, { 0, y2, half, rowH }, -1, "DUAL");
+    // ECHO | MOTION | SPACE
+    const int third = (width - 16) / 3;
+    echoPanel = panel ("ECHO", Palette::mixer, { 0, y2, third, rowH }, -1, "DUAL");
     echoSrc = new LedRadio (proc, "echo_self", "MOD SOURCE", { "SELF", "LFO" });
     owned.add (echoSrc);
-    auto* echoMode = new LedRadio (proc, "echo_mode", "MODE", { "DUAL", "TAPE", "PING-PONG", "LO-FI", "MOD" });
-    owned.add (echoMode);
     echoKnobs[0] = knob ("echo_time1", "TIME 1", Palette::mixer, sm ("5ms", "2s"));
     echoKnobs[1] = knob ("echo_time2", "TIME 2", Palette::mixer, sm ("5ms", "2s"));
     echoKnobs[2] = knob ("echo_mod", "MOD", Palette::mixer, sm ("0", "100"));
-    echoPanel->setGrid ({ 1.0f, 1.0f, 1.0f, 1.0f }, {
-        echoKnobs[0], echoKnobs[1],
-        knob ("echo_fb", "FEEDBACK", Palette::mixer, sm ("0", "MAX")),
-        knob ("echo_mix", "MIX", Palette::mixer, sm ("DRY", "WET")),
-        echoMode, echoKnobs[2], echoSrc,
+    auto* echoMode = new LedRadio (proc, "echo_mode", "MODE", { "DUAL", "TAPE", "PING-PONG", "LO-FI", "MOD" });
+    owned.add (echoMode);
+    echoPanel->setGrid ({ 1.45f, 1.0f, 1.0f, 1.0f }, {
+        echoMode, echoKnobs[0], echoKnobs[1], knob ("echo_fb", "FEEDBACK", Palette::mixer, sm ("0", "MAX")),
+        echoSrc, echoKnobs[2], knob ("echo_mix", "MIX", Palette::mixer, sm ("DRY", "WET")),
         knob ("echo_voices", "TO VOICES", Palette::mixer, sm ("0", "100")) });
 
+    // MOTION: movement in space between the filters and ECHO
+    motionPanel = panel ("MOTION", Palette::motion, { third + 8, y2, third, rowH }, -1, "OFF");
+    auto* motMode = new LedRadio (proc, "mot_mode", "MODE", { "ORBIT", "PHASER", "ENSEMBLE", "TREMOLO", "ROTOR" });
+    owned.add (motMode);
+    auto* motOn = static_cast<Component*> (owned.add (new LedButton (proc, "mot_on", "ON")));
+    motSync = static_cast<Component*> (owned.add (new LedButton (proc, "mot_sync", "SYNC")));
+    motRate = knob ("mot_rate", "RATE", Palette::motion, sm (".02", "10"));
+    motDiv = knob ("mot_div", "DIVISION", Palette::motion, sm ("8b", "1/8"));
+    motX = knob ("mot_x", "WIDTH", Palette::motion, sm ("0", "100"));
+    auto* motDepth = knob ("mot_depth", "DEPTH", Palette::motion, sm ("0", "100"));
+    auto* motMix = knob ("mot_mix", "MIX", Palette::motion, sm ("DRY", "WET"));
+    motionPanel->setGrid ({ 1.3f, 1.0f, 1.0f, 1.0f }, { motMode, motRate, motDiv, motDepth, motOn, motSync, motX, motMix });
+    motionControls = { motMode, motRate, motDiv, motDepth, motSync, motX, motMix };
+
     // SPACE
-    spacePanel = panel ("SPACE", Palette::fx2, { half + 8, y2, width - half - 8, rowH }, -1, "VOID");
+    spacePanel = panel ("SPACE", Palette::fx2, { 2 * (third + 8), y2, width - 2 * (third + 8), rowH }, -1, "VOID");
     auto* algo = new LedRadio (proc, "space_algo", "ALGORITHM", { "AURORA", "VOID", "RUNNER", "SATURN", "COMET" });
     algo->setTooltip (Params::findDef ("space_algo")->tip);
     owned.add (algo);
@@ -1001,6 +1014,27 @@ void FxPage::refreshLive()
         for (int i = 0; i < 3; ++i) echoKnobs[i]->setLabel (names[m][i]);
         echoPanel->setRightText (Params::findDef ("echo_mode")->choices[m].toUpperCase());
         echoSrc->setAlpha (m == 0 || m == 2 ? 1.0f : 0.35f);   // SELF / LFO only steer DUAL and PING-PONG
+    }
+    {
+        // MOTION: dimmed while off; RATE or DIVISION by SYNC; the ROTOR takes its speed from X; X named per mode
+        const bool on = proc.getParamReal ("mot_on") > 0.5f, sync = proc.getParamReal ("mot_sync") > 0.5f;
+        const int mm = jlimit (0, 4, roundToInt (proc.getParamReal ("mot_mode")));
+        auto alpha = [] (Component* c, float a) { if (std::abs (c->getAlpha() - a) > 0.01f) c->setAlpha (a); };
+        for (auto* c : motionControls) alpha (c, on ? 1.0f : 0.4f);
+        if (on)
+        {
+            alpha (motRate, mm == 4 ? 0.35f : (sync ? 0.35f : 1.0f));
+            alpha (motDiv, mm == 4 ? 0.35f : (sync ? 1.0f : 0.35f));
+            alpha (motSync, mm == 4 ? 0.35f : 1.0f);
+        }
+        const int key = (on ? 10 : 0) + mm;
+        if (key != shownMotion)
+        {
+            shownMotion = key;
+            static const char* xNames[5] = { "WIDTH", "FEEDBACK", "SPREAD", "STEREO", "SPEED" };
+            motX->setLabel (xNames[mm]);
+            motionPanel->setRightText (on ? Params::findDef ("mot_mode")->choices[mm].toUpperCase() : String ("OFF"));
+        }
     }
     const int a = roundToInt (proc.getParamReal ("space_algo"));
     if (a == shownAlgo) return;

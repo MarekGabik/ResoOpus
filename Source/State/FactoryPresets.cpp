@@ -479,6 +479,43 @@ const std::vector<FactoryPreset>& factoryPresets()
             { "lead_flt_model", 1.0f }, { "lead_flt_cutoff", 1800.0f }, { "lead_flt_res", 3.0f }, { "lead_flt_env", 30.0f },
             { "echo_mode", 2.0f }, { "echo_time1", 0.375f }, { "echo_time2", 0.375f }, { "echo_fb", 45.0f }, { "echo_mix", 30.0f },
             { "v1_hold", 45.0f }, { "v2_hold", 30.0f }, { "v3_type", 0.0f }, { "v4_type", 0.0f } }, {} },
+
+        // ---- MOTION
+        { "Orbiting Choir", "Drones",
+          "MOTION ORBIT: the choirs slowly circle around your head, darker and further away behind you. Best on headphones; RATE = how fast, WIDTH = how far apart the ears hear it.",
+          { { "v1_hold", 70.0f }, { "v2_hold", 55.0f }, { "v3_type", 0.0f }, { "v4_type", 0.0f },
+            { "mot_on", 1.0f }, { "mot_mode", 0.0f }, { "mot_rate", 0.06f }, { "mot_depth", 85.0f }, { "mot_x", 70.0f },
+            { "space_algo", 1.0f }, { "space_z", 65.0f }, { "space_blend", 40.0f } }, {} },
+
+        { "Rotor Organ", "Drones",
+          "NEBULA organ stops through MOTION ROTOR: a rotating speaker turning slowly. Push the mod wheel up and it speeds up to fast, with the inertia of the real thing.",
+          { { "v1_type", 5.0f }, { "v1_n_table", 1.0f }, { "v1_n_pos", 60.0f }, { "v1_tune", 50.0f }, { "v1_hold", 65.0f },
+            { "v2_type", 5.0f }, { "v2_n_table", 1.0f }, { "v2_n_pos", 40.0f }, { "v2_tune", 57.0f }, { "v2_hold", 50.0f },
+            { "v3_type", 0.0f }, { "v4_type", 0.0f },
+            { "mot_on", 1.0f }, { "mot_mode", 4.0f }, { "mot_x", 20.0f }, { "mot_depth", 80.0f },
+            { "space_algo", 1.0f }, { "space_z", 40.0f }, { "space_blend", 25.0f } },
+          { { Mod::ModWheel, "mot_x", 0.7f, 0, 50.0f, 0, false } } },
+
+        { "String Machine", "Cinematic",
+          "Bright choirs in octaves through MOTION ENSEMBLE: three swinging copies like the chorus of old string machines, wide and lush. SPREAD = how wide.",
+          { { "v1_tune", 50.0f }, { "v1_int2", 12.0f }, { "v1_int3", 7.0f }, { "v1_int4", 19.0f }, { "v1_int5", 24.0f }, { "v1_on4", 1.0f }, { "v1_on5", 1.0f },
+            { "v2_tune", 57.0f }, { "v2_int2", 12.0f }, { "v2_int3", 4.0f }, { "v2_int4", 16.0f },
+            { "v1_hold", 55.0f }, { "v2_hold", 40.0f }, { "v3_type", 0.0f }, { "v4_type", 0.0f }, { "v1_attack", 3.0f }, { "v2_attack", 4.0f },
+            { "flt_model", 4.0f }, { "flt_cutoff", 4000.0f },
+            { "mot_on", 1.0f }, { "mot_mode", 2.0f }, { "mot_rate", 0.6f }, { "mot_depth", 70.0f }, { "mot_x", 80.0f },
+            { "space_algo", 0.0f }, { "space_x", 30.0f }, { "space_y", 0.0f }, { "space_z", 70.0f }, { "space_blend", 35.0f } }, {} },
+
+        { "Phase Drift", "Textures",
+          "MOTION PHASER sweeps slowly through two bright choirs: the notches drift like clouds, left and right a quarter apart. FEEDBACK (X) sharpens them.",
+          { { "v1_hold", 70.0f }, { "v2_hold", 55.0f }, { "v3_type", 0.0f }, { "v4_type", 0.0f }, { "v2_tune", 52.0f },
+            { "mot_on", 1.0f }, { "mot_mode", 1.0f }, { "mot_rate", 0.05f }, { "mot_depth", 90.0f }, { "mot_x", 70.0f },
+            { "space_algo", 1.0f }, { "space_z", 60.0f }, { "space_blend", 35.0f } }, {} },
+
+        { "Tremolo Waves", "Pulse",
+          "MOTION TREMOLO in tempo (1/8): the drone pulses and the sides alternate (STEREO 100 %). Turn DEPTH for gentle waves or hard chops.",
+          { { "v1_hold", 70.0f }, { "v2_hold", 55.0f }, { "v3_hold", 30.0f }, { "v4_type", 0.0f },
+            { "mot_on", 1.0f }, { "mot_mode", 3.0f }, { "mot_sync", 1.0f }, { "mot_div", 6.0f }, { "mot_depth", 75.0f }, { "mot_x", 100.0f },
+            { "echo_mode", 2.0f }, { "echo_time1", 0.375f }, { "echo_time2", 0.375f }, { "echo_fb", 30.0f }, { "echo_mix", 20.0f } }, {} },
     };
     return presets;
 }
