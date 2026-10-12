@@ -60,7 +60,8 @@ set(RESOOPUS_SOURCES
     Source/UI/Keyboard.cpp
     Source/UI/Bars.cpp
     Source/UI/PresetBrowser.cpp
-    Source/UI/ModMatrix.cpp)
+    Source/UI/ModMatrix.cpp
+    Source/UI/FilterView.cpp)
 
 target_sources(ResoOpus PRIVATE ${RESOOPUS_SOURCES})
 target_include_directories(ResoOpus PRIVATE Source)

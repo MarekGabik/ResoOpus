@@ -4,6 +4,7 @@
 #include "Params/Parameters.h"
 #include <juce_dsp/juce_dsp.h>
 #include "ModMatrix.h"
+#include "FilterView.h"
 
 class ResoOpusProcessor;
 
@@ -107,9 +108,11 @@ private:
     ModulePanel* spacePanel = nullptr;
     ModulePanel* filterPanel = nullptr;
     ModulePanel* filterBPanel = nullptr;
+    ModulePanel* routingPanel = nullptr;
+    FilterRoutingView* filterView = nullptr;
     juce::Label* spaceInfo = nullptr;
     juce::Array<juce::Component*> filterBControls;
-    int shownAlgo = -1, shownModel = -1, shownModelB = -1;
+    int shownAlgo = -1, shownModel = -1, shownModelB = -1, shownRoute = -2;
 };
 
 // MOD: the motion sources (LFO 1, LFO 2, RANDOM, MOD ENV) on top, the modulation matrix below

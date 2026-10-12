@@ -241,8 +241,9 @@
     <h2 id="fx"><span class="num">08</span>Stránka FX</h2>
     <figure class="shot"><img src="img/fx.jpg" alt="Stránka FX" width="2400" height="1552" loading="lazy"><figcaption>Stránka <strong>FX</strong> s presetem Stereo Filters: dva pásmové filtry v routingu Stereo, každý houpaný jiným LFO.</figcaption></figure>
     <h3>FILTER A a FILTER B</h3>
-    <figure class="shot"><img src="img/filters.jpg" alt="FILTER A a B" width="1548" height="546" loading="lazy"></figure>
+    <figure class="shot"><img src="img/filters.jpg" alt="FILTER A, ROUTING a FILTER B" width="2344" height="546" loading="lazy"><figcaption>FILTER A (zlatý), ROUTING s grafem a FILTER B (fialový). Graf ukazuje, co filtry s modulací právě dělají: preset Stereo Filters, A vlevo a B vpravo, oba houpané LFO.</figcaption></figure>
     <p>Dva stereo filtry pro celý nástroj, běží s oversamplingem. Oba mají <strong>CUTOFF</strong> 20 Hz–20 kHz, <strong>RESONANCE</strong> 0–10, <strong>DRIVE</strong> 0–10, <strong>MODEL</strong> a <strong>MODE</strong> (low pass, band pass, high pass; s ikonami). <strong>SPREAD</strong> u A rozladí levý a pravý filtr proti sobě. FILTER B se zapíná tlačítkem <strong>ON</strong>.</p>
+    <p>Mezi filtry je panel <strong>ROUTING</strong>. Graf v něm je skutečná odezva obou filtrů, změřená ze stejného kódu, který hraje, včetně modulace: když LFO houpe cutoffem, křivka se hýbe. Zlatá křivka je A, fialová B, bílá je výsledek podle routingu (Serial = A × B, Parallel = A + B). U Split a Stereo jsou křivky popsané DRONE / LEAD nebo LEFT / RIGHT. Pod grafem je přepínač ROUTING a schéma, kudy signál teče.</p>
     <div class="table-wrap"><table>
       <thead><tr><th>ROUTING</th><th>Co dělá</th></tr></thead>
       <tbody>
@@ -255,16 +256,16 @@
     <div class="table-wrap"><table>
       <thead><tr><th>Model</th><th>Strmost</th><th>Charakter</th></tr></thead>
       <tbody>
-        <tr><td>GROWL</td><td class="num">12 dB</td><td>Špinavý state-variable filtr se saturací uvnitř. Při hlasitém vstupu a vyšší rezonanci vrčí.</td></tr>
-        <tr><td>LADDER</td><td class="num">24 dB</td><td>Tranzistorový ladder: kulatý, při vysoké rezonanci trochu ubere basy a zpívá.</td></tr>
-        <tr><td>DIODE</td><td class="num">24 dB</td><td>Diodový ladder s provázanými stupni: gumový, „squelchy“ zvuk, rezonance spíš kouše, než zvoní.</td></tr>
-        <tr><td>SCREAM</td><td class="num">12 dB</td><td>Rezonance prochází ořezem (clipping): ostrý, křičí a na maximu piští.</td></tr>
-        <tr><td>SILK</td><td class="num">12 dB</td><td>Čistý a hladký, jemně saturuje jen vstup. Na klidné plochy.</td></tr>
+        <tr><td>GROWL</td><td class="num">12 dB</td><td>Op-amp state variable, jehož integrátory se ořezávají. Basy drží při jakékoli rezonanci. DRIVE ohýbá vlnu nesouměrně (sudé harmonické, vrčí). Na vrcholu rezonance se sám rozezní zrnitým tónem.</td></tr>
+        <tr><td>LADDER</td><td class="num">24 dB</td><td>Tranzistorový ladder: kulatý a teplý. S rezonancí ubývají basy (asi o 7 dB), na vrcholu se rozezní čistým sinusem. DRIVE přidává liché harmonické.</td></tr>
+        <tr><td>DIODE</td><td class="num">24 dB</td><td>Diodový ladder: gumová rezonance, která se s hlasitostí stlačuje a bere basy. Diody ořezávají nesouměrně (sudé i liché harmonické). Sám se nerozezní, rezonance spíš kouše, než zvoní.</td></tr>
+        <tr><td>SCREAM</td><td class="num">12 dB</td><td>Sallen-Key s diodami v rezonanci: agresivní, s drivem kouše ještě víc. Od rezonance ~9,3 křičí a rozezní se ostrým, skoro obdélníkovým tónem. DRIVE ořezává nejtvrději.</td></tr>
+        <tr><td>SILK</td><td class="num">12 dB</td><td>Čistý digitální filtr: lineární, rezonance nezávisí na hlasitosti a nepřidává harmonické. Velmi úzký, ale sám se nerozezní. DRIVE jen tlačí do měkkého stropu.</td></tr>
       </tbody>
     </table></div>
-    <p>Při plné rezonanci si Band Pass udrží hlasitost, úzké pásmo tedy nezmizí, ale zpívá.</p>
+    <p>Při plné rezonanci si Band Pass udrží hlasitost, úzké pásmo tedy nezmizí, ale zpívá. Stejných pět modelů má i filtr LEADu.</p>
     <h3>ECHO</h3>
-    <figure class="shot"><img src="img/echo.jpg" alt="ECHO" width="800" height="546" loading="lazy"></figure>
+    <figure class="shot"><img src="img/echo.jpg" alt="ECHO" width="1172" height="546" loading="lazy"></figure>
     <ul>
       <li>Dvě linky (<strong>TIME 1</strong> vlevo, <strong>TIME 2</strong> vpravo, 5 ms–2 s) s křížovou zpětnou vazbou. Změna času klouže jako u pásky.</li>
       <li><strong>FEEDBACK</strong>: nad ~55 % začne echo samo zpívat. Smyčka je omezená, takže hlasitost neuteče.</li>
@@ -272,7 +273,7 @@
       <li><strong>TO VOICES</strong>: ozvěna se vrací do hlasů jako FM. Viz GRAVITY.</li>
     </ul>
     <h3>SPACE</h3>
-    <figure class="shot"><img src="img/space.jpg" alt="SPACE" width="776" height="546" loading="lazy"></figure>
+    <figure class="shot"><img src="img/space.jpg" alt="SPACE" width="1172" height="546" loading="lazy"></figure>
     <div class="table-wrap"><table>
       <thead><tr><th>Algoritmus</th><th>X · Y · Z</th><th>Zvuk</th></tr></thead>
       <tbody>
@@ -288,7 +289,7 @@
     <h2 id="motion"><span class="num">09</span>Stránka MOD</h2>
     <figure class="shot"><img src="img/mod-page.jpg" alt="Stránka MOD s presetem Lunar Tide" width="2400" height="1552" loading="lazy"><figcaption>Stránka <strong>MOD</strong> s presetem <strong>Lunar Tide</strong>: LFO 1 houpe GRAVITY, LFO 2 otevírá FILTER A. Číslo u záložky MOD je počet modulací.</figcaption></figure>
     <p>Všechny zdroje pohybu a všechny modulace jsou na jedné stránce (záložka <strong>MOD</strong>, klávesa <kbd>4</kbd>). Nahoře jsou čtyři zdroje, pod nimi matice.</p>
-    <figure class="shot"><img src="img/motion.jpg" alt="LFO 1, LFO 2, RANDOM, MOD ENV" width="2344" height="488" loading="lazy"><figcaption>Barevná pilulka vpravo v hlavičce je „kabel“: chyť ji a pusť na libovolný knob. Číslo v ní říká, kolik modulací zdroj už má. Klikem je zobrazíš v matici.</figcaption></figure>
+    <figure class="shot"><img src="img/motion.jpg" alt="LFO 1, LFO 2, RANDOM, MOD ENV" width="2344" height="552" loading="lazy"><figcaption>Barevná pilulka vpravo v hlavičce je „kabel“: chyť ji a pusť na libovolný knob. Číslo v ní říká, kolik modulací zdroj už má. Klikem je zobrazíš v matici.</figcaption></figure>
     <div class="table-wrap"><table>
       <thead><tr><th>Zdroj</th><th>Ovladače</th></tr></thead>
       <tbody>

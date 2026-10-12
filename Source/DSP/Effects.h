@@ -29,7 +29,7 @@ public:
     enum Model { Growl = 0, Ladder, Diode, Scream, Silk, numModels };
     enum Mode { LowPass = 0, BandPass, HighPass };
 
-    void reset() { s1 = s2 = 0.0f; for (auto& z : st) z = 0.0f; for (auto& z : dz) z = 0.0; dz4 = 0.0; clipPrev = 0.0f; }
+    void reset() { s1 = s2 = 0.0f; for (auto& z : st) z = 0.0f; for (auto& z : dz) z = 0.0; dz4 = 0.0; clipPrev = 0.0f; dc = 0.0f; }
 
     float process (float x, float g, float res, float drive, int mode, int model)
     {
@@ -38,21 +38,33 @@ public:
         {
             case Ladder: out = ladder (x * (1.0f + 3.0f * drive), g, res, mode); break;
             case Diode:  out = diode (x * (1.0f + 3.0f * drive), g, res, mode); break;
-            case Scream: out = scream (x * (1.0f + 4.0f * drive), g, res, mode); break;
+            case Scream: out = scream (x * (1.0f + 4.0f * drive), g, res, drive, mode); break;
             case Silk:   out = silk (x * (1.0f + 2.0f * drive), g, res, mode); break;
-            default:     out = growl (x * (1.0f + 3.0f * drive), g, res, mode); break;
+            default:     out = growl (x * (1.0f + 3.0f * drive), g, res, drive, mode); break;
         }
         if (! (std::abs (out) < 1.0e4f)) { reset(); out = 0.0f; }
-        return out / (1.0f + 1.5f * drive);
+        // the uneven clipping of GROWL and DIODE makes a little DC: an 8 Hz high pass takes it out
+        dc += dcC * (out - dc);
+        return (out - dc) / (1.0f + 1.5f * drive);
     }
 
 private:
     // integrators clip a little harder on one side (the "op-amp as integrator" character)
-    static float sat (float v) { return v > 0.0f ? 1.6f * tanhFast (v / 1.6f) : 1.4f * tanhFast (v / 1.4f); }
-
-    float growl (float x, float g, float res, int mode)
+    static float sat (float v) { return v > 0.0f ? 1.2f * tanhFast (v / 1.2f) : 1.0f * tanhFast (v / 1.0f); }
+    // an input stage that bends one half of the wave more than the other: even harmonics, a warm growl
+    static float asymDrive (float v)
     {
-        const float k = 2.0f - 1.97f * res;                  // damping: 2 (none) .. 0.03 (near self-oscillation)
+        static const float b = 0.35f, tb = tanhFast (b), d = 1.0f - tb * tb;
+        return (tanhFast (v + b) - tb) / d;
+    }
+
+    // GROWL: op-amp state variable whose integrators clip. 12 dB, keeps the lows at any resonance; drive bends the
+    // wave asymmetrically (even harmonics); the damping goes slightly negative at the top, so it self-oscillates
+    // and the clipping integrators make that tone gritty
+    float growl (float x, float g, float res, float drive, int mode)
+    {
+        x += std::min (1.0f, 3.0f * drive) * (asymDrive (x) - x);   // DRIVE 0: clean, from 33 % fully bent
+        const float k = 2.0f - 2.2f * res * std::sqrt (res); // damping: 2 (none) .. -0.2 (self-oscillation, clipped hard)
         const float h = 1.0f / (1.0f + g * (g + k));
         const float hp = (x - (k + g) * s1 - s2) * h;
         const float v1 = g * hp;
@@ -63,13 +75,14 @@ private:
         s2 = lp + v2;
         // band pass: unity peak at low resonance; the saturated peak cannot grow, so the gain falls only slowly with
         // the damping (a narrow band keeps its level instead of fading away)
-        return mode == BandPass ? 2.0f * bp * std::pow (0.5f * k, 0.25f) : (mode == HighPass ? hp : lp);
+        return mode == BandPass ? 2.0f * bp * std::pow (0.5f * std::max (0.02f, k), 0.25f) : (mode == HighPass ? hp : lp);
     }
 
+    // SILK: a clean digital state variable. Linear (the resonance does not depend on the level, no harmonics) up to
+    // a soft ceiling, very narrow at the top but it never self-oscillates; drive only pushes into that ceiling
     float silk (float x, float g, float res, int mode)
     {
-        x = 1.5f * tanhFast (x / 1.5f);
-        const float k = 2.0f - 1.9f * res;
+        const float k = 2.0f - 1.95f * res;
         const float h = 1.0f / (1.0f + g * (g + k));
         const float hp = (x - (k + g) * s1 - s2) * h;
         const float v1 = g * hp;
@@ -79,14 +92,20 @@ private:
         const float lp = v2 + s2;
         s2 = lp + v2;
         const float y = mode == BandPass ? 2.0f * bp * std::pow (0.5f * k, 0.4f) : (mode == HighPass ? hp : lp);
-        return 1.2f * tanhFast (y / 1.2f);   // a harmonic right on the resonance must not jump out
+        // clean below 0.9, then a soft ceiling (a harmonic right on the resonance must not jump out)
+        const float a = std::abs (y);
+        return a < 0.9f ? y : std::copysign (0.9f + 0.4f * tanhFast ((a - 0.9f) / 0.4f), y);
     }
 
-    // 12 dB with a clipped resonance path: the damping is split into a linear part and a clipped positive feedback
-    // (one sample late), so the resonance compresses and screams instead of ringing cleanly
-    float scream (float x, float g, float res, int mode)
+    // SCREAM: Sallen-Key style 12 dB with diodes in the resonance path. The damping is split into a linear part and a
+    // clipped positive feedback (one sample late), so the resonance compresses and screams instead of ringing; the
+    // input clips symmetrically (strong odd harmonics) and the harder it is driven, the more the resonance bites
+    float scream (float x, float g, float res, float drive, int mode)
     {
-        const float fbk = 2.12f * std::pow (res, 1.6f);    // clipped feedback, beyond 2 = self-oscillation
+        x += std::min (1.0f, 3.0f * drive) * (x / std::sqrt (1.0f + x * x) - x);
+        // clipped feedback, beyond 2 = self-oscillation (from about 9.3 on the knob, hard at 10)
+        const float r4 = res * res * res * res;
+        const float fbk = 1.95f * res * (0.7f + 0.3f * res) + 0.65f * r4 * r4 * r4;
         const float k = 2.0f;
         const float h = 1.0f / (1.0f + g * (g + k));
         const float hp = (x - (k + g) * s1 - s2 + fbk * clipPrev) * h;
@@ -96,22 +115,23 @@ private:
         const float v2 = g * bp;
         const float lp = v2 + s2;
         s2 = lp + v2;
-        clipPrev = diodeClip (bp);
-        const float comp = 1.0f / (1.0f + 0.6f * fbk);
+        clipPrev = diodeClip (1.6f * bp) * 0.625f;        // a harder knee: the self-oscillation turns square-ish
+        const float comp = 1.0f / (1.0f + 0.3f * fbk);
         const float y = mode == BandPass ? 2.0f * bp * comp : (mode == HighPass ? hp : lp);
         return 1.3f * tanhFast (y / 1.3f);
     }
     static float diodeClip (float v) { return v / std::sqrt (1.0f + 2.5f * v * v); }
 
-    // transistor ladder: four one-pole TPT stages, the feedback loop solved without delay, tanh at the input;
-    // band and high pass by mixing the stage outputs
+    // LADDER: transistor ladder, four one-pole TPT stages, the feedback loop solved without delay, tanh at the input
+    // (symmetric: odd harmonics, round). 24 dB, the lows thin out with resonance, self-oscillates as a clean sine.
+    // Band and high pass by mixing the stage outputs
     float ladder (float x, float g, float res, int mode)
     {
         const float k = 4.1f * res;
         const float G = g / (1.0f + g);
         const float b = 1.0f / (1.0f + g);
         const float S = G * G * G * st[0] * b + G * G * st[1] * b + G * st[2] * b + st[3] * b;
-        float u = (x * (1.0f + 0.6f * k) - k * S) / (1.0f + k * G * G * G * G);
+        float u = (x * (1.0f + 0.3f * k) - k * S) / (1.0f + k * G * G * G * G);   // half the bass back: it thins with resonance
         u = tanhFast (u);
         float y[4];
         float in = u;
@@ -123,25 +143,29 @@ private:
             in = y[i];
         }
         // the input gain that keeps the lows of the low pass is taken back out of band and high pass
-        const float back = 1.0f / (1.0f + 0.6f * k);
+        const float back = 1.0f / (1.0f + 0.3f * k);
         if (mode == BandPass) return 4.0f * (y[1] - 2.0f * y[2] + y[3]) * std::sqrt (back) / (1.0f + 0.3f * k);
         if (mode == HighPass) return (u - 4.0f * y[0] + 6.0f * y[1] - 4.0f * y[2] + y[3]) * back;
         return y[3];
     }
 
-    // diode ladder (coupled stages, after D. Wurtz's model) with a high pass in the feedback path
+    // DIODE: diode ladder (coupled stages, after D. Wurtz's model) with a high pass in the feedback path. About 18 dB,
+    // a rubbery resonance that loses the most lows and compresses with the level; the diodes clip unevenly (even and
+    // odd harmonics). The coupled stages resonate up to 1.48x above their own cutoff, so with resonance the cutoff
+    // is scaled back to keep the peak on the knob
+    static float diodeAsym (float v) { return v >= 0.0f ? v / (1.0f + 1.3f * v) : v / (1.0f - 0.8f * v); }
     float diode (float x, float g, float res, int mode)
     {
         // double precision: at low cutoffs the stage solve divides by a tiny a
         const double k = 19.0 * res;
-        const double a = g, ainv = 1.0 / a, a2 = a * a, bb = 2.0 * a + 1.0, b2 = bb * bb;
+        const double a = g * (1.0 - 0.324 * res), ainv = 1.0 / a, a2 = a * a, bb = 2.0 * a + 1.0, b2 = bb * bb;
         const double c = 1.0 / (2.0 * a2 * a2 - 4.0 * a2 * b2 + b2 * b2);
         const double g0 = 2.0 * a2 * a2 * c;
         const double gg = g0 * fbB;
         const double s0 = (a2 * a * dz[0] + a2 * bb * dz[1] + dz[2] * (b2 - 2.0 * a2) * a + dz[3] * (b2 - 3.0 * a2) * bb) * c;
         const double s = fbB * s0 - dz4;
         double y5 = (gg * x + s) / (1.0 + gg * k);
-        const double y0 = softClip ((float) (x - k * y5));
+        const double y0 = diodeAsym ((float) (x - k * y5));
         y5 = gg * y0 + s;
         const double y4 = g0 * y0 + s0;
         const double y3 = (bb * y4 - dz[3]) * ainv;
@@ -167,7 +191,7 @@ private:
             s2 = lp + v2;
             return hp;
         }
-        return (float) (y4 * (1.0 + 0.5 * k));
+        return (float) (y4 * (1.0 + 0.3 * k));
     }
 
     float s1 = 0.0f, s2 = 0.0f, clipPrev = 0.0f;
@@ -175,9 +199,14 @@ private:
     double dz[4] {}, dz4 = 0.0;
 public:
     // diode ladder feedback high pass (cutoff in Hz at the running sample rate)
-    void prepare (double fs) { const double K = 2.0 * pi * 90.0 / fs; fbA = (K - 2.0) / (K + 2.0); fbB = 2.0 / (K + 2.0); }
+    void prepare (double fs)
+    {
+        const double K = 2.0 * pi * 90.0 / fs; fbA = (K - 2.0) / (K + 2.0); fbB = 2.0 / (K + 2.0);
+        dcC = (float) (1.0 - std::exp (-2.0 * pi * 8.0 / fs));
+    }
 private:
     double fbA = -0.99, fbB = 1.0;
+    float dc = 0.0f, dcC = 0.0005f;
 };
 
 // Soft ceiling for signals inside a feedback loop: transparent when quiet, never louder than c

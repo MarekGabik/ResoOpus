@@ -605,6 +605,12 @@ void ResoOpusProcessor::processChunk (AudioBuffer<float>& out, int start, int le
             if (filterPrimed) cutoffRampB[c].set (g, count); else cutoffRampB[c].reset (g);
         }
         auto setR = [this, count] (::dsp::Ramp& r, float t) { if (filterPrimed) r.set (t, count); else r.reset (t); };
+        liveFilter[0][0].store (curG[GP::flt_cutoff], std::memory_order_relaxed);
+        liveFilter[0][1].store (curG[GP::flt_res] / 10.0f, std::memory_order_relaxed);
+        liveFilter[0][2].store (curG[GP::flt_drive] / 10.0f, std::memory_order_relaxed);
+        liveFilter[1][0].store (curG[GP::flt2_cutoff], std::memory_order_relaxed);
+        liveFilter[1][1].store (curG[GP::flt2_res] / 10.0f, std::memory_order_relaxed);
+        liveFilter[1][2].store (curG[GP::flt2_drive] / 10.0f, std::memory_order_relaxed);
         setR (resRamp, curG[GP::flt_res] / 10.0f);
         setR (driveRamp, curG[GP::flt_drive] / 10.0f);
         setR (resRampB, curG[GP::flt2_res] / 10.0f);

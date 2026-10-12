@@ -91,6 +91,7 @@ public:
     std::atomic<float> liveRoot[Params::numVoices];      // sounding root (MIDI note), for the keyboard in KEYS mode
     std::atomic<float> meterPeak { -100.0f };
     std::atomic<float> liveGravity { 0.0f };             // GRAVITY after modulation, 0..1
+    std::atomic<float> liveFilter[2][3] {};              // FILTER A / B after modulation: cutoff Hz, resonance 0..1, drive 0..1
     std::atomic<float> liveLead { -1.0f };               // sounding LEAD pitch (MIDI), -1 = silent
     std::atomic<float> cpuLoad { 0.0f };
 

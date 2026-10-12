@@ -241,8 +241,9 @@
     <h2 id="fx"><span class="num">08</span>FX page</h2>
     <figure class="shot"><img src="img/fx.jpg" alt="FX page" width="2400" height="1552" loading="lazy"><figcaption>The <strong>FX</strong> page with the Stereo Filters preset: two band-pass filters in Stereo routing, each swung by a different LFO.</figcaption></figure>
     <h3>FILTER A and FILTER B</h3>
-    <figure class="shot"><img src="img/filters.jpg" alt="FILTER A and B" width="1548" height="546" loading="lazy"></figure>
+    <figure class="shot"><img src="img/filters.jpg" alt="FILTER A, ROUTING and FILTER B" width="2344" height="546" loading="lazy"><figcaption>FILTER A (gold), ROUTING with its graph and FILTER B (violet). The graph shows what the filters do right now, modulation included: the Stereo Filters preset, A on the left and B on the right, both swung by LFOs.</figcaption></figure>
     <p>Two stereo filters for the whole instrument, running oversampled. Both have <strong>CUTOFF</strong> 20 Hz–20 kHz, <strong>RESONANCE</strong> 0–10, <strong>DRIVE</strong> 0–10, <strong>MODEL</strong> and <strong>MODE</strong> (low, band, high pass, with icons). <strong>SPREAD</strong> on A detunes the left and right filters against each other. FILTER B is switched on with <strong>ON</strong>.</p>
+    <p>Between the filters sits the <strong>ROUTING</strong> panel. Its graph is the real response of both filters, measured from the same code that plays, modulation included: when an LFO swings the cutoff, the curve moves. Gold is A, violet is B, white is the result of the routing (Serial = A × B, Parallel = A + B). Split and Stereo label the curves DRONE / LEAD or LEFT / RIGHT. Below the graph: the ROUTING switch and a diagram of where the signal flows.</p>
     <div class="table-wrap"><table>
       <thead><tr><th>ROUTING</th><th>What it does</th></tr></thead>
       <tbody>
@@ -255,16 +256,16 @@
     <div class="table-wrap"><table>
       <thead><tr><th>Model</th><th>Slope</th><th>Character</th></tr></thead>
       <tbody>
-        <tr><td>GROWL</td><td class="num">12 dB</td><td>Dirty state-variable filter with saturating integrators. Loud input and resonance growl.</td></tr>
-        <tr><td>LADDER</td><td class="num">24 dB</td><td>Transistor ladder: round, thins the lows a little at high resonance and sings.</td></tr>
-        <tr><td>DIODE</td><td class="num">24 dB</td><td>Diode ladder with coupled stages: rubbery "squelch", the resonance bites more than it rings.</td></tr>
-        <tr><td>SCREAM</td><td class="num">12 dB</td><td>Clipped resonance loop: harsh, screams and screeches when pushed.</td></tr>
-        <tr><td>SILK</td><td class="num">12 dB</td><td>Clean and smooth, only the input is gently limited. For calm pads.</td></tr>
+        <tr><td>GROWL</td><td class="num">12 dB</td><td>An op-amp state variable whose integrators clip. Keeps the lows at any resonance. DRIVE bends the wave unevenly (even harmonics, a growl). At the top of the resonance it rings on its own with a gritty tone.</td></tr>
+        <tr><td>LADDER</td><td class="num">24 dB</td><td>Transistor ladder: round and warm. The lows thin out with resonance (about 7 dB), at the top it rings as a clean sine. DRIVE adds odd harmonics.</td></tr>
+        <tr><td>DIODE</td><td class="num">24 dB</td><td>Diode ladder: a rubbery resonance that squeezes with the level and takes the lows. The diodes clip unevenly (even and odd harmonics). It does not ring on its own; the resonance bites more than it rings.</td></tr>
+        <tr><td>SCREAM</td><td class="num">12 dB</td><td>Sallen-Key with diodes in the resonance: aggressive, bites even more with drive. From resonance ~9.3 it screams and rings with a harsh, almost square tone. DRIVE clips the hardest.</td></tr>
+        <tr><td>SILK</td><td class="num">12 dB</td><td>A clean digital filter: linear, the resonance does not depend on the level and adds no harmonics. Very narrow, but it never rings on its own. DRIVE only pushes into a soft ceiling.</td></tr>
       </tbody>
     </table></div>
-    <p>At full resonance Band Pass keeps its level: a narrow band doesn't vanish, it sings.</p>
+    <p>At full resonance Band Pass keeps its level: a narrow band doesn't vanish, it sings. The LEAD filter has the same five models.</p>
     <h3>ECHO</h3>
-    <figure class="shot"><img src="img/echo.jpg" alt="ECHO" width="800" height="546" loading="lazy"></figure>
+    <figure class="shot"><img src="img/echo.jpg" alt="ECHO" width="1172" height="546" loading="lazy"></figure>
     <ul>
       <li>Two lines (<strong>TIME 1</strong> left, <strong>TIME 2</strong> right, 5 ms–2 s) with cross feedback. Time changes glide like tape.</li>
       <li><strong>FEEDBACK</strong>: above ~55 % the echo starts to sing on its own. The loop has a ceiling, so the level never runs away.</li>
@@ -272,7 +273,7 @@
       <li><strong>TO VOICES</strong>: the echo returns into the voices as FM. See GRAVITY.</li>
     </ul>
     <h3>SPACE</h3>
-    <figure class="shot"><img src="img/space.jpg" alt="SPACE" width="776" height="546" loading="lazy"></figure>
+    <figure class="shot"><img src="img/space.jpg" alt="SPACE" width="1172" height="546" loading="lazy"></figure>
     <div class="table-wrap"><table>
       <thead><tr><th>Algorithm</th><th>X · Y · Z</th><th>Sound</th></tr></thead>
       <tbody>
@@ -288,7 +289,7 @@
     <h2 id="motion"><span class="num">09</span>The MOD page</h2>
     <figure class="shot"><img src="img/mod-page.jpg" alt="The MOD page with the Lunar Tide preset" width="2400" height="1552" loading="lazy"><figcaption>The <strong>MOD</strong> page with the <strong>Lunar Tide</strong> preset: LFO 1 swings GRAVITY, LFO 2 opens FILTER A. The number on the MOD tab counts the modulations.</figcaption></figure>
     <p>All motion sources and all modulations live on one page (the <strong>MOD</strong> tab, key <kbd>4</kbd>). Four sources at the top, the matrix below them.</p>
-    <figure class="shot"><img src="img/motion.jpg" alt="LFO 1, LFO 2, RANDOM, MOD ENV" width="2344" height="488" loading="lazy"><figcaption>The coloured pill on the right of the header is a "cable": grab it and drop it on any knob. Its number tells how many modulations the source already drives; click it to show them in the matrix.</figcaption></figure>
+    <figure class="shot"><img src="img/motion.jpg" alt="LFO 1, LFO 2, RANDOM, MOD ENV" width="2344" height="552" loading="lazy"><figcaption>The coloured pill on the right of the header is a "cable": grab it and drop it on any knob. Its number tells how many modulations the source already drives; click it to show them in the matrix.</figcaption></figure>
     <div class="table-wrap"><table>
       <thead><tr><th>Source</th><th>Controls</th></tr></thead>
       <tbody>

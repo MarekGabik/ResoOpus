@@ -128,8 +128,8 @@ void LedRadio::paint (Graphics& g)
         g.drawText (label, 0, 0, getWidth(), 13, Justification::centredLeft, false);
         y = 19.0f;
     }
-    const float listH = (float) names.size() * 15.0f;
-    drawGlassButton (g, Rectangle<float> (1.0f, y + std::max (0.0f, (listH - 28.0f) * 0.5f), 30.0f, 28.0f), false);
+    // the button sits right under the title, level with the first entry
+    drawGlassButton (g, Rectangle<float> (1.0f, y, 30.0f, 28.0f), false);
 
     g.setFont (Fonts::bold (10.5f));
     for (int i = 0; i < names.size(); ++i)
@@ -339,6 +339,7 @@ void ModulePanel::resized()
     float total = 0.0f;
     for (auto w : weights) total += w;
 
+    // every item of a row starts at the same height (the titles line up)
     for (size_t i = 0; i < items.size(); ++i)
     {
         auto* c = items[i];
@@ -348,7 +349,10 @@ void ModulePanel::resized()
         for (int k = 0; k < col; ++k) x0 += weights[(size_t) k];
         const float cx = body.getX() + body.getWidth() * (x0 + weights[(size_t) col] * 0.5f) / total;
         const float cy = body.getY() + body.getHeight() * ((float) row + 0.5f) / (float) rows;
-        c->setCentrePosition (roundToInt (cx), roundToInt (cy));
+        // every row starts where a knob with its value would (100 px centred in the cell), so panels side by side
+        // put their titles on the same line too; a taller item grows downwards, staying inside the panel
+        const int top = jlimit (body.getY(), std::max (body.getY(), body.getBottom() - c->getHeight()), roundToInt (cy - 50.0f));
+        c->setTopLeftPosition (roundToInt (cx - c->getWidth() * 0.5f), top);
     }
 }
 

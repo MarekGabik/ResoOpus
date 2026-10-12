@@ -475,6 +475,8 @@ DronePage::DronePage (ResoOpusProcessor& p) : Page (p)
     addAndMakeVisible (master);
     const char* mIds[] = { "pitch", "dust", "grit", "master_vol" };
     const char* mNames[] = { "PITCH", "DUST", "GRIT", "VOLUME" };
+    // the titles of every control in the detail and MASTER panels sit on one line (switches, knobs, small knobs)
+    const int titleY = 42;
     for (int i = 0; i < 4; ++i)
     {
         Knob::Style st;
@@ -483,7 +485,7 @@ DronePage::DronePage (ResoOpusProcessor& p) : Page (p)
         st.bipolar = i == 0;
         auto* k = knob (mIds[i], mNames[i], Palette::master, st);
         master->addAndMakeVisible (k);
-        k->setTopLeftPosition (3 + i * 62, 48);
+        k->setTopLeftPosition (3 + i * 62, titleY);
     }
 
     // detail of the selected voice
@@ -504,7 +506,7 @@ DronePage::DronePage (ResoOpusProcessor& p) : Page (p)
                         { Palette::voiceType (0), Palette::choir, Palette::siren, Palette::pulsar, Palette::quasar, Palette::nebula });
         owned.add (type);
         detailPanel->addChildComponent (type);
-        type->setTopLeftPosition (16, 36);
+        type->setTopLeftPosition (16, titleY);
         d.all.add (type);
 
         // CHOIR: chord and the five intervals
@@ -518,14 +520,14 @@ DronePage::DronePage (ResoOpusProcessor& p) : Page (p)
             [this, v] (int c) { proc.applyChord (v, c); });
         d.chord->setTooltip ("Fills the five oscillator intervals with a chord in one click; fine-tune them afterwards by ear");
         owned.add (d.chord);
-        add (d.chord, 150, 36, VP::Choir);
+        add (d.chord, 150, titleY, VP::Choir);
         for (int i = 0; i < 5; ++i)
         {
             auto* k = knob (V + "int" + String (i + 1), "OSC " + String (i + 1), Palette::choir, smallStyle());
-            add (k, 262 + i * 74, 52, VP::Choir);
+            add (k, 262 + i * 74, titleY, VP::Choir);
             auto* led = new LedDot (proc, V + "on" + String (i + 1));
             owned.add (led);
-            add (led, 262 + i * 74 + 12, 52, VP::Choir);
+            add (led, 262 + i * 74 + 12, titleY, VP::Choir);
         }
         // SIREN
         const char* sirenIds[] = { "siren_rate", "siren_am", "siren_div", "siren_noise", "siren_wave" };
@@ -533,27 +535,27 @@ DronePage::DronePage (ResoOpusProcessor& p) : Page (p)
         const char* sirenLo[] = { ".05", "0", "OFF", "0", "~square" };
         const char* sirenHi[] = { "300", "100", "1:16", "100", "~tri" };
         for (int i = 0; i < 5; ++i)
-            add (knob (V + sirenIds[i], sirenNames[i], Palette::siren, range (sirenLo[i], sirenHi[i])), 150 + i * 96, 44, VP::Siren);
+            add (knob (V + sirenIds[i], sirenNames[i], Palette::siren, range (sirenLo[i], sirenHi[i])), 150 + i * 96, titleY, VP::Siren);
         // PULSAR
         const char* pulsarIds[] = { "sym", "bloom", "twin", "twin_mix", "sub", "vibrato" };
         const char* pulsarNames[] = { "SYMMETRY", "BLOOM", "TWIN", "BLEND", "SUB", "VIBRATO" };
         const char* pulsarLo[] = { "~pulse", "0", "-12", "0", "0", "0" };
         const char* pulsarHi[] = { "~pulsew", "100", "+24", "100", "100", "50c" };
         for (int i = 0; i < 6; ++i)
-            add (knob (V + pulsarIds[i], pulsarNames[i], Palette::pulsar, range (pulsarLo[i], pulsarHi[i], i == 0, true)), 150 + i * 80, 52, VP::Pulsar);
+            add (knob (V + pulsarIds[i], pulsarNames[i], Palette::pulsar, range (pulsarLo[i], pulsarHi[i], i == 0, true)), 150 + i * 80, titleY, VP::Pulsar);
         // QUASAR
         const char* qIds[] = { "q_ratio", "q_fine", "q_fb", "q_track" };
         const char* qNames[] = { "RATIO", "FINE", "FEEDBACK", "TRACK" };
         const char* qLo[] = { ".5", "-50c", "~sine", "0" };
         const char* qHi[] = { "8", "+50c", "~noise", "100" };
         for (int i = 0; i < 4; ++i)
-            add (knob (V + qIds[i], qNames[i], Palette::quasar, range (qLo[i], qHi[i], i == 1)), 150 + i * 96, 44, VP::Quasar);
+            add (knob (V + qIds[i], qNames[i], Palette::quasar, range (qLo[i], qHi[i], i == 1)), 150 + i * 96, titleY, VP::Quasar);
         // NEBULA
         auto* table = new LedRadio (proc, V + "n_table", "TABLE", { "VOCAL", "ORGAN", "GLASS" });
         owned.add (table);
-        add (table, 150, 36, VP::Nebula);
-        add (knob (V + "n_scan", "SCAN", Palette::nebula, range ("-", "+", true)), 262, 44, VP::Nebula);
-        add (knob (V + "n_drift", "DRIFT", Palette::nebula, range ("0", "100")), 358, 44, VP::Nebula);
+        add (table, 150, titleY, VP::Nebula);
+        add (knob (V + "n_scan", "SCAN", Palette::nebula, range ("-", "+", true)), 262, titleY, VP::Nebula);
+        add (knob (V + "n_drift", "DRIFT", Palette::nebula, range ("0", "100")), 358, titleY, VP::Nebula);
 
         // every type that sounds: CHARACTER (digital - clean - analog), ATTACK, RELEASE
         auto* div = new Component();
@@ -569,7 +571,7 @@ DronePage::DronePage (ResoOpusProcessor& p) : Page (p)
         {
             detailPanel->addChildComponent (common[i]);
             d.all.add (common[i]);
-            common[i]->setTopLeftPosition (648 + (i - 1) * 82, 52);
+            common[i]->setTopLeftPosition (648 + (i - 1) * 82, titleY);
         }
         for (auto* c : common)
             for (int t = VP::Choir; t <= VP::Nebula; ++t) d.byType[t].add (c);
@@ -894,35 +896,40 @@ FxPage::FxPage (ResoOpusProcessor& p) : Page (p)
     const int rowH = 265, gap = 10, y2 = rowH + gap;
 
     const int half = (width - 8) / 2;
-    // FILTER A
-    filterPanel = panel ("FILTER A", Palette::filter, { 0, 0, half, rowH }, -1, "GROWL 12 dB");
+    // FILTER A | ROUTING (what the filters do, live) | FILTER B
+    const int side = 360, mid = width - 2 * side - 16;
+    filterPanel = panel ("FILTER A", Palette::filter, { 0, 0, side, rowH }, -1, "GROWL 12 dB");
     auto* model = new LedRadio (proc, "flt_model", "MODEL", { "GROWL", "LADDER", "DIODE", "SCREAM", "SILK" });
     model->setTooltip (Params::findDef ("flt_model")->tip);
     owned.add (model);
     auto* mode = new LedRadio (proc, "flt_mode", "MODE", { "LOW", "BAND", "HIGH" });
     mode->setIcons (filterModeIcons(), same (Palette::filter, 3));
     owned.add (mode);
-    filterPanel->setGrid ({ 1.15f, 1.0f, 1.0f }, {
+    filterPanel->setGrid ({ 1.1f, 1.0f, 1.0f }, {
         knob ("flt_cutoff", "CUTOFF", Palette::filter, sm ("20", "20k")),
         knob ("flt_res", "RESONANCE", Palette::filter, sm ("0", "10")),
         knob ("flt_drive", "DRIVE", Palette::filter, sm ("0", "10")),
         model, mode, knob ("flt_spread", "SPREAD", Palette::filter, sm ("0", "100")) });
 
-    // FILTER B with ROUTING
-    filterBPanel = panel ("FILTER B", Palette::filter, { half + 8, 0, width - half - 8, rowH }, -1, "SILK 12 dB");
+    routingPanel = panel ("ROUTING", Palette::label, { side + 8, 0, mid, rowH }, -1, "B OFF");
+    filterView = new FilterRoutingView (proc);
+    owned.add (filterView);
+    filterView->setSize (mid - 12, rowH - ModulePanel::headerHeight - 12);
+    routingPanel->setGrid ({ 1.0f }, { filterView });
+
+    // FILTER B: its own colour, the same as its curve in ROUTING
+    filterBPanel = panel ("FILTER B", Palette::filterB, { width - side, 0, side, rowH }, -1, "SILK 12 dB");
     auto* modelB = new LedRadio (proc, "flt2_model", "MODEL", { "GROWL", "LADDER", "DIODE", "SCREAM", "SILK" });
     owned.add (modelB);
     auto* modeB = new LedRadio (proc, "flt2_mode", "MODE", { "LOW", "BAND", "HIGH" });
-    modeB->setIcons (filterModeIcons(), same (Palette::filter, 3));
+    modeB->setIcons (filterModeIcons(), same (Palette::filterB, 3));
     owned.add (modeB);
-    auto* route = new LedRadio (proc, "flt_route", "ROUTING", { "SERIAL", "PARALLEL", "SPLIT", "STEREO" });
-    owned.add (route);
     auto* onB = static_cast<Component*> (owned.add (new LedButton (proc, "flt2_on", "ON")));
-    auto* cutB = knob ("flt2_cutoff", "CUTOFF", Palette::filter, sm ("20", "20k"));
-    auto* resB = knob ("flt2_res", "RESONANCE", Palette::filter, sm ("0", "10"));
-    auto* drvB = knob ("flt2_drive", "DRIVE", Palette::filter, sm ("0", "10"));
-    filterBPanel->setGrid ({ 1.15f, 1.0f, 1.1f, 0.75f }, { cutB, resB, drvB, onB, modelB, modeB, route, nullptr });
-    filterBControls = { cutB, resB, drvB, modelB, modeB, route };
+    auto* cutB = knob ("flt2_cutoff", "CUTOFF", Palette::filterB, sm ("20", "20k"));
+    auto* resB = knob ("flt2_res", "RESONANCE", Palette::filterB, sm ("0", "10"));
+    auto* drvB = knob ("flt2_drive", "DRIVE", Palette::filterB, sm ("0", "10"));
+    filterBPanel->setGrid ({ 1.1f, 1.0f, 1.0f }, { cutB, resB, drvB, modelB, modeB, onB });
+    filterBControls = { cutB, resB, drvB, modelB, modeB };
 
     // ECHO
     auto* echoPanel = panel ("ECHO", Palette::mixer, { 0, y2, half, rowH }, -1, "2 LINES");
@@ -965,6 +972,13 @@ void FxPage::refreshLive()
     const bool bOn = proc.getParamReal ("flt2_on") > 0.5f;
     for (auto* c : filterBControls)
         if (std::abs (c->getAlpha() - (bOn ? 1.0f : 0.4f)) > 0.01f) c->setAlpha (bOn ? 1.0f : 0.4f);
+    if (isVisible()) filterView->update();
+    const int r = bOn ? roundToInt (proc.getParamReal ("flt_route")) : -1;
+    if (r != shownRoute)
+    {
+        shownRoute = r;
+        routingPanel->setRightText (r < 0 ? String ("B OFF") : Params::findDef ("flt_route")->choices[jlimit (0, 3, r)].toUpperCase());
+    }
     const int a = roundToInt (proc.getParamReal ("space_algo"));
     if (a == shownAlgo) return;
     shownAlgo = a;
@@ -985,7 +999,7 @@ void FxPage::refreshLive()
 ModPage::ModPage (ResoOpusProcessor& p) : Page (p), matrix (p)
 {
     auto sm = [] (String lo, String hi, bool bi = false) { return range (lo, hi, bi, true); };
-    const int mh = 236, pw = (width - 24) / 4;
+    const int mh = 268, pw = (width - 24) / 4;
     // MOTION: LFO 1, LFO 2, RANDOM (drag the arrow in the header onto any knob)
     const Colour lfoCol[] = { Mod::sourceColour (Mod::Lfo1), Mod::sourceColour (Mod::Lfo2), Mod::sourceColour (Mod::Random) };
     for (int l = 0; l < 2; ++l)

@@ -943,6 +943,64 @@ static void testEffects()
         }
     }
     {
+        // every model has its own character (96 kHz, cutoff 1 kHz, low pass): measured on the bare filter
+        const double fs = 96000.0;
+        auto gFor = [fs] (double fc) { return (float) std::tan (MathConstants<double>::pi * fc / fs); };
+        auto level = [&] (int model, float res, double f, float amp)
+        {
+            ::dsp::AnalogFilter flt; flt.prepare (fs); flt.reset();
+            const int n = (int) (0.3 * fs);
+            double e = 0.0;
+            for (int i = 0; i < n; ++i)
+            {
+                const float y = flt.process (amp * (float) std::sin (MathConstants<double>::twoPi * f * i / fs), gFor (1000), res, 0.0f, 0, model);
+                if (i >= n / 2) e += (double) y * y;
+            }
+            return 10.0 * std::log10 (e / (n / 2) / (0.5 * amp * amp) + 1e-30);
+        };
+        auto selfOsc = [&] (int model)
+        {
+            ::dsp::AnalogFilter flt; flt.prepare (fs); flt.reset();
+            double e = 0.0;
+            const int n = (int) (1.5 * fs);
+            for (int i = 0; i < n; ++i) { const float y = flt.process (i == 0 ? 0.5f : 0.0f, gFor (1000), 1.0f, 0.0f, 0, model); if (i > n / 2) e += (double) y * y; }
+            return 10.0 * std::log10 (e / (n / 2) + 1e-30);
+        };
+        auto driveHarm = [&] (int model, int h)
+        {
+            ::dsp::AnalogFilter flt; flt.prepare (fs); flt.reset();
+            AudioBuffer<float> b (2, (int) fs);
+            for (int i = 0; i < b.getNumSamples(); ++i)
+            {
+                const float y = flt.process (0.5f * (float) std::sin (MathConstants<double>::twoPi * 187.5 * i / fs), gFor (8000), 0.0f, 0.6f, 0, model);
+                b.setSample (0, i, y); b.setSample (1, i, y);
+            }
+            const auto db = spectrum (b, b.getNumSamples() - 32768, 15);
+            const double binHz = fs / 32768.0;
+            auto at = [&] (double f) { double m = -300.0; for (int d = -2; d <= 2; ++d) m = std::max (m, db[(size_t) (std::lround (f / binHz) + d)]); return m; };
+            return at (187.5 * h) - at (187.5);
+        };
+        enum { G, L, D, S, K };
+        const double bass[5] = { level (G, 0.9f, 100, 0.01f) - level (G, 0.0f, 100, 0.01f), level (L, 0.9f, 100, 0.01f) - level (L, 0.0f, 100, 0.01f),
+                                 level (D, 0.9f, 100, 0.01f) - level (D, 0.0f, 100, 0.01f), 0, level (K, 0.9f, 100, 0.01f) - level (K, 0.0f, 100, 0.01f) };
+        const double slopeL = level (L, 0.0f, 8000, 0.01f) - level (L, 0.0f, 4000, 0.01f), slopeK = level (K, 0.0f, 8000, 0.01f) - level (K, 0.0f, 4000, 0.01f);
+        // resonance against level: quiet vs loud peak over the lows
+        auto squeeze = [&] (int m) { return (level (m, 0.9f, 1000, 0.01f) - level (m, 0.9f, 100, 0.01f)) - (level (m, 0.9f, 1000, 0.5f) - level (m, 0.9f, 100, 0.5f)); };
+        const double sqD = squeeze (D), sqK = squeeze (K);
+        const double oscG = selfOsc (G), oscL = selfOsc (L), oscS = selfOsc (S), oscK = selfOsc (K), oscD = selfOsc (D);
+        const double h2G = driveHarm (G, 2), h3L = driveHarm (L, 3), h2L = driveHarm (L, 2), h3S = driveHarm (S, 3), h3K = driveHarm (K, 3), h2D = driveHarm (D, 2);
+        check (std::abs (bass[G]) < 1.0 && std::abs (bass[K]) < 1.0 && bass[L] < -4.0 && bass[D] < -4.0,
+               "FILTER models: resonance 9 keeps the lows in GROWL / SILK (" + String (bass[G], 1) + " / " + String (bass[K], 1) + " dB), thins them in LADDER / DIODE ("
+               + String (bass[L], 1) + " / " + String (bass[D], 1) + " dB)");
+        check (slopeL < -20.0 && slopeK > -14.0 && slopeK < -10.0, "FILTER models: LADDER 24 dB (" + String (slopeL, 1) + "), SILK 12 dB (" + String (slopeK, 1) + " per octave)");
+        check (sqD > 6.0 && std::abs (sqK) < 4.0, "FILTER models: DIODE resonance squeezes with level (" + String (sqD, 1) + " dB), SILK stays linear (" + String (sqK, 1) + " dB)");
+        check (oscG > -30.0 && oscL > -30.0 && oscS > -20.0 && oscK < -80.0 && oscD < -60.0,
+               "FILTER models: self-oscillation GROWL " + String (roundToInt (oscG)) + ", LADDER " + String (roundToInt (oscL)) + ", SCREAM " + String (roundToInt (oscS)) + " dB; SILK and DIODE stay quiet");
+        check (h2G > -25.0 && h2L < -80.0 && h3L > -25.0 && h3S > h3L + 2.0 && h3K < -40.0 && h2D > -30.0,
+               "FILTER models: DRIVE harmonics GROWL even (H2 " + String (roundToInt (h2G)) + "), LADDER odd (H3 " + String (roundToInt (h3L)) + "), SCREAM hardest (H3 " + String (roundToInt (h3S))
+               + "), DIODE both (H2 " + String (roundToInt (h2D)) + "), SILK clean (H3 " + String (roundToInt (h3K)) + ")");
+    }
+    {
         // FILTER B and ROUTING
         auto chanDb = [sr] (const AudioBuffer<float>& out, int ch, double f)
         {
@@ -2003,6 +2061,82 @@ int main (int argc, char* argv[])
         editor->setPresetBrowser (false);
         ed.reset();
         std::cout << "done" << std::endl;
+        return 0;
+    }
+    if (argc > 1 && String (argv[1]) == "--filters")
+    {
+        // the character of every filter model at 96 kHz (2x oversampling), cutoff 1 kHz, low pass
+        static const char* names[] = { "GROWL", "LADDER", "DIODE", "SCREAM", "SILK" };
+        const double fs = 96000.0;
+        auto gFor = [fs] (double fc) { return (float) std::tan (MathConstants<double>::pi * fc / fs); };
+        // steady-state level (dB) of a sine through the filter
+        auto level = [&] (int model, int mode, double fc, float res, float drive, double f, float amp)
+        {
+            ::dsp::AnalogFilter flt; flt.prepare (fs); flt.reset();
+            const int n = (int) (0.4 * fs);
+            double e = 0.0;
+            for (int i = 0; i < n; ++i)
+            {
+                const float y = flt.process (amp * (float) std::sin (MathConstants<double>::twoPi * f * i / fs), gFor (fc), res, drive, mode, model);
+                if (i >= n / 2) e += (double) y * y;
+            }
+            return 10.0 * std::log10 (e / (n / 2) / (0.5 * amp * amp) + 1e-30);
+        };
+        // harmonics of the output (dB vs the strongest): returns { h2, h3, fundamental Hz }
+        auto harmonics = [&] (const std::vector<float>& y)
+        {
+            AudioBuffer<float> b (2, (int) y.size());
+            for (int i = 0; i < (int) y.size(); ++i) { b.setSample (0, i, y[(size_t) i] * 0.25f); b.setSample (1, i, y[(size_t) i] * 0.25f); }
+            const auto db = spectrum (b, (int) y.size() - 32768, 15);
+            const double binHz = fs / 32768.0;
+            size_t pk = 4; for (size_t k = 4; k < db.size() / 2; ++k) if (db[k] > db[pk]) pk = k;
+            auto at = [&] (double fr) { double m = -300.0; for (int d = -3; d <= 3; ++d) { const long k = std::lround (fr / binHz) + d; if (k > 0 && k < (long) db.size() / 2) m = std::max (m, db[(size_t) k]); } return m; };
+            const double f0 = pk * binHz;
+            return std::array<double, 3> { at (2 * f0) - db[pk], at (3 * f0) - db[pk], f0 };
+        };
+        if (argc > 2)
+        {
+            const int m = String (argv[2]).getIntValue();
+            for (double fr : { 100.0, 1000.0, 2000.0, 4000.0, 8000.0 })
+            {
+                ::dsp::AnalogFilter flt; flt.prepare (fs); flt.reset();
+                const int n = (int) (0.4 * fs);
+                double e = 0.0, dc = 0.0;
+                for (int i = 0; i < n; ++i)
+                {
+                    const float y = flt.process (0.01f * (float) std::sin (MathConstants<double>::twoPi * fr * i / fs), gFor (1000), 0.0f, 0.0f, 0, m);
+                    if (i >= n / 2) { e += (double) y * y; dc += y; }
+                }
+                dc /= (n / 2);
+                std::cout << fr << " Hz: " << String (10.0 * std::log10 (e / (n / 2) / 5e-5), 1) << " dB, dc " << dc << std::endl;
+            }
+            return 0;
+        }
+        for (int m = 0; m < 5; ++m)
+        {
+            const int LP = 0;
+            const double flat0 = level (m, LP, 1000, 0.0f, 0.0f, 100, 0.01f);
+            const double slope = level (m, LP, 1000, 0.0f, 0.0f, 8000, 0.01f) - level (m, LP, 1000, 0.0f, 0.0f, 4000, 0.01f);
+            const double peak9 = level (m, LP, 1000, 0.9f, 0.0f, 1000, 0.01f) - flat0, bass9 = level (m, LP, 1000, 0.9f, 0.0f, 100, 0.01f) - flat0;
+            const double peak5 = level (m, LP, 1000, 0.5f, 0.0f, 1000, 0.01f) - flat0;
+            const double peakLoud = level (m, LP, 1000, 0.9f, 0.0f, 1000, 0.5f) - level (m, LP, 1000, 0.9f, 0.0f, 100, 0.5f);
+            // self-oscillation: res 1, a single kick, 2 s
+            ::dsp::AnalogFilter flt; flt.prepare (fs); flt.reset();
+            std::vector<float> y ((size_t) (2.0 * fs));
+            for (size_t i = 0; i < y.size(); ++i) y[i] = flt.process (i == 0 ? 0.5f : 0.0f, gFor (1000), 1.0f, 0.0f, LP, m);
+            double e = 0.0; for (size_t i = y.size() / 2; i < y.size(); ++i) e += (double) y[i] * y[i];
+            const double selfDb = 10.0 * std::log10 (e / (y.size() / 2) + 1e-30);
+            const auto sh = harmonics (y);
+            // drive: 200 Hz at -6 dBFS, cutoff 8 kHz, drive 0.6
+            ::dsp::AnalogFilter fd; fd.prepare (fs); fd.reset();
+            std::vector<float> z ((size_t) (1.0 * fs));
+            for (size_t i = 0; i < z.size(); ++i) z[i] = fd.process (0.5f * (float) std::sin (MathConstants<double>::twoPi * 200.0 * i / fs), gFor (8000), 0.0f, 0.6f, LP, m);
+            const auto dh = harmonics (z);
+            std::cout << names[m] << ": slope 4->8k " << String (slope, 1) << " dB/oct, res 5 peak " << String (peak5, 1) << ", res 9 peak " << String (peak9, 1)
+                      << " bass " << String (bass9, 1) << ", loud res 9 peak-vs-bass " << String (peakLoud, 1)
+                      << " | self-osc " << (selfDb > -60.0 ? String (selfDb, 1) + " dB at " + String (sh[2], 0) + " Hz, H2 " + String (sh[0], 0) + " H3 " + String (sh[1], 0) : String ("none"))
+                      << " | drive H2 " << String (dh[0], 0) << " H3 " << String (dh[1], 0) << std::endl;
+        }
         return 0;
     }
     if (argc > 1 && String (argv[1]) == "--shifter")
