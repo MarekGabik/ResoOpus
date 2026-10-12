@@ -1036,6 +1036,16 @@ static void testEffects()
                     stable = stable && allFinite (out) && peakDb (out) < 0.0;
                 }
         check (stable, "COMB and VOWEL at full resonance and drive, every mode, 20 Hz and 20 kHz: finite, below 0 dBFS");
+        {
+            // the Comb Harp preset rings in tune with the keys (A = MIDI 69 = 440 Hz)
+            auto p = makeProc (sr);
+            for (int i = 0; i < p->presets->numFactory(); ++i)
+                if (p->presets->getPresets()[i].name == "Comb Harp") p->presets->load (i, false);
+            setParam (*p, "v1_hold", 0.0f); setParam (*p, "echo_mix", 0.0f); setParam (*p, "space_blend", 0.0f);
+            const auto out = render (*p, 1.0, note (69, 0.0, 0.8));
+            const double f = peakFrequency (out, sr, 400.0, 480.0, (int) (0.2 * sr));
+            check (std::abs (cents (f, 440.0)) < 15.0, "Comb Harp preset: the comb follows the keys in tune (A = " + String (f, 1) + " Hz)");
+        }
     }
     {
         // FILTER B and ROUTING
@@ -2192,6 +2202,25 @@ int main (int argc, char* argv[])
         editor->setPresetBrowser (false);
         ed.reset();
         std::cout << "done" << std::endl;
+        return 0;
+    }
+    if (argc > 1 && String (argv[1]) == "--plevels")
+    {
+        // loudness of every factory preset: 8 s with the plates and a lead chord played (RMS and peak, dBFS)
+        auto ref = makeProc();
+        const auto& all = ref->presets->getPresets();
+        for (int i = 0; i < ref->presets->numFactory(); ++i)
+        {
+            auto p = makeProc();
+            p->presets->load (i, false);
+            std::vector<Ev> ev { { 0.5, MidiMessage::noteOn (1, 60, 0.7f) }, { 0.5, MidiMessage::noteOn (1, 64, 0.6f) },
+                                 { 1.0, MidiMessage::noteOn (1, 72, 0.7f) }, { 1.0, MidiMessage::noteOn (1, 76, 0.7f) }, { 1.0, MidiMessage::noteOn (1, 79, 0.7f) },
+                                 { 5.0, MidiMessage::noteOff (1, 60) }, { 5.0, MidiMessage::noteOff (1, 64) },
+                                 { 5.0, MidiMessage::noteOff (1, 72) }, { 5.0, MidiMessage::noteOff (1, 76) }, { 5.0, MidiMessage::noteOff (1, 79) } };
+            auto out = render (*p, 8.0, ev);
+            std::cout << String (all[i].name).paddedRight (' ', 22) << " RMS " << String (rmsDb (out, 48000, out.getNumSamples()), 1)
+                      << "  peak " << String (peakDb (out), 1) << std::endl;
+        }
         return 0;
     }
     if (argc > 1 && String (argv[1]) == "--echo")
