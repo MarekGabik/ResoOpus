@@ -58,6 +58,21 @@ private:
     bool on = false;
 };
 
+// Small labelled pill that switches a bool parameter (ECHO SYNC between the two TIME knobs): gold when on
+class MiniToggle : public juce::Component, public juce::SettableTooltipClient
+{
+public:
+    MiniToggle (ResoOpusProcessor&, const juce::String& paramID, const juce::String& text);
+    void paint (juce::Graphics&) override;
+    void mouseDown (const juce::MouseEvent&) override;
+
+private:
+    juce::RangedAudioParameter* param = nullptr;
+    std::unique_ptr<juce::ParameterAttachment> attachment;
+    juce::String text;
+    bool on = false;
+};
+
 // GRAVITY: the big centre knob. Zones STILL / ORBIT / TURBULENCE / COLLAPSE around it, value arc in the zone colour,
 // modulation ring (live value), the four voices as dots on an orbit that pull together as GRAVITY rises.
 // Drag vertically (Shift = fine), wheel, double-click = type, Cmd/Ctrl-click = default, right-click = PATH and modulation,
@@ -118,6 +133,8 @@ private:
     juce::Array<juce::Component*> motionControls;
     LedRadio* echoSrc = nullptr;
     Knob* echoKnobs[3] {};
+    Knob* echoDivs[2] {};
+    MiniToggle* echoSync = nullptr;
     FilterRoutingView* filterView = nullptr;
     juce::Array<juce::Component*> filterBControls;
     int shownAlgo = -1, shownModel = -1, shownModelB = -1, shownRoute = -2, shownEcho = -1, shownMotion = -1;
@@ -233,7 +250,9 @@ private:
     ModulePanel* detailPanel = nullptr;
     GravityView* gravity = nullptr;
     ModulePanel* gravityPanel = nullptr;
+    ModulePanel* masterPanel = nullptr;
     int shownPath = -1;
+    juce::String shownFill;
     juce::Label* offNote = nullptr;
     int selected = 0;
     int shownType[Params::numVoices] { -1, -1, -1, -1 };

@@ -131,6 +131,7 @@ namespace Mod
 
     const juce::StringArray& functionNames();
     double divisionBeats (int index);     // LFO / RANDOM sync divisions in quarter notes
+    double echoDivisionBeats (int index); // ECHO sync divisions in quarter notes
     enum Function { FnNone = 0, Scale, Offset, LowClip, HighClip, Exponential, NormExponential,
                     LowPass, HighPass, Slew, LowSlew, HighSlew, SampleHold, Bounce };
 }
@@ -175,6 +176,7 @@ namespace GP
         menv_attack, menv_decay, menv_sustain, menv_release,
         echo_mode,
         mot_on, mot_mode, mot_rate, mot_sync, mot_div, mot_depth, mot_x, mot_mix,
+        echo_sync, echo_div1, echo_div2,
         count
     };
     enum PlayMode { Plates = 0, Keys };

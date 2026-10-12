@@ -1118,6 +1118,16 @@ static void testEffects()
             for (int i = (int) (t * sr); i < (int) ((t + len) * sr); ++i) e += (double) out.getSample (ch, i) * out.getSample (ch, i);
             return 10.0 * std::log10 (e / (len * sr) + 1e-30);
         };
+        {
+            // SYNC: TIME 1 = 1/8 dotted at 120 BPM = 375 ms
+            auto p = makeProc (sr);
+            dryPluck (*p);
+            setParam (*p, "echo_mix", 100.0f); setParam (*p, "echo_fb", 0.0f); setParam (*p, "echo_mod", 0.0f);
+            setParam (*p, "echo_sync", 1.0f); setParam (*p, "echo_div1", 7.0f);
+            const auto out = render (*p, 1.0, note (60, 0.0, 0.05));
+            check (chan (out, 0, 0.375, 0.04) > chan (out, 0, 0.25, 0.04) + 30.0, "ECHO SYNC: TIME 1 = 1/8 dotted at 120 BPM repeats at 375 ms ("
+                   + String (chan (out, 0, 0.25, 0.04), 0) + " -> " + String (chan (out, 0, 0.375, 0.04), 0) + " dB)");
+        }
         // PING-PONG: left at 250 ms, then right at 625 ms, nothing on the other side
         const auto pp = pluck (2, 60.0f, 0.0f);
         check (chan (pp, 0, 0.25) > chan (pp, 1, 0.25) + 40.0 && chan (pp, 1, 0.625) > chan (pp, 0, 0.625) + 40.0,
@@ -2229,6 +2239,16 @@ int main (int argc, char* argv[])
         save ("voice-strip", areaOf ("CHOIR"));
         save ("detail-choir", areaOf ("VOICE 1"));
         save ("master", areaOf ("MASTER"));
+        {
+            // FILL names the scale while the voices sit on it
+            auto snapshot = [&] { std::map<String, float> m; for (auto* id : { "v1_tune", "v2_tune", "v3_tune", "v4_tune", "snap_scale", "snap_root" }) m[id] = p->getParamReal (id); return m; };
+            const auto before = snapshot();
+            p->fillVoices (2, 2);
+            live (0.2);
+            save ("master-fill", areaOf ("MASTER"));
+            for (auto& kv : before) p->setParamReal (kv.first, kv.second);
+            live (0.2);
+        }
         save ("topbar", { 0, 0, ResoOpusEditor::logicalWidth, TopBar::height });
         save ("keyboard", { 0, TopBar::height + Stage::height, ResoOpusEditor::logicalWidth, ResoOpusEditor::logicalHeight - TopBar::height - Stage::height - BottomBar::height });
         save ("bottombar", { 0, ResoOpusEditor::logicalHeight - BottomBar::height, ResoOpusEditor::logicalWidth, BottomBar::height });
@@ -2286,6 +2306,9 @@ int main (int argc, char* argv[])
         preset ("Orbiting Choir");
         live (1.5);
         save ("motion-fx", areaOf ("MOTION"));
+        setParam (*p, "echo_sync", 1.0f); setParam (*p, "echo_mode", 1.0f);
+        live (0.3);
+        save ("echo-sync", areaOf ("ECHO"));
         editor->showPage (0);
 
         preset ("Lunar Tide");
@@ -2795,6 +2818,7 @@ int main (int argc, char* argv[])
             if (id.startsWith ("menv_")) { setParam (*p, "flt_cutoff", 900.0f); p->addModulation (Mod::ModEnv, "flt_cutoff", 0.5f); }
             if (id.startsWith ("mot_") && id != "mot_on") { setParam (*p, "mot_on", 1.0f); setParam (*p, "mot_rate", 2.0f); }
             if (id == "mot_div") setParam (*p, "mot_sync", 1.0f);
+            if (id == "echo_div1" || id == "echo_div2") setParam (*p, "echo_sync", 1.0f);
             if (id == "mot_x") setParam (*p, "mot_mode", 1.0f);   // phaser feedback
             if (id.startsWith ("echo_") && id != "echo_mix") setParam (*p, "echo_mix", 50.0f);
             if (id == "echo_self") setParam (*p, "echo_mod", 60.0f);

@@ -59,6 +59,7 @@ public:
     // Voice helpers (message thread)
     void applyChord (int voice, int chord);              // CHORD: fills the five intervals of a CHOIR voice
     void fillVoices (int scale, int root);               // FILL: spreads the four voices over a scale
+    bool fillMatches (int scale, int root) const;        // do the four voices still sit where FILL put them?
     int plateNote (int voice) const;                     // MIDI note of the plate that plays this voice
 
     // Modulation helpers (message thread)

@@ -12,8 +12,10 @@ public:
     LedButton (ResoOpusProcessor&, const juce::String& paramID, const juce::String& label);
     void paint (juce::Graphics&) override;
     void mouseDown (const juce::MouseEvent&) override;
+    void setLeftAligned (bool b) { left = b; repaint(); }   // under a switch list: title and button flush left like the list
 
 private:
+    bool left = false;
     juce::RangedAudioParameter* param = nullptr;
     std::unique_ptr<juce::ParameterAttachment> attachment;
     juce::String label;
@@ -79,6 +81,7 @@ public:
     // Lays out children in a grid: column weights, items row-major (nullptr = empty cell)
     void setGrid (std::vector<float> columnWeights, std::vector<juce::Component*> items);
     void setSpan (juce::Component* item, int columns);   // a wide item centred over several grid columns
+    std::function<void()> onLayout;                     // after every grid layout: place extra children relative to it
     void setRightText (const juce::String& t) { rightText = t; repaint(); }
     // one short line at the bottom of the panel (what the chosen mode does); the grid makes room for it
     void setFooter (const juce::String& t) { const bool had = footer.isNotEmpty(); footer = t; if (had != footer.isNotEmpty()) resized(); repaint(); }

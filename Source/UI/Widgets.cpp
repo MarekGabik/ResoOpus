@@ -50,10 +50,10 @@ void LedButton::paint (Graphics& g)
     {
         g.setColour (Palette::label);
         g.setFont (Fonts::bold (10.5f));
-        g.drawText (label, 0, 0, getWidth(), 13, Justification::centred, false);
+        g.drawText (label, 0, 0, getWidth(), 13, left ? Justification::centredLeft : Justification::centred, false);
         y = 19.0f;
     }
-    drawGlassButton (g, Rectangle<float> (30.0f, 28.0f).withCentre ({ getWidth() * 0.5f, y + 14.0f }), on);
+    drawGlassButton (g, left ? Rectangle<float> (1.0f, y, 30.0f, 28.0f) : Rectangle<float> (30.0f, 28.0f).withCentre ({ getWidth() * 0.5f, y + 14.0f }), on);
 }
 
 void LedButton::mouseDown (const MouseEvent& e)
@@ -284,7 +284,14 @@ void ModulePanel::paint (Graphics& g)
     }
     g.setColour (Palette::plateText);
     g.setFont (Fonts::bold (11.5f).withExtraKerningFactor (0.11f));
-    g.drawText (title, 0, 0, getWidth(), headerHeight, Justification::centred, false);
+    {
+        // the title is centred; a wide select button on the right pushes it into the space left of the button
+        const int tw = GlyphArrangement::getStringWidthInt (Fonts::bold (11.5f).withExtraKerningFactor (0.11f), title);
+        int right = getWidth();
+        if (rightText.isNotEmpty() && onRightClick) right = (int) rightButtonArea().getX() - 6;
+        const int centreX = std::min (getWidth() / 2, right - tw / 2 - 4);
+        g.drawText (title, centreX - getWidth() / 2, 0, getWidth(), headerHeight, Justification::centred, false);
+    }
 
     // colour dot (blinks with the source for LFO / random)
     const auto dot = Rectangle<float> (8.0f, 8.0f).withCentre ({ 13.0f, headerHeight * 0.5f });
@@ -369,7 +376,14 @@ void ModulePanel::resized()
     float total = 0.0f;
     for (auto w : weights) total += w;
 
-    // every item of a row starts at the same height (the titles line up)
+    // every item of a row starts at the same height (the titles line up). In a column with a switch list, every item
+    // starts at the list's left edge (a switch or a button under a list sits flush); other columns stay centred
+    std::vector<int> colW ((size_t) cols, 0);
+    for (size_t i = 0; i < items.size(); ++i)
+        if (dynamic_cast<LedRadio*> (items[i]) != nullptr && spans.find (items[i]) == spans.end())
+            colW[i % (size_t) cols] = std::max (colW[i % (size_t) cols], items[i]->getWidth());
+    for (size_t i = 0; i < items.size(); ++i)
+        if (auto* b = dynamic_cast<LedButton*> (items[i])) b->setLeftAligned (colW[i % (size_t) cols] > 0);
     for (size_t i = 0; i < items.size(); ++i)
     {
         auto* c = items[i];
@@ -384,8 +398,10 @@ void ModulePanel::resized()
         // every row starts where a knob with its value would (100 px centred in the cell), so panels side by side
         // put their titles on the same line too; a taller item grows downwards, staying inside the panel
         const int top = jlimit (body.getY(), std::max (body.getY(), body.getBottom() - c->getHeight()), roundToInt (cy - 50.0f));
-        c->setTopLeftPosition (roundToInt (cx - c->getWidth() * 0.5f), top);
+        const int w = sp != spans.end() || colW[(size_t) col] == 0 ? c->getWidth() : colW[(size_t) col];
+        c->setTopLeftPosition (roundToInt (cx - w * 0.5f), top);
     }
+    if (onLayout) onLayout();
 }
 
 //==============================================================================

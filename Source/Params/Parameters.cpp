@@ -252,6 +252,13 @@ const std::vector<ParamDef>& Params::globalDefs()
                             "together (0) or alternating (100). Rotor: speed, slow below the middle, fast above it (with inertia)"));
             d.push_back (F ("mot_mix", "Motion Mix", 0.0f, 100.0f, 100.0f, Unit::Percent, "Dry / moved"));
         }
+        // ECHO in tempo
+        {
+            static const StringArray echoDivs { "1/32", "1/16 T", "1/16", "1/8 T", "1/16 D", "1/8", "1/4 T", "1/8 D", "1/4", "1/2 T", "1/4 D", "1/2", "1/2 D", "1 bar" };
+            d.push_back (B ("echo_sync", "Echo Sync", false, "ECHO times in the song tempo (the TIME knobs become note values, at most 2 s)"));
+            d.push_back (C ("echo_div1", "Echo Division 1", echoDivs, 7, "TIME 1 in the song tempo"));
+            d.push_back (C ("echo_div2", "Echo Division 2", echoDivs, 8, "TIME 2 in the song tempo"));
+        }
         return d;
     }();
     return defs;
@@ -590,6 +597,12 @@ float Params::parse (const ParamDef& d, const String& text, float fallback)
 }
 
 //==============================================================================
+double Mod::echoDivisionBeats (int index)
+{
+    static const double b[] = { 0.125, 1.0 / 6.0, 0.25, 1.0 / 3.0, 0.375, 0.5, 2.0 / 3.0, 0.75, 1.0, 4.0 / 3.0, 1.5, 2.0, 3.0, 4.0 };
+    return b[juce::jlimit (0, 13, index)];
+}
+
 double Mod::divisionBeats (int index)
 {
     static const double b[] = { 32.0, 16.0, 8.0, 4.0, 2.0, 1.0, 0.5, 0.25, 2.0 / 3.0, 1.0 / 3.0, 1.5, 0.75 };

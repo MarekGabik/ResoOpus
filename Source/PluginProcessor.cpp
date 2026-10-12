@@ -662,6 +662,12 @@ void ResoOpusProcessor::processChunk (AudioBuffer<float>& out, int start, int le
     {
         ::dsp::Echo::Settings es;
         es.time1 = curG[GP::echo_time1]; es.time2 = curG[GP::echo_time2];
+        if (curG[GP::echo_sync] > 0.5f)
+        {
+            // in tempo: note values at the song tempo, within the 2 s of the lines
+            es.time1 = (float) std::min (2.0, Mod::echoDivisionBeats ((int) curG[GP::echo_div1]) * 60.0 / hostBpm);
+            es.time2 = (float) std::min (2.0, Mod::echoDivisionBeats ((int) curG[GP::echo_div2]) * 60.0 / hostBpm);
+        }
         es.feedback = curG[GP::echo_fb] / 100.0f; es.mix = curG[GP::echo_mix] / 100.0f;
         es.mod = curG[GP::echo_mod] / 100.0f; es.self = (int) curG[GP::echo_self] == 0; es.dust = dust;
         es.mode = (int) curG[GP::echo_mode];
@@ -960,17 +966,25 @@ void ResoOpusProcessor::applyChord (int voice, int chord)
         setParamReal (Params::voiceID (voice, "int" + String (i + 1)), iv[i]);
 }
 
+// degrees 1-3-5-7 of the scale from the root, starting at C1 + root
+static int fillNote (int scale, int root, int voice)
+{
+    const auto& steps = Params::scaleSteps (scale);
+    const int degree = voice * 2;
+    return 36 + root + steps[degree % steps.size()] + 12 * (degree / steps.size());
+}
+
+bool ResoOpusProcessor::fillMatches (int scale, int root) const
+{
+    for (int k = 0; k < Params::numVoices; ++k)
+        if (std::abs (getParamReal (Params::voiceID (k, "tune")) - (float) fillNote (scale, root, k)) > 0.01f) return false;
+    return true;
+}
+
 void ResoOpusProcessor::fillVoices (int scale, int root)
 {
-    // degrees 1-3-5-7 of the scale from the root, starting at C1 + root
-    const auto& steps = Params::scaleSteps (scale);
-    const int baseNote = 36 + root;
     for (int k = 0; k < Params::numVoices; ++k)
-    {
-        const int degree = k * 2;
-        const int note = baseNote + steps[degree % steps.size()] + 12 * (degree / steps.size());
-        setParamReal (Params::voiceID (k, "tune"), (float) note);
-    }
+        setParamReal (Params::voiceID (k, "tune"), (float) fillNote (scale, root, k));
     setParamReal ("snap_scale", (float) scale);
     setParamReal ("snap_root", (float) root);
 }

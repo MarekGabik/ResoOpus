@@ -102,6 +102,34 @@ void LedDot::paint (Graphics& g)
 
 void LedDot::mouseDown (const MouseEvent&) { attachment->setValueAsCompleteGesture (on ? 0.0f : 1.0f); }
 
+MiniToggle::MiniToggle (ResoOpusProcessor& p, const String& id, const String& t) : text (t)
+{
+    param = p.param (id);
+    jassert (param != nullptr);
+    attachment = std::make_unique<ParameterAttachment> (*param, [this] (float v) { on = v > 0.5f; repaint(); });
+    attachment->sendInitialUpdate();
+    if (auto* d = Params::findDef (id)) setTooltip (d->tip);
+    setSize (GlyphArrangement::getStringWidthInt (Fonts::bold (9.0f), text) + 14, 16);
+    setMouseCursor (MouseCursor::PointingHandCursor);
+}
+
+void MiniToggle::paint (Graphics& g)
+{
+    const auto r = getLocalBounds().toFloat().reduced (0.5f);
+    g.setColour (on ? Palette::curve : Colour (0xff1c1d22));
+    g.fillRoundedRectangle (r, r.getHeight() * 0.5f);
+    g.setColour (on ? Palette::curve.brighter (0.2f) : Colour (0xff3a3b42));
+    g.drawRoundedRectangle (r, r.getHeight() * 0.5f, 1.0f);
+    g.setColour (on ? Palette::plateText : Palette::textDim);
+    g.setFont (Fonts::bold (9.0f));
+    g.drawText (text, r, Justification::centred, false);
+}
+
+void MiniToggle::mouseDown (const MouseEvent& e)
+{
+    if (! e.mods.isPopupMenu()) attachment->setValueAsCompleteGesture (on ? 0.0f : 1.0f);
+}
+
 //==============================================================================
 GravityView::GravityView (ResoOpusProcessor& p) : proc (p)
 {
@@ -471,6 +499,7 @@ DronePage::DronePage (ResoOpusProcessor& p) : Page (p)
     const int mw = 254, dh = height - gh - gap;
     auto* master = new MasterPanel (*this);
     owned.add (master);
+    masterPanel = master;
     master->setBounds (width - mw, gh + gap, mw, dh);
     addAndMakeVisible (master);
     const char* mIds[] = { "pitch", "dust", "grit", "master_vol" };
@@ -821,6 +850,14 @@ void DronePage::VoiceScope::paint (Graphics& g)
 void DronePage::refreshLive()
 {
     Page::refreshLive();
+    {
+        // FILL shows the scale the voices sit on (until one of them is retuned by hand)
+        static const char* shortNames[] = { "MAJOR", "MINOR", "DORIAN", "PHRYGIAN", "LYDIAN", "MIXOLYD", "HARM MIN",
+                                             "PENTA MAJ", "PENTA MIN", "WHOLE TONE", "HIRAJOSHI", "DBL HARM" };
+        const int scale = jlimit (0, 11, roundToInt (proc.getParamReal ("snap_scale"))), root = jlimit (0, 11, roundToInt (proc.getParamReal ("snap_root")));
+        const String fill = proc.fillMatches (scale, root) ? Params::findDef ("snap_root")->choices[root] + " " + shortNames[scale] : String ("FILL");
+        if (fill != shownFill) { shownFill = fill; masterPanel->setRightText (fill); }
+    }
     for (int v = 0; v < Params::numVoices; ++v)
     {
         auto* c = columns[v];
@@ -932,7 +969,7 @@ FxPage::FxPage (ResoOpusProcessor& p) : Page (p)
     auto* resB = knob ("flt2_res", "RESONANCE", Palette::filterB, sm ("0", "10"));
     auto* drvB = knob ("flt2_drive", "DRIVE", Palette::filterB, sm ("0", "10"));
     modelB->setColumns (2);
-    filterBPanel->setGrid ({ 1.0f, 1.0f, 1.0f, 1.0f }, { cutB, resB, drvB, onB, modelB, nullptr, modeB, nullptr });
+    filterBPanel->setGrid ({ 1.0f, 1.0f, 1.0f, 1.0f }, { onB, cutB, resB, drvB, modelB, nullptr, modeB, nullptr });
     filterBPanel->setSpan (modelB, 2);
     filterBPanel->setSpan (modeB, 2);
     filterBControls = { cutB, resB, drvB, modelB, modeB };
@@ -952,6 +989,23 @@ FxPage::FxPage (ResoOpusProcessor& p) : Page (p)
         echoMode, echoKnobs[0], echoKnobs[1], knob ("echo_fb", "FEEDBACK", Palette::mixer, sm ("0", "MAX")),
         echoSrc, echoKnobs[2], knob ("echo_mix", "MIX", Palette::mixer, sm ("DRY", "WET")),
         knob ("echo_voices", "TO VOICES", Palette::mixer, sm ("0", "100")) });
+    // in tempo: the note values take the place of the TIME knobs; SYNC sits between the two
+    for (int i = 0; i < 2; ++i)
+    {
+        echoDivs[i] = knob (i == 0 ? "echo_div1" : "echo_div2", i == 0 ? "TIME 1" : "TIME 2", Palette::mixer, sm ("1/32", "1 bar"));
+        echoPanel->addAndMakeVisible (echoDivs[i]);
+        echoDivs[i]->setVisible (false);
+    }
+    echoSync = new MiniToggle (proc, "echo_sync", "SYNC");
+    owned.add (echoSync);
+    echoPanel->addAndMakeVisible (echoSync);
+    echoPanel->onLayout = [this]
+    {
+        for (int i = 0; i < 2; ++i)
+            echoDivs[i]->setTopLeftPosition (echoKnobs[i]->getBounds().getCentreX() - echoDivs[i]->getWidth() / 2, echoKnobs[i]->getY());
+        echoSync->setCentrePosition ((echoKnobs[0]->getBounds().getCentreX() + echoKnobs[1]->getBounds().getCentreX()) / 2, echoKnobs[0]->getY() + 48);
+    };
+    echoPanel->onLayout();
 
     // MOTION: movement in space between the filters and ECHO
     motionPanel = panel ("MOTION", Palette::motion, { third + 8, y2, third, rowH }, -1, "OFF");
@@ -997,6 +1051,11 @@ void FxPage::refreshLive()
         shownRoute = r;
         routingPanel->setRightText (r < 0 ? String ("B OFF") : Params::findDef ("flt_route")->choices[jlimit (0, 3, r)].toUpperCase());
     }
+    {
+        const bool sync = proc.getParamReal ("echo_sync") > 0.5f;
+        for (int i = 0; i < 2; ++i)
+            if (echoDivs[i]->isVisible() != sync) { echoDivs[i]->setVisible (sync); echoKnobs[i]->setVisible (! sync); }
+    }
     const int em = roundToInt (proc.getParamReal ("echo_mode"));
     if (em != shownEcho)
     {
@@ -1006,6 +1065,7 @@ void FxPage::refreshLive()
                                            { "TIME 1", "TIME 2", "DEGRADE" }, { "TIME 1", "TIME 2", "DEPTH" } };
         const int m = jlimit (0, 4, em);
         for (int i = 0; i < 3; ++i) echoKnobs[i]->setLabel (names[m][i]);
+        for (int i = 0; i < 2; ++i) echoDivs[i]->setLabel (names[m][i]);
         echoPanel->setRightText (Params::findDef ("echo_mode")->choices[m].toUpperCase());
         static const char* info[5] = { "Two lines, left and right, feeding each other.",
                                         "A tape loop with two heads: darker, wobbling repeats.",
