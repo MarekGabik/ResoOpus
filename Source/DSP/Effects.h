@@ -15,21 +15,32 @@ inline float tanhFast (float x)
     return x * (27.0f + x2) / (27.0f + 9.0f * x2);
 }
 
+// Soft ceiling for signals inside a feedback loop: transparent when quiet, never louder than c
+inline float ceilingClip (float x, float c) { return c * tanhFast (x / c); }
+
 //==============================================================================
-// FILTER with five analog-style models. All take g = tan(pi fc / fs), res 0..1, drive 0..1 and give
-// low pass / band pass / high pass. Runs in the oversampled domain.
-//   GROWL  aggressive 12 dB state variable with saturating (asymmetric) integrators
-//   LADDER transistor ladder, 24 dB: round, thins the lows a little at high resonance, sings at the top
-//   DIODE  diode ladder, coupled stages: rubbery "squelch", the resonance bites more than it sings
-//   SCREAM 12 dB with a clipped resonance path: harsh, screaming, screeches when pushed
-//   SILK   clean, linear 12 dB state variable, only the input is softly limited
+// FILTER with seven models. All take g = tan(pi fc / fs), res 0..1, drive 0..1 and a mode (low / band / high).
+// Runs in the oversampled domain.
+//   GROWL  op-amp state variable, 12 dB, clipping integrators: keeps the lows, gritty self-oscillation, even harmonics
+//   LADDER transistor ladder, 24 dB: round, the lows thin with resonance, rings as a clean sine
+//   DIODE  diode ladder, coupled stages: rubbery resonance that squeezes with level, uneven clipping
+//   SCREAM Sallen-Key style 12 dB with diodes in the resonance: aggressive, screams near the top
+//   SILK   clean digital state variable, linear, never self-oscillates
+//   COMB   tuned feedback delay (cutoff = pitch): string, metal or hollow tube
+//   VOWEL  three formants (cutoff walks U-O-A-E-I, mode = man / woman / child)
+
 class AnalogFilter
 {
 public:
-    enum Model { Growl = 0, Ladder, Diode, Scream, Silk, numModels };
+    enum Model { Growl = 0, Ladder, Diode, Scream, Silk, Comb, Vowel, numModels };
     enum Mode { LowPass = 0, BandPass, HighPass };
 
-    void reset() { s1 = s2 = 0.0f; for (auto& z : st) z = 0.0f; for (auto& z : dz) z = 0.0; dz4 = 0.0; clipPrev = 0.0f; dc = 0.0f; }
+    void reset()
+    {
+        s1 = s2 = 0.0f; for (auto& z : st) z = 0.0f; for (auto& z : dz) z = 0.0; dz4 = 0.0; clipPrev = 0.0f; dc = 0.0f;
+        std::fill (combBuf.begin(), combBuf.end(), 0.0f); combW = 0; combLp = 0.0f;
+        for (auto& f : form) f[0] = f[1] = 0.0f;
+    }
 
     float process (float x, float g, float res, float drive, int mode, int model)
     {
@@ -40,6 +51,8 @@ public:
             case Diode:  out = diode (x * (1.0f + 3.0f * drive), g, res, mode); break;
             case Scream: out = scream (x * (1.0f + 4.0f * drive), g, res, drive, mode); break;
             case Silk:   out = silk (x * (1.0f + 2.0f * drive), g, res, mode); break;
+            case Comb:   out = comb (x * (1.0f + 3.0f * drive), g, res, drive, mode); break;
+            case Vowel:  out = vowel (x * (1.0f + 3.0f * drive), g, res, drive, mode); break;
             default:     out = growl (x * (1.0f + 3.0f * drive), g, res, drive, mode); break;
         }
         if (! (std::abs (out) < 1.0e4f)) { reset(); out = 0.0f; }
@@ -194,6 +207,96 @@ private:
         return (float) (y4 * (1.0 + 0.3 * k));
     }
 
+    // COMB: a tuned feedback delay; the cutoff is its pitch (one period of delay), the resonance its feedback.
+    // LOW = a damped loop (a plucked string, warm), BAND = every harmonic rings (metallic), HIGH = negative feedback:
+    // only the odd harmonics ring an octave lower (hollow, like a clarinet or a tube). Drive saturates the loop
+    float comb (float x, float g, float res, float drive, int mode)
+    {
+        if (combBuf.empty()) return x;
+        if (g != combG || mode != combMode)
+        {
+            combG = g; combMode = mode;
+            combD = pi / std::atan ((double) g);   // fs / f, since g = tan (pi f / fs)
+            combC = (float) (1.0 - std::exp (-twoPi * 3.0 / combD));   // LOW: the loop is damped at ~3x the pitch
+            if (mode == LowPass)
+            {
+                // the damping delays the loop a little: take its phase delay at the pitch off the line, so it stays in tune
+                const double w = twoPi / combD, a = 1.0 - combC;
+                combD -= std::atan2 (a * std::sin (w), 1.0 - a * std::cos (w)) / w;
+            }
+        }
+        const int n = (int) combBuf.size();
+        const double d = std::max (2.0, std::min (combD, (double) n - 4.0));
+        double pos = (double) combW - d;
+        if (pos < 0.0) pos += n;
+        const int i0 = (int) pos;
+        const float fr = (float) (pos - i0), a = combBuf[(size_t) i0], b = combBuf[(size_t) ((i0 + 1) % n)];
+        float delayed = a + fr * (b - a);
+        const float fb = (mode == HighPass ? -1.0f : 1.0f) * (0.3f + 0.67f * res);
+        if (mode == LowPass)
+        {
+            combLp += combC * (delayed - combLp);
+            delayed = combLp;
+        }
+        float v = x + fb * delayed;
+        v = drive > 0.0f ? ceilingClip (v, 1.5f - std::min (1.0f, drive)) : ceilingClip (v, 3.0f);
+        combBuf[(size_t) combW] = v;
+        if (++combW >= n) combW = 0;
+        return v * std::pow (1.0f - fb * fb, 0.4f);   // keeps the level of a broad sound about the same
+    }
+
+    // VOWEL: three formant band passes (a vocal tract). The cutoff walks U - O - A - E - I (dark to bright), the
+    // resonance sharpens the formants, the mode is the size of the throat: LOW = man, BAND = woman, HIGH = child
+    float vowel (float x, float g, float res, float drive, int mode)
+    {
+        if (drive > 0.0f) x += std::min (1.0f, 3.0f * drive) * (tanhFast (x) - x);
+        if (g != vowelG || res != vowelRes || mode != vowelMode)
+        {
+            vowelG = g; vowelRes = res; vowelMode = mode;
+            static const float table[5][3] = { { 300.0f, 870.0f, 2240.0f },     // U
+                                               { 570.0f, 840.0f, 2410.0f },     // O
+                                               { 730.0f, 1090.0f, 2440.0f },    // A
+                                               { 530.0f, 1840.0f, 2480.0f },    // E
+                                               { 270.0f, 2290.0f, 3010.0f } };  // I
+            static const float amp[5][3] = { { 1.0f, 0.35f, 0.12f }, { 1.0f, 0.55f, 0.15f }, { 1.0f, 0.6f, 0.25f },
+                                             { 1.0f, 0.55f, 0.35f }, { 1.0f, 0.4f, 0.35f } };
+            const double f = std::atan ((double) g) * fsRate / pi;
+            const float p = 4.0f * clampf ((float) (std::log (std::max (20.0, f) / 20.0) / std::log (1000.0)), 0.0f, 1.0f);
+            const int i = std::min (3, (int) p);
+            const float t = p - (float) i;
+            const float size = mode == HighPass ? 1.35f : (mode == BandPass ? 1.17f : 1.0f);
+            const float q = 4.0f + 26.0f * res;
+            for (int k = 0; k < 3; ++k)
+            {
+                const double hz = size * table[i][k] * std::pow (table[i + 1][k] / table[i][k], t);
+                formG[k] = (float) std::tan (pi * std::min (hz, 0.45 * fsRate) / fsRate);
+                formK[k] = 1.0f / q;
+                formA[k] = amp[i][k] + t * (amp[i + 1][k] - amp[i][k]);
+            }
+            vowelGain = 3.0f * std::pow (q / 4.0f, 0.65f);   // narrower formants pass less: make up for it
+        }
+        float y = 0.0f;
+        for (int k = 0; k < 3; ++k)
+        {
+            const float gk = formG[k], kk = formK[k];
+            const float h = 1.0f / (1.0f + gk * (gk + kk));
+            const float hp = (x - (kk + gk) * form[k][0] - form[k][1]) * h;
+            const float v1 = gk * hp, bp = v1 + form[k][0];
+            form[k][0] = bp + v1;
+            const float v2 = gk * bp, lp = v2 + form[k][1];
+            form[k][1] = lp + v2;
+            y += formA[k] * kk * bp;   // unity at each formant's centre
+        }
+        return ceilingClip (vowelGain * y, 1.4f);
+    }
+
+    std::vector<float> combBuf;
+    int combW = 0;
+    double combD = 100.0, fsRate = 48000.0;
+    float combG = -1.0f, combLp = 0.0f, combC = 0.1f, vowelG = -1.0f, vowelRes = -1.0f, vowelGain = 3.0f;
+    int vowelMode = -1, combMode = -1;
+    float form[3][2] {}, formG[3] {}, formK[3] {}, formA[3] {};
+
     float s1 = 0.0f, s2 = 0.0f, clipPrev = 0.0f;
     float st[4] {};
     double dz[4] {}, dz4 = 0.0;
@@ -203,14 +306,15 @@ public:
     {
         const double K = 2.0 * pi * 90.0 / fs; fbA = (K - 2.0) / (K + 2.0); fbB = 2.0 / (K + 2.0);
         dcC = (float) (1.0 - std::exp (-2.0 * pi * 8.0 / fs));
+        fsRate = fs;
+        combBuf.assign ((size_t) (fs / 18.0) + 8, 0.0f);   // the comb reaches down to 20 Hz
+        combW = 0; combG = vowelG = -1.0f;
     }
 private:
     double fbA = -0.99, fbB = 1.0;
     float dc = 0.0f, dcC = 0.0005f;
 };
 
-// Soft ceiling for signals inside a feedback loop: transparent when quiet, never louder than c
-inline float ceilingClip (float x, float c) { return c * tanhFast (x / c); }
 
 //==============================================================================
 // Slowly keeps the left / right balance of a wet signal equal to the balance of its input (feedback loops drift

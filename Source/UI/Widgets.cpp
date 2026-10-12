@@ -109,13 +109,25 @@ void LedRadio::setIcons (StringArray iconNames, Array<Colour> colours)
     repaint();
 }
 
-void LedRadio::updateSize()
+void LedRadio::setColumns (int c)
+{
+    columns = std::max (1, c);
+    updateSize();
+    repaint();
+}
+
+float LedRadio::columnWidth() const
 {
     int w = 0;
     for (auto& s : names) w = std::max (w, GlyphArrangement::getStringWidthInt (Fonts::bold (10.5f), s));
-    if (! icons.isEmpty()) w += 22;
-    setSize (std::max (GlyphArrangement::getStringWidthInt (Fonts::bold (10.5f), label), 30 + 10 + 12 + w) + 4,
-             (label.isEmpty() ? 0 : 19) + std::max (30, names.size() * 15));
+    return (float) (16 + (icons.isEmpty() ? 0 : 22) + w + 12);
+}
+
+void LedRadio::updateSize()
+{
+    const int listW = 36 + roundToInt (columnWidth() * (float) columns) - 12;
+    setSize (std::max (GlyphArrangement::getStringWidthInt (Fonts::bold (10.5f), label), listW) + 4,
+             (label.isEmpty() ? 0 : 19) + std::max (30, rowsPerColumn() * 15));
 }
 
 void LedRadio::paint (Graphics& g)
@@ -132,11 +144,14 @@ void LedRadio::paint (Graphics& g)
     drawGlassButton (g, Rectangle<float> (1.0f, y, 30.0f, 28.0f), false);
 
     g.setFont (Fonts::bold (10.5f));
+    const int rows = rowsPerColumn();
+    const float colW = columnWidth();
     for (int i = 0; i < names.size(); ++i)
     {
-        const float ly = y + (float) i * 15.0f;
+        const float cx = (float) (i / rows) * colW;   // column offset
+        const float ly = y + (float) (i % rows) * 15.0f;
         const bool sel = i == index;
-        const auto dot = Rectangle<float> (6.0f, 6.0f).withCentre ({ 43.0f, ly + 7.5f });
+        const auto dot = Rectangle<float> (6.0f, 6.0f).withCentre ({ 43.0f + cx, ly + 7.5f });
         if (sel)
         {
             g.setColour (Palette::curve.withAlpha (0.35f));
@@ -146,18 +161,18 @@ void LedRadio::paint (Graphics& g)
         else
             g.setColour (Colour (0xff2d2e35));
         g.fillEllipse (dot);
-        int tx = 52;
+        float tx = 52.0f + cx;
         if (i < icons.size())
         {
             auto p = Icons::wave (icons[i]);
-            p.applyTransform (AffineTransform::scale (15.0f, 9.0f).translated (52.0f, ly + 3.0f));
+            p.applyTransform (AffineTransform::scale (15.0f, 9.0f).translated (52.0f + cx, ly + 3.0f));
             const auto c = i < iconColours.size() ? iconColours[i] : Palette::label;
             g.setColour (sel ? c : c.withAlpha (0.45f));
             g.strokePath (p, PathStrokeType (1.3f, PathStrokeType::curved, PathStrokeType::rounded));
-            tx = 74;
+            tx = 74.0f + cx;
         }
         g.setColour (sel ? Palette::text : Palette::textFaint.brighter (0.25f));
-        g.drawText (names[i], tx, (int) ly, getWidth() - tx, 15, Justification::centredLeft, false);
+        g.drawText (names[i], Rectangle<float> (tx, ly, colW, 15.0f), Justification::centredLeft, false);
     }
 }
 
@@ -167,8 +182,9 @@ void LedRadio::mouseDown (const MouseEvent& e)
     const float y0 = label.isEmpty() ? 0.0f : 19.0f;
     if (e.position.x >= 36.0f)
     {
-        const int i = (int) ((e.position.y - y0) / 15.0f);
-        if (i >= 0 && i < numChoices) choose (i);
+        const int row = (int) ((e.position.y - y0) / 15.0f), col = (int) ((e.position.x - 36.0f) / columnWidth());
+        const int i = col * rowsPerColumn() + row;
+        if (row >= 0 && row < rowsPerColumn() && i >= 0 && i < numChoices) choose (i);
     }
     else
         choose ((index + 1 + numChoices) % numChoices);
@@ -328,6 +344,12 @@ void ModulePanel::mouseDown (const MouseEvent& e)
     if (onRightClick && rightText.isNotEmpty() && rightButtonArea().contains (e.position)) onRightClick (*this);
 }
 
+void ModulePanel::setSpan (Component* item, int columns)
+{
+    spans[item] = columns;
+    resized();
+}
+
 void ModulePanel::resized()
 {
     if (handle) handle->setBounds (getWidth() - 62, 3, 56, 19);
@@ -345,9 +367,11 @@ void ModulePanel::resized()
         auto* c = items[i];
         if (c == nullptr) continue;
         const int col = (int) i % cols, row = (int) i / cols;
-        float x0 = 0.0f;
+        float x0 = 0.0f, wc = 0.0f;
         for (int k = 0; k < col; ++k) x0 += weights[(size_t) k];
-        const float cx = body.getX() + body.getWidth() * (x0 + weights[(size_t) col] * 0.5f) / total;
+        const auto sp = spans.find (c);
+        for (int k = col; k < std::min (cols, col + (sp != spans.end() ? sp->second : 1)); ++k) wc += weights[(size_t) k];
+        const float cx = body.getX() + body.getWidth() * (x0 + wc * 0.5f) / total;
         const float cy = body.getY() + body.getHeight() * ((float) row + 0.5f) / (float) rows;
         // every row starts where a knob with its value would (100 px centred in the cell), so panels side by side
         // put their titles on the same line too; a taller item grows downwards, staying inside the panel

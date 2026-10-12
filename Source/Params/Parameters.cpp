@@ -172,7 +172,7 @@ const std::vector<ParamDef>& Params::globalDefs()
         d.push_back (C ("arp_octaves", "Arp Octaves", { "1", "2", "3", "4" }, 0, "How many octaves the arpeggio climbs"));
         d.push_back (B ("arp_latch", "Latch", false, "Keeps the arpeggio running after you let go of the keys"));
         // appended later (parameter IDs stay in their order)
-        d.push_back (C ("flt_model", "Filter A Model", { "Growl", "Ladder", "Diode", "Scream", "Silk" }, 0,
+        d.push_back (C ("flt_model", "Filter A Model", { "Growl", "Ladder", "Diode", "Scream", "Silk", "Comb", "Vowel" }, 0,
                         "Character of the filter. Growl: dirty 12 dB that growls. Ladder: round 24 dB transistor ladder that sings. "
                         "Diode: rubbery squelch, bites more than it rings. Scream: harsh 12 dB, screeches when pushed. Silk: clean and smooth"));
         d.push_back (B ("drone_on", "Drone", true,
@@ -185,7 +185,7 @@ const std::vector<ParamDef>& Params::globalDefs()
         d.push_back (F ("lead_flt_env", "Lead Filter Env", -100.0f, 100.0f, 0.0f, Unit::Percent,
                         "How far the filter envelope moves the cutoff of each note (100 % = 6 octaves up, negative = down)"));
         d.push_back (F ("lead_flt_key", "Lead Key Track", 0.0f, 100.0f, 50.0f, Unit::Percent, "The cutoff follows the played note (100 % = one octave per octave)"));
-        d.push_back (C ("lead_flt_model", "Lead Filter Model", { "Growl", "Ladder", "Diode", "Scream", "Silk" }, 1, "Character of the lead filter (same models as FILTER)"));
+        d.push_back (C ("lead_flt_model", "Lead Filter Model", { "Growl", "Ladder", "Diode", "Scream", "Silk", "Comb", "Vowel" }, 1, "Character of the lead filter (same models as FILTER)"));
         d.push_back (C ("lead_flt_mode", "Lead Filter Mode", { "Low Pass", "Band Pass", "High Pass" }, 0, "Low pass, band pass or high pass for every lead note"));
         d.push_back (LogF ("lead_fenv_attack", "Lead Filter Attack", 0.001f, 10.0f, 0.005f, Unit::Seconds, "Filter envelope attack"));
         d.push_back (LogF ("lead_fenv_decay", "Lead Filter Decay", 0.001f, 30.0f, 0.4f, Unit::Seconds, "Filter envelope decay"));
@@ -196,7 +196,7 @@ const std::vector<ParamDef>& Params::globalDefs()
         d.push_back (F ("flt2_res", "Filter B Resonance", 0.0f, 10.0f, 0.0f, Unit::Scale10, "Resonance of FILTER B"));
         d.push_back (F ("flt2_drive", "Filter B Drive", 0.0f, 10.0f, 0.0f, Unit::Scale10, "Drive of FILTER B"));
         d.push_back (C ("flt2_mode", "Filter B Mode", { "Low Pass", "Band Pass", "High Pass" }, 2, "Low pass, band pass or high pass"));
-        d.push_back (C ("flt2_model", "Filter B Model", { "Growl", "Ladder", "Diode", "Scream", "Silk" }, 4, "Character of FILTER B"));
+        d.push_back (C ("flt2_model", "Filter B Model", { "Growl", "Ladder", "Diode", "Scream", "Silk", "Comb", "Vowel" }, 4, "Character of FILTER B"));
         d.push_back (C ("flt_route", "Filter Routing", { "Serial", "Parallel", "Split", "Stereo" }, 0,
                         "Serial: A then B (e.g. low pass + high pass = a band). Parallel: A and B side by side, mixed. "
                         "Split: the drone through A, the LEAD through B. Stereo: A on the left, B on the right"));

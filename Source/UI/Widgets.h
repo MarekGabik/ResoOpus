@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Knob.h"
+#include <map>
 
 class ResoOpusProcessor;
 
@@ -29,6 +30,7 @@ public:
     void refresh();   // action version: re-reads the lit entry
     // a waveform pictogram (Icons::wave names) in front of every entry, each in its own colour
     void setIcons (juce::StringArray iconNames, juce::Array<juce::Colour> colours);
+    void setColumns (int columns);   // long lists: entries fill column by column
     void paint (juce::Graphics&) override;
     void mouseDown (const juce::MouseEvent&) override;
 
@@ -40,6 +42,9 @@ private:
     juce::Array<juce::Colour> iconColours;
     int index = 0;
     int numChoices = 1;
+    int columns = 1;
+    int rowsPerColumn() const { return (names.size() + columns - 1) / columns; }
+    float columnWidth() const;
     std::function<int()> getIndex;
     std::function<void (int)> setIndex;
     void choose (int i);
@@ -73,6 +78,7 @@ public:
 
     // Lays out children in a grid: column weights, items row-major (nullptr = empty cell)
     void setGrid (std::vector<float> columnWeights, std::vector<juce::Component*> items);
+    void setSpan (juce::Component* item, int columns);   // a wide item centred over several grid columns
     void setRightText (const juce::String& t) { rightText = t; repaint(); }
     // makes the right header text a select button (pill with an arrow); called with the panel as menu target
     std::function<void (juce::Component&)> onRightClick;
@@ -97,6 +103,7 @@ private:
     std::unique_ptr<SourceHandle> handle;
     std::vector<float> weights;
     std::vector<juce::Component*> items;
+    std::map<juce::Component*, int> spans;
 };
 
 // Vertical group (e.g. SYNC above KB RESET)

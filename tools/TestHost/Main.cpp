@@ -1001,6 +1001,43 @@ static void testEffects()
                + "), DIODE both (H2 " + String (roundToInt (h2D)) + "), SILK clean (H3 " + String (roundToInt (h3K)) + ")");
     }
     {
+        // COMB is tuned by CUTOFF (LOW stays in tune despite its damping, HIGH rings the odd harmonics an octave down);
+        // VOWEL puts its formants on the vowel; both survive the extremes
+        const double fs = 96000.0;
+        auto strongest = [fs] (int model, double fc, int mode, double lo, double hi)
+        {
+            ::dsp::AnalogFilter flt; flt.prepare (fs); flt.reset();
+            const float g = (float) std::tan (MathConstants<double>::pi * fc / fs);
+            AudioBuffer<float> b (2, 65536);
+            for (int i = 0; i < b.getNumSamples(); ++i) { const float y = flt.process (i == 0 ? 0.5f : 0.0f, g, 0.8f, 0.0f, mode, model); b.setSample (0, i, y); b.setSample (1, i, y); }
+            const auto db = spectrum (b, 0, 15);
+            const double binHz = fs / 32768.0;
+            size_t best = (size_t) (lo / binHz);
+            for (size_t k = best; k < (size_t) (hi / binHz); ++k) if (db[k] > db[best]) best = k;
+            return std::make_pair (best * binHz, db[best]);
+        };
+        const auto low = strongest (5, 220.0, 0, 150.0, 300.0), band = strongest (5, 220.0, 1, 600.0, 700.0);
+        const auto hollowOdd = strongest (5, 220.0, 2, 300.0, 360.0), hollowEven = strongest (5, 220.0, 2, 400.0, 480.0);
+        const auto f1 = strongest (6, 632.5, 0, 500.0, 900.0), f2 = strongest (6, 632.5, 0, 950.0, 1400.0);
+        check (std::abs (cents (low.first, 220.0)) < 15.0 && std::abs (cents (band.first, 660.0)) < 10.0 && hollowOdd.second > hollowEven.second + 20.0,
+               "COMB at 220 Hz: LOW " + String (low.first, 1) + " Hz, BAND 3rd harmonic " + String (band.first, 1) + " Hz, HIGH rings 330 Hz "
+               + String (hollowOdd.second - hollowEven.second, 0) + " dB over 440 Hz");
+        check (std::abs (f1.first - 730.0) < 25.0 && std::abs (f2.first - 1090.0) < 40.0, "VOWEL A: formants at " + String (f1.first, 0) + " / " + String (f2.first, 0) + " Hz (730 / 1090)");
+        bool stable = true;
+        for (int m : { 5, 6 })
+            for (int mode = 0; mode < 3; ++mode)
+                for (float fc : { 20.0f, 20000.0f })
+                {
+                    auto p = makeProc (sr);
+                    setParam (*p, "space_blend", 0.0f);
+                    setParam (*p, "flt_model", (float) m); setParam (*p, "flt_mode", (float) mode);
+                    setParam (*p, "flt_cutoff", fc); setParam (*p, "flt_res", 10.0f); setParam (*p, "flt_drive", 10.0f);
+                    auto out = render (*p, 3.0);
+                    stable = stable && allFinite (out) && peakDb (out) < 0.0;
+                }
+        check (stable, "COMB and VOWEL at full resonance and drive, every mode, 20 Hz and 20 kHz: finite, below 0 dBFS");
+    }
+    {
         // FILTER B and ROUTING
         auto chanDb = [sr] (const AudioBuffer<float>& out, int ch, double f)
         {
@@ -2063,10 +2100,59 @@ int main (int argc, char* argv[])
         std::cout << "done" << std::endl;
         return 0;
     }
+    if (argc > 1 && String (argv[1]) == "--flevel")
+    {
+        // drone level through each model vs the open default filter
+        auto lv = [] (int model, float cutoff, float res, int mode)
+        {
+            auto p = makeProc();
+            setParam (*p, "space_blend", 0.0f); setParam (*p, "echo_mix", 0.0f);
+            setParam (*p, "flt_model", (float) model); setParam (*p, "flt_cutoff", cutoff); setParam (*p, "flt_res", res); setParam (*p, "flt_mode", (float) mode);
+            auto out = render (*p, 5.0);
+            return rmsDb (out, 2 * 48000, out.getNumSamples());
+        };
+        const double open = lv (0, 20000.0f, 0.0f, 0);
+        for (int mode = 0; mode < 3; ++mode)
+            for (float res : { 0.0f, 5.0f, 10.0f })
+                std::cout << "mode " << mode << " res " << res << ":  COMB 110 Hz " << String (lv (5, 110.0f, res, mode) - open, 1)
+                          << "  COMB 440 Hz " << String (lv (5, 440.0f, res, mode) - open, 1) << "  VOWEL A " << String (lv (6, 632.0f, res, mode) - open, 1)
+                          << "  VOWEL I " << String (lv (6, 15000.0f, res, mode) - open, 1) << " dB" << std::endl;
+        return 0;
+    }
+    if (argc > 1 && String (argv[1]) == "--combvowel")
+    {
+        // impulse response peaks: COMB at 220 Hz (low / band / high), VOWEL at the "A" position (632 Hz) and "I" (20 kHz)
+        const double fs = 96000.0;
+        auto peaks = [fs] (int model, double fc, float res, int mode, int count)
+        {
+            ::dsp::AnalogFilter flt; flt.prepare (fs); flt.reset();
+            const float g = (float) std::tan (MathConstants<double>::pi * fc / fs);
+            AudioBuffer<float> b (2, 65536);
+            for (int i = 0; i < b.getNumSamples(); ++i) { const float y = flt.process (i == 0 ? 0.5f : 0.0f, g, res, 0.0f, mode, model); b.setSample (0, i, y); b.setSample (1, i, y); }
+            const auto db = spectrum (b, 0, 15);
+            const double binHz = fs / 32768.0;
+            std::vector<std::pair<double, double>> pk;
+            for (size_t k = 3; k < (size_t) (5000.0 / binHz); ++k)
+                if (db[k] > db[k - 1] && db[k] >= db[k + 1] && db[k] > db[k - 2] && db[k] >= db[k + 2]) pk.push_back ({ db[k], k * binHz });
+            std::sort (pk.rbegin(), pk.rend());
+            pk.resize (std::min<size_t> (pk.size(), (size_t) count));
+            std::sort (pk.begin(), pk.end(), [] (auto& x, auto& y) { return x.second < y.second; });
+            String line;
+            for (auto& p : pk) line << String (p.second, 0) << " Hz (" << String (p.first, 0) << ")  ";
+            return line;
+        };
+        std::cout << "COMB low:  " << peaks (5, 220.0, 0.8f, 0, 6) << std::endl;
+        std::cout << "COMB band: " << peaks (5, 220.0, 0.8f, 1, 6) << std::endl;
+        std::cout << "COMB high: " << peaks (5, 220.0, 0.8f, 2, 6) << std::endl;
+        std::cout << "VOWEL A man:   " << peaks (6, 632.5, 0.6f, 0, 3) << std::endl;
+        std::cout << "VOWEL A child: " << peaks (6, 632.5, 0.6f, 2, 3) << std::endl;
+        std::cout << "VOWEL U:       " << peaks (6, 20.0, 0.6f, 0, 3) << std::endl;
+        return 0;
+    }
     if (argc > 1 && String (argv[1]) == "--filters")
     {
         // the character of every filter model at 96 kHz (2x oversampling), cutoff 1 kHz, low pass
-        static const char* names[] = { "GROWL", "LADDER", "DIODE", "SCREAM", "SILK" };
+        static const char* names[] = { "GROWL", "LADDER", "DIODE", "SCREAM", "SILK", "COMB", "VOWEL" };
         const double fs = 96000.0;
         auto gFor = [fs] (double fc) { return (float) std::tan (MathConstants<double>::pi * fc / fs); };
         // steady-state level (dB) of a sine through the filter
@@ -2112,7 +2198,7 @@ int main (int argc, char* argv[])
             }
             return 0;
         }
-        for (int m = 0; m < 5; ++m)
+        for (int m = 0; m < 7; ++m)
         {
             const int LP = 0;
             const double flat0 = level (m, LP, 1000, 0.0f, 0.0f, 100, 0.01f);

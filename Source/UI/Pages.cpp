@@ -885,8 +885,8 @@ const juce::StringArray& filterModeIcons() { static const juce::StringArray i { 
 juce::Array<juce::Colour> same (juce::Colour c, int n) { juce::Array<juce::Colour> a; for (int i = 0; i < n; ++i) a.add (c); return a; }
 const char* slopeText (int model)
 {
-    static const char* slopes[] = { "GROWL 12 dB", "LADDER 24 dB", "DIODE 24 dB", "SCREAM 12 dB", "SILK 12 dB" };
-    return slopes[juce::jlimit (0, 4, model)];
+    static const char* slopes[] = { "GROWL 12 dB", "LADDER 24 dB", "DIODE 24 dB", "SCREAM 12 dB", "SILK 12 dB", "COMB", "VOWEL" };
+    return slopes[juce::jlimit (0, 6, model)];
 }
 }
 
@@ -899,17 +899,21 @@ FxPage::FxPage (ResoOpusProcessor& p) : Page (p)
     // FILTER A | ROUTING (what the filters do, live) | FILTER B
     const int side = 360, mid = width - 2 * side - 16;
     filterPanel = panel ("FILTER A", Palette::filter, { 0, 0, side, rowH }, -1, "GROWL 12 dB");
-    auto* model = new LedRadio (proc, "flt_model", "MODEL", { "GROWL", "LADDER", "DIODE", "SCREAM", "SILK" });
+    auto* model = new LedRadio (proc, "flt_model", "MODEL", { "GROWL", "LADDER", "DIODE", "SCREAM", "SILK", "COMB", "VOWEL" });
     model->setTooltip (Params::findDef ("flt_model")->tip);
     owned.add (model);
     auto* mode = new LedRadio (proc, "flt_mode", "MODE", { "LOW", "BAND", "HIGH" });
     mode->setIcons (filterModeIcons(), same (Palette::filter, 3));
     owned.add (mode);
-    filterPanel->setGrid ({ 1.1f, 1.0f, 1.0f }, {
+    model->setColumns (2);
+    filterPanel->setGrid ({ 1.0f, 1.0f, 1.0f, 1.0f }, {
         knob ("flt_cutoff", "CUTOFF", Palette::filter, sm ("20", "20k")),
         knob ("flt_res", "RESONANCE", Palette::filter, sm ("0", "10")),
         knob ("flt_drive", "DRIVE", Palette::filter, sm ("0", "10")),
-        model, mode, knob ("flt_spread", "SPREAD", Palette::filter, sm ("0", "100")) });
+        knob ("flt_spread", "SPREAD", Palette::filter, sm ("0", "100")),
+        model, nullptr, mode, nullptr });
+    filterPanel->setSpan (model, 2);
+    filterPanel->setSpan (mode, 2);
 
     routingPanel = panel ("ROUTING", Palette::label, { side + 8, 0, mid, rowH }, -1, "B OFF");
     filterView = new FilterRoutingView (proc);
@@ -919,7 +923,7 @@ FxPage::FxPage (ResoOpusProcessor& p) : Page (p)
 
     // FILTER B: its own colour, the same as its curve in ROUTING
     filterBPanel = panel ("FILTER B", Palette::filterB, { width - side, 0, side, rowH }, -1, "SILK 12 dB");
-    auto* modelB = new LedRadio (proc, "flt2_model", "MODEL", { "GROWL", "LADDER", "DIODE", "SCREAM", "SILK" });
+    auto* modelB = new LedRadio (proc, "flt2_model", "MODEL", { "GROWL", "LADDER", "DIODE", "SCREAM", "SILK", "COMB", "VOWEL" });
     owned.add (modelB);
     auto* modeB = new LedRadio (proc, "flt2_mode", "MODE", { "LOW", "BAND", "HIGH" });
     modeB->setIcons (filterModeIcons(), same (Palette::filterB, 3));
@@ -928,7 +932,10 @@ FxPage::FxPage (ResoOpusProcessor& p) : Page (p)
     auto* cutB = knob ("flt2_cutoff", "CUTOFF", Palette::filterB, sm ("20", "20k"));
     auto* resB = knob ("flt2_res", "RESONANCE", Palette::filterB, sm ("0", "10"));
     auto* drvB = knob ("flt2_drive", "DRIVE", Palette::filterB, sm ("0", "10"));
-    filterBPanel->setGrid ({ 1.1f, 1.0f, 1.0f }, { cutB, resB, drvB, modelB, modeB, onB });
+    modelB->setColumns (2);
+    filterBPanel->setGrid ({ 1.0f, 1.0f, 1.0f, 1.0f }, { cutB, resB, drvB, onB, modelB, nullptr, modeB, nullptr });
+    filterBPanel->setSpan (modelB, 2);
+    filterBPanel->setSpan (modeB, 2);
     filterBControls = { cutB, resB, drvB, modelB, modeB };
 
     // ECHO
@@ -1072,7 +1079,7 @@ LeadPage::LeadPage (ResoOpusProcessor& p) : Page (p)
         static_cast<Component*> (owned.add (new LedButton (proc, "lead_sync", "SYNC"))), nullptr });
 
     filterPanel = panel ("LEAD FILTER", c, { 330 + g6, 0, 390, rowH }, -1, "LADDER 24 dB");
-    auto* fmodel = new LedRadio (proc, "lead_flt_model", "MODEL", { "GROWL", "LADDER", "DIODE", "SCREAM", "SILK" });
+    auto* fmodel = new LedRadio (proc, "lead_flt_model", "MODEL", { "GROWL", "LADDER", "DIODE", "SCREAM", "SILK", "COMB", "VOWEL" });
     owned.add (fmodel);
     auto* fmode = new LedRadio (proc, "lead_flt_mode", "MODE", { "LOW", "BAND", "HIGH" });
     fmode->setIcons (filterModeIcons(), same (c, 3));
@@ -1082,7 +1089,10 @@ LeadPage::LeadPage (ResoOpusProcessor& p) : Page (p)
         knob ("lead_flt_res", "RESONANCE", c, sm ("0", "10")),
         knob ("lead_flt_env", "ENV", c, sm ("-", "+", true)),
         knob ("lead_flt_key", "KEY", c, sm ("0", "100")),
-        fmodel, fmode, nullptr, nullptr });
+        fmodel, nullptr, fmode, nullptr });
+    fmodel->setColumns (2);
+    filterPanel->setSpan (fmodel, 2);
+    filterPanel->setSpan (fmode, 2);
 
     auto* fenv = panel ("FILTER ENV", c, { 726 + g6, 0, 212, rowH }, Mod::LeadEnv);
     fenv->setGrid ({ 1.0f, 1.0f }, {
