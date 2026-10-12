@@ -941,7 +941,7 @@ FxPage::FxPage (ResoOpusProcessor& p) : Page (p)
     // ECHO | MOTION | SPACE
     const int third = (width - 16) / 3;
     echoPanel = panel ("ECHO", Palette::mixer, { 0, y2, third, rowH }, -1, "DUAL");
-    echoSrc = new LedRadio (proc, "echo_self", "MOD SOURCE", { "SELF", "LFO" });
+    echoSrc = new LedRadio (proc, "echo_self", "MOD SOURCE", { "SELF", "SINE" });
     owned.add (echoSrc);
     echoKnobs[0] = knob ("echo_time1", "TIME 1", Palette::mixer, sm ("5ms", "2s"));
     echoKnobs[1] = knob ("echo_time2", "TIME 2", Palette::mixer, sm ("5ms", "2s"));

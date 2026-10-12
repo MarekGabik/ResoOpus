@@ -135,8 +135,9 @@ const std::vector<ParamDef>& Params::globalDefs()
                         "Repeats; above ~55 % the echo starts to sing on its own (standing waves you can play with TIME)"));
         d.push_back (F ("echo_mix", "Echo Mix", 0.0f, 100.0f, 0.0f, Unit::Percent, "Dry / echo"));
         d.push_back (F ("echo_mod", "Echo Mod", 0.0f, 100.0f, 10.0f, Unit::Percent, "How much the delay times wobble (from the source below)"));
-        d.push_back (C ("echo_self", "Echo Mod Source", { "Self", "LFO" }, 0,
-                        "Self: the echo modulates its own time (resonances turn unstable). LFO: a slow sine"));
+        d.push_back (C ("echo_self", "Echo Mod Source", { "Self", "Sine" }, 0,
+                        "Self: the echo modulates its own time (resonances turn unstable). Sine: the echo's own slow sine "
+                        "(0.23 Hz, not LFO 1 / 2; for those add Echo Time to the matrix). Used in DUAL and PING-PONG"));
         d.push_back (F ("echo_voices", "Echo To Voices", 0.0f, 100.0f, 0.0f, Unit::Percent,
                         "Feeds the echo back into the voices as frequency modulation (works with GRAVITY: the whole instrument becomes one loop)"));
         // SPACE
