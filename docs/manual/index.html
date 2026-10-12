@@ -24,7 +24,7 @@
       <li><a href="#master">MASTER a DUST</a></li>
       <li><a href="#lead">Stránka LEAD</a></li>
       <li><a href="#fx">Stránka FX</a></li>
-      <li><a href="#motion">MOTION a modulace</a></li>
+      <li><a href="#motion">Stránka MOD</a></li>
       <li><a href="#hrani">Hraní a lišty</a></li>
       <li><a href="#prohlizec">Prohlížeč presetů</a></li>
       <li class="genre sep"><a href="#blade">Neon a déšť</a></li>
@@ -53,7 +53,7 @@
         <div class="lang" aria-label="Jazyk"><span aria-current="page">CS</span><a href="en.html" hreflang="en" lang="en">EN</a></div>
       </div>
       <h1>Reso<span class="q">Opus</span></h1>
-      <p class="lede">Drone syntezátor pro filmové, ambientní a experimentální plochy. Čtyři ručně a mikrotonálně laděné hlasy v pěti typech hrají hned po vložení do stopy. Uprostřed je knob GRAVITY, který vede od čistého ladění k chaosu. K tomu polyfonní LEAD s filtrem pro každou notu, dva filtry s routingem, ozvěna, prostor, dvě LFO a náhodný zdroj. Hrát jde jen drone, jen lead, nebo obojí.</p>
+      <p class="lede">Drone syntezátor pro filmové, ambientní a experimentální plochy. Čtyři ručně a mikrotonálně laděné hlasy v pěti typech hrají hned po vložení do stopy. Uprostřed je knob GRAVITY, který vede od čistého ladění k chaosu. K tomu polyfonní LEAD s filtrem pro každou notu, dva filtry s routingem, ozvěna, prostor a stránka MOD se dvěma LFO, náhodným zdrojem, modulační obálkou a maticí modulací. Hrát jde jen drone, jen lead, nebo obojí.</p>
       <div class="meta">
         <span>VST3 · Windows / macOS</span><span>AU · macOS</span><span>instrument · drone + lead (až 8 hlasů)</span><span>Ableton Live 11 / 12</span><span>4 hlasy · 5 typů · 24 modulací · 54 presetů</span>
       </div>
@@ -66,9 +66,10 @@
     <div class="table-wrap"><table>
       <thead><tr><th>Stránka</th><th>Co obsahuje</th></tr></thead>
       <tbody>
-        <tr><td>DRONE</td><td>Čtyři hlasy (typ, ladění, HOLD, PAN, hlasitost, osciloskop), GRAVITY, detail vybraného hlasu, MASTER (PITCH, DUST, VOLUME, FILL).</td></tr>
+        <tr><td>DRONE</td><td>Čtyři hlasy (typ, ladění, HOLD, PAN, hlasitost, osciloskop), GRAVITY, detail vybraného hlasu, MASTER (PITCH, DUST, GRIT, VOLUME, FILL).</td></tr>
         <tr><td>LEAD</td><td>Melodická vrstva: oscilátory, filtr s obálkou pro každou notu, obálka hlasitosti, polyfonie, glide, vibrato, ARP.</td></tr>
-        <tr><td>FX</td><td>FILTER A a B s routingem, ECHO, SPACE a MOTION: LFO 1, LFO 2 a RANDOM.</td></tr>
+        <tr><td>FX</td><td>FILTER A a B s routingem, ECHO a SPACE.</td></tr>
+        <tr><td>MOD</td><td>LFO 1, LFO 2, RANDOM, MOD ENV a matice všech modulací.</td></tr>
       </tbody>
     </table></div>
     <div class="chain"><span>4 hlasy</span><i>⇄</i><span class="me">GRAVITY · DUST</span><i>+</i><span>LEAD (1–8 not)</span><i>→</i><span>FILTER A / B</span><i>→</i><span>ECHO</span><i>→</i><span>SPACE</span><i>→</i><span>MASTER → limiter</span></div>
@@ -79,10 +80,10 @@
       <tbody>
         <tr><td>zapnuto</td><td>vypnuto</td><td>Jen drone (výchozí). Plates C3–F3 hrají hlasy, ostatní klávesy nic.</td></tr>
         <tr><td>zapnuto</td><td>zapnuto</td><td>Obojí. Plates hrají drone, všechny ostatní klávesy LEAD.</td></tr>
-        <tr><td>vypnuto</td><td>zapnuto</td><td>Jen lead. Hlasy dronu ztichnou a neberou CPU, všechny klávesy včetně plates hrají LEAD. Stránka DRONE se ztlumí.</td></tr>
+        <tr><td>vypnuto</td><td>zapnuto</td><td>Jen lead. Hlasy dronu ztichnou a nezatěžují procesor, všechny klávesy včetně plates hrají LEAD. Stránka DRONE se ztlumí.</td></tr>
       </tbody>
     </table></div>
-    <p>Hlasy, LEAD i filtry běží převzorkovaně (výchozí 2×), takže ani vysoké tóny a silná modulace nezní digitálně. Na konci je měkký limiter, který drží výstup pod −0,3 dBFS.</p>
+    <p>Hlasy, LEAD i filtry běží s oversamplingem (výchozí 2×), takže ani vysoké tóny a silná modulace nezní digitálně tvrdě. Na konci je měkký limiter, který drží výstup pod −0,3 dBFS.</p>
     <div class="note info"><p><strong>Nic nehraje? Je to v pořádku.</strong>Některé presety (Slow Bloom, Requiem Air, Four Plates) mají HOLD na nule: zní, jen když hraješ. Ostatní presety droní hned po vložení.</p></div>
 
     <h2 id="start"><span class="num">02</span>Rychlý start</h2>
@@ -103,14 +104,14 @@
           <li><strong>Hlavička</strong> ukazuje typ a číslo hlasu (= číslo plate na klávesnici). Tečka vlevo svítí, když hlas zní.</li>
           <li><strong>TUNE</strong>: ladění C0–C8, volné a mikrotonální. Dvojklikem napíšeš notu i s centy, třeba <code>D2+12</code>.</li>
           <li><strong>Druhý knob</strong> mění podle typu: TIDE (CHOIR), FM (SIREN), SHARP (PULSAR), INDEX (QUASAR), POSITION (NEBULA).</li>
-          <li><strong>HOLD</strong>: úroveň droneu bez doteku. 0 % = hlas zní jen při hraní.</li>
+          <li><strong>HOLD</strong>: úroveň, na které hlas zní bez doteku. 0 % = hlas zní jen při hraní.</li>
           <li><strong>PAN</strong>: poloha vlevo a vpravo.</li>
           <li><strong>SCOPE</strong>: živý průběh hlasu v barvě jeho typu, vždy dvě periody jeho tónu, takže obraz stojí. Výška křivky je hlasitost. Klikem přepneš na <strong>SPECTRUM</strong> (harmonické, akord, vrčení TIDE).</li>
           <li><strong>VOL</strong>: tažením hlasitost (−60 až +6 dB), dvojklik = −2 dB. Tenký proužek pod ní je aktuální úroveň, svislá značka na něm je HOLD.</li>
         </ul>
       </div>
     </div>
-    <p>V detailu hlasu je vždy <strong>TYPE</strong>, <strong>CHARACTER</strong> (viz níže), <strong>ATTACK</strong> (1 ms–30 s, jak pomalu hlas nabíhá i při náběhu HOLD) a <strong>RELEASE</strong> (1 ms–30 s, jak dlouho doznívá). Vypnutý hlas (OFF) nebere CPU.</p>
+    <p>V detailu hlasu je vždy <strong>TYPE</strong>, <strong>CHARACTER</strong> (viz níže), <strong>ATTACK</strong> (1 ms–30 s, jak pomalu hlas nastupuje, platí i pro náběh na úroveň HOLD) a <strong>RELEASE</strong> (1 ms–30 s, jak dlouho doznívá). Vypnutý hlas (OFF) nezatěžuje procesor.</p>
 
     <h2 id="typy"><span class="num">04</span>Typy hlasů</h2>
     <p>Každý typ má v přepínači TYPE vlastní ikonu průběhu v barvě typu: <strong>CHOIR</strong> (pět pil), <strong>SIREN</strong> (obdélník se sirénou), <strong>PULSAR</strong> (tvar od trojúhelníku po obdélník), <strong>QUASAR</strong> (FM) a <strong>NEBULA</strong> (wavetable).</p>
@@ -118,8 +119,8 @@
     <figure class="shot"><img src="img/detail-choir.jpg" alt="Detail hlasu CHOIR" width="1816" height="372" loading="lazy"><figcaption>CHOIR: TYPE, CHORD, intervaly pěti oscilátorů s LED vypínači, CHARACTER, ATTACK a RELEASE.</figcaption></figure>
     <ul>
       <li><strong>CHORD</strong> naplní všech pět intervalů najednou: <em>Unison</em> (pár centů od sebe, zázněje), <em>Octaves</em>, <em>Fifths</em>, <em>Major</em> (0 4 7 12 16), <em>Minor</em> (0 3 7 12 15).</li>
-      <li><strong>OSC 1–5</strong>: interval každé pily nad TUNE (−24 až +36 půltónů). Tažení se <kbd>Shift</kbd> jde po centech. LED nad knobem pilu vypne.</li>
-      <li><strong>TIDE</strong> (v modulu hlasu): do 50 % stahuje celý akord dolů. Nad 50 % klesá dál a pily se začnou navzájem modulovat: vrčení, kovové alikvoty a praskání na dně.</li>
+      <li><strong>OSC 1–5</strong>: interval každé pily nad TUNE (−24 až +36 půltónů). Se <kbd>Shift</kbd> se ladí po centech. LED nad knobem pilu vypne.</li>
+      <li><strong>TIDE</strong> (v modulu hlasu): do 50 % stahuje celý akord dolů. Nad 50 % klesá dál a pily se začnou navzájem modulovat: vrčení, kovové alikvoty a na dně praskání (pily klesnou až na pár Hz a cvakají). Praskání ztlumíš knobem GRIT v MASTER.</li>
     </ul>
     <h3>SIREN: sirény, ptáci, monstra, vítr</h3>
     <figure class="shot"><img src="img/detail-siren.jpg" alt="Detail hlasu SIREN" width="1816" height="372" loading="lazy"><figcaption>SIREN: modulátor (RATE, AM, WAVE), DIVIDER pro podtóny a NOISE.</figcaption></figure>
@@ -139,7 +140,7 @@
     <ul>
       <li><strong>SHARP</strong> (v modulu hlasu): tvar tónu od měkkého trojúhelníku přes „žraločí ploutev“ a pilu po ostrý obdélník.</li>
       <li><strong>SYMMETRY</strong>: souměrnost tvaru. U obdélníku je to šířka pulzu: úzký pulz zní nosově a tence, 50 % je čistý obdélník.</li>
-      <li><strong>BLOOM</strong>: obálka ohýbá tón. Začne trochu podladěný a matný a rozkvete do výšky a jasu.</li>
+      <li><strong>BLOOM</strong>: obálka ohýbá tón. Začne trochu pod svou výškou a matně, pak se vytáhne nahoru a rozzáří.</li>
       <li><strong>TWIN</strong> a <strong>BLEND</strong>: druhý tón nad prvním (−12 až +24 půltónů). Pár centů od unisona = pomalé zázněje, 7 = kvinta.</li>
       <li><strong>SUB</strong>: měkký tón o oktávu níž. <strong>VIBRATO</strong>: až 50 centů, každý hlas má trochu jinou rychlost.</li>
     </ul>
@@ -149,24 +150,24 @@
     <ul>
       <li><strong>INDEX</strong> (v modulu hlasu): hloubka FM, od čistého sinusu po jasný, ostrý tón.</li>
       <li><strong>RATIO</strong>: kmitočet modulátoru proti tónu (0,5–8). Celá čísla zní harmonicky, ostatní (1,41; 3,5…) jako zvony a kov.</li>
-      <li><strong>FINE</strong>: rozladí modulátor o ±50 centů. Pomalé tlučení a třpyt.</li>
+      <li><strong>FINE</strong>: rozladí modulátor o ±50 centů. Pomalé zázněje a třpyt.</li>
       <li><strong>FEEDBACK</strong>: modulátor moduluje sám sebe. Sinus se mění směrem k pile a šumu.</li>
       <li><strong>TRACK</strong>: jak moc INDEX sleduje hlasitost hlasu. Tichý hlas je tmavší, takže doznívající zvon přirozeně tmavne.</li>
     </ul>
-    <p>Hloubka FM je omezená tak, aby postranní pásma zůstala pod Nyquistovým kmitočtem. Ani vysoké tóny s velkým INDEXem nealiasují (−76 dB na 1976 Hz).</p>
+    <p>Hloubka FM je omezená tak, aby postranní pásma zůstala pod Nyquistovým kmitočtem. Ani vysoké tóny s velkým INDEXem proto nevytvářejí aliasing (−76 dB na 1976 Hz).</p>
     <h3>NEBULA: wavetable</h3>
     <figure class="shot"><img src="img/detail-nebula.jpg" alt="Detail hlasu NEBULA" width="1816" height="372" loading="lazy"><figcaption>NEBULA: TABLE, SCAN a DRIFT. POSITION je v modulu hlasu.</figcaption></figure>
     <ul>
       <li><strong>TABLE</strong>: tři rodiny tabulek po osmi vlnách. <em>Vocal</em> (bručení a samohlásky U, O, A, AE, E, I, ER), <em>Organ</em> (varhanní rejstříky od flétny po plné varhany a jazýček), <em>Glass</em> (skleněné, zvonivé a digitální spektra).</li>
-      <li><strong>POSITION</strong> (v modulu hlasu): kde v tabulce jsi. Mezi vlnami přechází plynule.</li>
-      <li><strong>SCAN</strong>: hlasitost hlasu posouvá POSITION. Hraní plate tak projde tabulkou (záporné hodnoty opačným směrem).</li>
-      <li><strong>DRIFT</strong>: POSITION se sama pomalu toulá.</li>
+      <li><strong>POSITION</strong> (v modulu hlasu): poloha v tabulce. Sousední vlny se plynule prolínají.</li>
+      <li><strong>SCAN</strong>: čím hlasitěji hlas zní, tím dál se posune POSITION. Když zahraješ plate, zvuk projede tabulkou (záporné hodnoty opačným směrem).</li>
+      <li><strong>DRIFT</strong>: POSITION se sama pomalu posouvá sem a tam.</li>
     </ul>
     <h3>CHARACTER: Digital – Clean – Analog</h3>
     <p>Plynulý knob u každého typu. <strong>Uprostřed</strong> je hlas čistý. <strong>Doprava (Analog)</strong>: každý oscilátor je trochu jinak naladěný a sám bloudí, hrany se zaoblí, přibudou sudé harmonické a jemná saturace. <strong>Doleva (Digital)</strong>: snížená bitová hloubka a vzorkovací kmitočet, aliasing záměrně jako barva (staré samplery a herní konzole).</p>
 
     <h3 id="prubehy">Průběhy oscilátorů</h3>
-    <p>Nákresy jsou vyrenderované přímo z DSP kódu pluginu (stejné třídy, které hrají v Abletonu), ne z ideálních tvarů. Výška každého grafu je srovnaná na stejné maximum, skutečné hlasitosti se liší.</p>
+    <p>Nákresy jsou vyrenderované přímo z DSP kódu pluginu (stejné třídy, které hrají v Abletonu), ne z ideálních tvarů. Všechny grafy mají stejnou výšku, skutečné hlasitosti se liší.</p>
     <p class="wave-head choir"><i class="sw"></i>CHOIR</p>
     <div class="waves choir"><div class="wave"><span>1 pila (OSC 1)</span><span class="s">3 periody, 110 Hz</span><svg viewBox="0 0 200 64" preserveAspectRatio="none" aria-hidden="true"><line class="axis" x1="0" y1="32" x2="200" y2="32"/><path class="l" d="M0.0 38.7L1.8 37.3L3.7 35.6L5.5 34.2L7.3 32.6L9.2 31.2L11.0 29.5L12.8 28.1L14.7 26.4L16.5 25.0L18.3 23.3L20.2 21.9L22.0 20.2L23.9 18.8L25.7 17.2L27.5 15.8L29.4 14.1L31.2 12.7L33.0 11.0L34.9 9.6L36.7 7.9L38.5 6.5L40.4 5.1L42.2 59.7L44.0 58.0L45.9 56.6L47.7 55.2L49.5 53.6L51.4 51.9L53.2 50.5L55.0 48.8L56.9 47.4L58.7 46.0L60.6 44.3L62.4 42.9L64.2 41.2L66.1 39.8L67.9 38.2L69.7 36.8L71.6 35.1L73.4 33.7L75.2 32.0L77.1 30.6L78.9 28.9L80.7 27.5L82.6 25.8L84.4 24.4L86.2 22.8L88.1 21.4L89.9 19.7L91.7 18.3L93.6 16.9L95.4 15.2L97.2 13.8L99.1 12.1L100.9 10.4L102.8 9.0L104.6 7.6L106.4 6.0L108.3 4.6L110.1 59.2L111.9 57.8L113.8 56.1L115.6 54.7L117.4 53.0L119.3 51.6L121.1 49.9L122.9 48.5L124.8 46.8L126.6 45.4L128.4 43.8L130.3 42.4L132.1 40.7L133.9 39.3L135.8 37.6L137.6 36.2L139.4 34.8L141.3 33.1L143.1 31.4L145.0 30.0L146.8 28.4L148.6 27.0L150.5 25.6L152.3 23.9L154.1 22.5L156.0 20.8L157.8 19.4L159.6 17.7L161.5 16.3L163.3 14.6L165.1 13.2L167.0 11.6L168.8 10.2L170.6 8.5L172.5 7.1L174.3 5.4L176.1 4.0L178.0 58.6L179.8 57.2L181.7 55.5L183.5 54.1L185.3 52.4L187.2 51.0L189.0 49.4L190.8 48.0L192.7 46.3L194.5 44.9L196.3 43.5L198.2 41.8L200.0 40.1"/></svg></div><div class="wave"><span>CHORD Fifths, 5 pil</span><span class="s">0 7 12 19 24</span><svg viewBox="0 0 200 64" preserveAspectRatio="none" aria-hidden="true"><line class="axis" x1="0" y1="32" x2="200" y2="32"/><path class="l" d="M0.0 53.3L1.2 50.2L2.4 47.1L3.6 43.8L4.7 40.7L5.9 37.6L7.1 34.5L8.3 31.4L9.5 28.1L10.7 25.3L11.8 21.9L13.0 18.8L14.2 31.2L15.4 28.1L16.6 25.0L17.8 37.0L18.9 34.0L20.1 31.2L21.3 27.8L22.5 24.7L23.7 21.4L24.9 18.6L26.0 15.5L27.2 12.1L28.4 9.0L29.6 6.0L30.8 18.3L32.0 15.2L33.1 42.6L34.3 39.8L35.5 36.5L36.7 33.4L37.9 30.3L39.1 27.2L40.2 39.6L41.4 36.5L42.6 48.5L43.8 45.7L45.0 42.4L46.2 39.3L47.3 51.6L48.5 48.5L49.7 45.4L50.9 42.1L52.1 39.0L53.3 35.9L54.4 32.8L55.6 29.8L56.8 26.4L58.0 23.3L59.2 20.2L60.4 17.2L61.5 14.1L62.7 26.1L63.9 23.6L65.1 35.4L66.3 47.7L67.5 44.6L68.6 41.5L69.8 38.4L71.0 35.1L72.2 32.0L73.4 28.9L74.6 25.8L75.7 22.8L76.9 19.4L78.1 32.0L79.3 28.9L80.5 25.6L81.7 37.9L82.8 34.8L84.0 31.7L85.2 44.0L86.4 40.7L87.6 37.9L88.8 34.5L89.9 31.4L91.1 28.4L92.3 25.3L93.5 22.2L94.7 18.8L95.9 15.8L97.0 12.7L98.2 25.0L99.4 37.3L100.6 34.0L101.8 30.9L103.0 28.1L104.1 24.7L105.3 21.6L106.5 23.0L107.7 30.9L108.9 43.2L110.1 39.8L111.2 36.8L112.4 33.7L113.6 30.6L114.8 42.9L116.0 39.8L117.2 36.8L118.3 33.4L119.5 30.3L120.7 27.2L121.9 36.8L123.1 36.5L124.3 33.1L125.4 30.0L126.6 27.0L127.8 23.9L129.0 32.8L130.2 32.8L131.4 45.4L132.5 42.4L133.7 54.4L134.9 51.3L136.1 48.2L137.3 45.2L138.5 42.1L139.6 38.7L140.8 35.9L142.0 32.6L143.2 29.5L144.4 26.4L145.6 23.3L146.7 20.2L147.9 32.3L149.1 29.2L150.3 26.1L151.5 38.4L152.7 35.4L153.8 32.0L155.0 28.9L156.2 26.1L157.4 22.8L158.6 19.7L159.8 16.3L160.9 13.5L162.1 10.4L163.3 7.1L164.5 4.3L165.7 16.3L166.9 44.0L168.0 41.0L169.2 37.6L170.4 34.8L171.6 31.4L172.8 28.4L174.0 40.7L175.1 37.6L176.3 49.9L177.5 46.6L178.7 43.5L179.9 40.7L181.1 37.3L182.2 49.6L183.4 46.6L184.6 43.5L185.8 40.4L187.0 37.0L188.2 34.0L189.3 30.9L190.5 27.8L191.7 24.7L192.9 21.4L194.1 18.3L195.3 15.2L196.4 27.5L197.6 24.4L198.8 36.8L200.0 48.8"/></svg></div><div class="wave"><span>Fifths + TIDE nad 50 %</span><span class="s">pily se modulují navzájem</span><svg viewBox="0 0 200 64" preserveAspectRatio="none" aria-hidden="true"><line class="axis" x1="0" y1="32" x2="200" y2="32"/><path class="l" d="M0.0 47.1L1.2 45.4L2.4 43.5L3.6 41.2L4.7 39.0L5.9 36.5L7.1 33.7L8.3 30.9L9.5 27.5L10.7 24.2L11.8 46.6L13.0 44.9L14.2 43.2L15.4 41.2L16.6 39.0L17.8 36.5L18.9 34.0L20.1 31.2L21.3 28.1L22.5 24.7L23.7 21.1L24.9 31.2L26.0 28.4L27.2 25.3L28.4 22.2L29.6 18.6L30.8 14.6L32.0 10.7L33.1 6.2L34.3 27.5L35.5 37.6L36.7 48.8L37.9 47.7L39.1 46.8L40.2 45.7L41.4 44.3L42.6 43.2L43.8 41.5L45.0 40.1L46.2 38.2L47.3 36.2L48.5 34.2L49.7 32.0L50.9 29.5L52.1 27.0L53.3 23.9L54.4 21.1L55.6 30.6L56.8 27.5L58.0 24.4L59.2 48.0L60.4 46.3L61.5 44.6L62.7 42.6L63.9 40.7L65.1 38.4L66.3 36.2L67.5 34.0L68.6 31.2L69.8 28.1L71.0 25.0L72.2 21.6L73.4 29.2L74.6 28.1L75.7 25.3L76.9 22.2L78.1 18.8L79.3 28.6L80.5 25.6L81.7 22.2L82.8 21.6L84.0 28.1L85.2 37.6L86.4 35.4L87.6 32.8L88.8 29.8L89.9 26.7L91.1 24.2L92.3 34.0L93.5 31.7L94.7 29.5L95.9 27.2L97.0 24.4L98.2 21.6L99.4 18.8L100.6 28.6L101.8 39.0L103.0 36.8L104.1 34.2L105.3 31.7L106.5 42.4L107.7 41.0L108.9 39.3L110.1 37.3L111.2 35.4L112.4 33.4L113.6 31.2L114.8 41.8L116.0 39.8L117.2 37.9L118.3 35.6L119.5 33.1L120.7 30.6L121.9 27.8L123.1 24.7L124.3 21.4L125.4 31.4L126.6 28.6L127.8 38.4L129.0 36.5L130.2 34.2L131.4 32.0L132.5 29.5L133.7 26.4L134.9 23.6L136.1 20.0L137.3 16.6L138.5 12.7L139.6 19.7L140.8 30.9L142.0 27.8L143.2 24.4L144.4 21.1L145.6 30.0L146.7 26.7L147.9 36.2L149.1 33.1L150.3 43.8L151.5 41.2L152.7 39.0L153.8 36.2L155.0 33.1L156.2 30.0L157.4 26.4L158.6 35.6L159.8 45.4L160.9 44.3L162.1 42.9L163.3 41.5L164.5 39.8L165.7 38.2L166.9 36.5L168.0 34.8L169.2 32.8L170.4 30.6L171.6 28.4L172.8 25.8L174.0 23.3L175.1 33.7L176.3 41.0L177.5 42.6L178.7 41.0L179.9 39.0L181.1 37.0L182.2 34.8L183.4 32.3L184.6 29.8L185.8 27.0L187.0 23.6L188.2 20.5L189.3 30.6L190.5 28.1L191.7 25.3L192.9 22.2L194.1 19.1L195.3 28.4L196.4 25.3L197.6 34.5L198.8 31.4L200.0 28.4"/></svg></div><div class="wave"><span>CHORD Unison</span><span class="s">obálka 4 s: zázněje</span><svg viewBox="0 0 200 64" preserveAspectRatio="none" aria-hidden="true"><line class="axis" x1="0" y1="32" x2="200" y2="32"/><path class="f" d="M0.0 7.4L1.8 5.1L3.7 4.0L5.5 4.6L7.3 6.0L9.2 7.1L11.0 8.2L12.8 9.3L14.7 10.4L16.5 11.8L18.3 13.0L20.2 14.1L22.0 15.2L23.9 15.8L25.7 15.8L27.5 15.8L29.4 15.8L31.2 15.8L33.0 15.8L34.9 15.8L36.7 15.8L38.5 15.8L40.4 15.2L42.2 14.1L44.0 12.7L45.9 11.6L47.7 10.4L49.5 9.9L51.4 11.0L53.2 13.2L55.0 15.2L56.9 15.8L58.7 15.8L60.6 15.8L62.4 15.8L64.2 15.8L66.1 15.8L67.9 15.8L69.7 16.6L71.6 16.0L73.4 14.1L75.2 11.8L77.1 11.0L78.9 12.7L80.7 14.6L82.6 16.6L84.4 16.0L86.2 14.6L88.1 13.5L89.9 12.4L91.7 12.1L93.6 14.1L95.4 16.0L97.2 18.3L99.1 20.2L100.9 19.7L102.8 18.6L104.6 17.4L106.4 16.3L108.3 14.9L110.1 14.1L111.9 14.6L113.8 15.8L115.6 16.9L117.4 18.3L119.3 19.4L121.1 20.0L122.9 18.0L124.8 16.0L126.6 13.8L128.4 11.8L130.3 11.8L132.1 13.0L133.9 14.1L135.8 15.2L137.6 16.3L139.4 14.4L141.3 12.1L143.1 11.3L145.0 12.7L146.8 14.6L148.6 16.6L150.5 17.2L152.3 15.5L154.1 15.5L156.0 15.5L157.8 15.5L159.6 15.5L161.5 15.5L163.3 15.5L165.1 15.5L167.0 13.5L168.8 11.3L170.6 9.3L172.5 9.6L174.3 10.7L176.1 11.8L178.0 13.2L179.8 14.4L181.7 15.5L183.5 15.5L185.3 15.5L187.2 15.5L189.0 15.5L190.8 15.5L192.7 15.5L194.5 15.5L196.3 15.5L198.2 15.5L200.0 14.4L200.0 56.9L198.2 55.8L196.3 54.7L194.5 53.3L192.7 51.6L190.8 49.4L189.0 48.5L187.2 50.5L185.3 52.7L183.5 54.7L181.7 56.1L179.8 57.2L178.0 58.3L176.1 59.4L174.3 60.0L172.5 58.6L170.6 56.4L168.8 54.4L167.0 52.4L165.1 50.5L163.3 48.5L161.5 46.8L159.6 45.7L157.8 44.6L156.0 43.5L154.1 44.6L152.3 45.7L150.5 47.1L148.6 48.2L146.8 49.4L145.0 50.5L143.1 51.6L141.3 53.0L139.4 54.1L137.6 55.2L135.8 56.4L133.9 57.8L132.1 57.5L130.3 55.5L128.4 53.6L126.6 51.6L124.8 49.4L122.9 47.4L121.1 45.4L119.3 44.6L117.4 44.6L115.6 44.6L113.8 44.6L111.9 46.0L110.1 46.8L108.3 46.0L106.4 44.6L104.6 44.6L102.8 44.6L100.9 44.6L99.1 45.4L97.2 47.7L95.4 49.6L93.6 51.6L91.7 53.6L89.9 55.8L88.1 57.2L86.2 56.9L84.4 55.8L82.6 54.4L80.7 53.3L78.9 52.2L77.1 51.0L75.2 49.9L73.4 48.5L71.6 47.4L69.7 46.3L67.9 45.2L66.1 44.0L64.2 44.0L62.4 45.2L60.6 46.6L58.7 47.7L56.9 48.8L55.0 50.2L53.2 52.2L51.4 54.1L49.5 56.1L47.7 58.3L45.9 59.4L44.0 59.2L42.2 57.8L40.4 56.6L38.5 55.5L36.7 54.4L34.9 52.4L33.0 50.5L31.2 48.5L29.4 49.4L27.5 51.3L25.7 53.6L23.9 55.5L22.0 56.6L20.2 58.0L18.3 59.2L16.5 59.2L14.7 59.2L12.8 59.2L11.0 59.2L9.2 59.2L7.3 59.2L5.5 59.2L3.7 59.2L1.8 59.2L0.0 57.5Z"/></svg></div><div class="wave"><span>CHARACTER Analog</span><span class="s">zaoblené hrany, sudé harmonické</span><svg viewBox="0 0 200 64" preserveAspectRatio="none" aria-hidden="true"><line class="axis" x1="0" y1="32" x2="200" y2="32"/><path class="l" d="M0.0 43.8L1.8 40.7L3.7 37.0L5.5 33.1L7.3 29.2L9.2 25.3L11.0 21.9L12.8 18.3L14.7 15.2L16.5 12.4L18.3 10.4L20.2 8.5L22.0 7.1L23.9 6.2L25.7 5.4L27.5 4.8L29.4 4.6L31.2 4.3L33.0 4.0L34.9 4.0L36.7 4.0L38.5 58.3L40.4 59.7L42.2 59.4L44.0 59.4L45.9 59.2L47.7 58.9L49.5 58.3L51.4 57.8L53.2 57.2L55.0 56.4L56.9 55.2L58.7 54.1L60.6 52.4L62.4 50.5L64.2 48.2L66.1 45.7L67.9 42.6L69.7 39.3L71.6 35.4L73.4 31.7L75.2 27.8L77.1 23.9L78.9 20.2L80.7 16.9L82.6 14.1L84.4 11.6L86.2 9.6L88.1 7.9L89.9 6.8L91.7 5.7L93.6 5.1L95.4 4.6L97.2 4.3L99.1 4.3L100.9 4.0L102.8 4.0L104.6 4.0L106.4 59.7L108.3 59.7L110.1 59.4L111.9 59.2L113.8 58.9L115.6 58.6L117.4 58.0L119.3 57.5L121.1 56.9L122.9 55.8L124.8 54.7L126.6 53.3L128.4 51.6L130.3 49.6L132.1 47.1L133.9 44.3L135.8 41.2L137.6 37.6L139.4 34.0L141.3 30.0L143.1 26.1L145.0 22.5L146.8 18.8L148.6 15.8L150.5 13.0L152.3 10.7L154.1 8.8L156.0 7.4L157.8 6.2L159.6 5.4L161.5 4.8L163.3 4.6L165.1 4.3L167.0 4.0L168.8 4.0L170.6 4.0L172.5 55.0L174.3 59.7L176.1 59.4L178.0 59.4L179.8 59.2L181.7 58.9L183.5 58.3L185.3 58.0L187.2 57.2L189.0 56.4L190.8 55.5L192.7 54.1L194.5 52.7L196.3 50.8L198.2 48.8L200.0 46.0"/></svg></div><div class="wave"><span>CHARACTER Digital</span><span class="s">málo bitů, nízký vzorkovací kmitočet</span><svg viewBox="0 0 200 64" preserveAspectRatio="none" aria-hidden="true"><line class="axis" x1="0" y1="32" x2="200" y2="32"/><path class="l" d="M0.0 39.0L1.3 39.0L2.5 39.0L3.8 35.4L5.0 35.4L6.3 35.4L7.5 32.0L8.8 32.0L10.1 32.0L11.3 32.0L12.6 28.6L13.8 28.6L15.1 28.6L16.4 28.6L17.6 25.0L18.9 21.4L20.1 21.4L21.4 21.4L22.6 21.4L23.9 18.0L25.2 18.0L26.4 18.0L27.7 14.4L28.9 14.4L30.2 14.4L31.4 14.4L32.7 11.0L34.0 11.0L35.2 11.0L36.5 11.0L37.7 7.6L39.0 7.6L40.3 7.6L41.5 4.0L42.8 4.0L44.0 60.0L45.3 60.0L46.5 56.4L47.8 56.4L49.1 56.4L50.3 53.0L51.6 53.0L52.8 49.6L54.1 49.6L55.3 49.6L56.6 46.0L57.9 46.0L59.1 46.0L60.4 46.0L61.6 42.6L62.9 42.6L64.2 42.6L65.4 42.6L66.7 39.0L67.9 39.0L69.2 39.0L70.4 35.4L71.7 35.4L73.0 35.4L74.2 35.4L75.5 32.0L76.7 32.0L78.0 32.0L79.2 28.6L80.5 28.6L81.8 28.6L83.0 28.6L84.3 25.0L85.5 25.0L86.8 21.4L88.1 21.4L89.3 21.4L90.6 18.0L91.8 18.0L93.1 18.0L94.3 18.0L95.6 14.4L96.9 14.4L98.1 14.4L99.4 11.0L100.6 11.0L101.9 11.0L103.1 11.0L104.4 7.6L105.7 7.6L106.9 7.6L108.2 4.0L109.4 4.0L110.7 60.0L111.9 60.0L113.2 56.4L114.5 56.4L115.7 56.4L117.0 53.0L118.2 53.0L119.5 53.0L120.8 53.0L122.0 49.6L123.3 49.6L124.5 46.0L125.8 46.0L127.0 46.0L128.3 42.6L129.6 42.6L130.8 42.6L132.1 42.6L133.3 39.0L134.6 39.0L135.8 39.0L137.1 35.4L138.4 35.4L139.6 35.4L140.9 35.4L142.1 32.0L143.4 32.0L144.7 32.0L145.9 28.6L147.2 28.6L148.4 28.6L149.7 28.6L150.9 25.0L152.2 25.0L153.5 25.0L154.7 21.4L156.0 21.4L157.2 18.0L158.5 18.0L159.7 18.0L161.0 18.0L162.3 14.4L163.5 14.4L164.8 14.4L166.0 11.0L167.3 11.0L168.6 11.0L169.8 11.0L171.1 7.6L172.3 7.6L173.6 7.6L174.8 4.0L176.1 4.0L177.4 60.0L178.6 60.0L179.9 56.4L181.1 56.4L182.4 56.4L183.6 56.4L184.9 53.0L186.2 53.0L187.4 53.0L188.7 49.6L189.9 49.6L191.2 49.6L192.5 49.6L193.7 46.0L195.0 42.6L196.2 42.6L197.5 42.6L198.7 42.6L200.0 39.0"/></svg></div></div>
     <p class="wave-head siren"><i class="sw"></i>SIREN</p>
@@ -180,7 +181,7 @@
     <p class="wave-head lead"><i class="sw"></i>LEAD · WAVE</p>
     <div class="waves lead"><div class="wave"><span>0 · Sine</span><span class="s">sinus</span><svg viewBox="0 0 200 64" preserveAspectRatio="none" aria-hidden="true"><line class="axis" x1="0" y1="32" x2="200" y2="32"/><path class="l" d="M0.0 25.0L1.8 22.2L3.7 19.1L5.5 16.3L7.3 13.8L9.2 11.6L11.0 9.3L12.8 7.6L14.7 6.2L16.5 5.1L18.3 4.6L20.2 4.0L22.0 4.0L23.9 4.3L25.7 5.1L27.5 6.2L29.4 7.4L31.2 9.3L33.0 11.3L34.9 13.5L36.7 16.0L38.5 18.8L40.4 21.6L42.2 24.7L44.0 27.8L45.9 30.9L47.7 34.2L49.5 37.3L51.4 40.4L53.2 43.5L55.0 46.3L56.9 48.8L58.7 51.3L60.6 53.6L62.4 55.5L64.2 57.2L66.1 58.3L67.9 59.2L69.7 59.7L71.6 60.0L73.4 59.7L75.2 59.4L77.1 58.3L78.9 57.2L80.7 55.5L82.6 53.8L84.4 51.6L86.2 49.4L88.1 46.6L89.9 43.8L91.7 40.7L93.6 37.6L95.4 34.8L97.2 31.4L99.1 28.4L100.9 25.0L102.8 21.9L104.6 19.1L106.4 16.3L108.3 13.8L110.1 11.6L111.9 9.6L113.8 7.6L115.6 6.2L117.4 5.1L119.3 4.6L121.1 4.0L122.9 4.0L124.8 4.3L126.6 5.1L128.4 6.2L130.3 7.6L132.1 9.3L133.9 11.3L135.8 13.5L137.6 16.0L139.4 18.8L141.3 21.6L143.1 24.7L145.0 27.8L146.8 31.2L148.6 34.0L150.5 37.3L152.3 40.4L154.1 43.5L156.0 46.3L157.8 49.1L159.6 51.3L161.5 53.6L163.3 55.5L165.1 56.9L167.0 58.3L168.8 59.2L170.6 59.7L172.5 60.0L174.3 59.7L176.1 59.4L178.0 58.6L179.8 57.2L181.7 55.8L183.5 53.8L185.3 51.6L187.2 49.4L189.0 46.8L190.8 44.0L192.7 41.0L194.5 37.9L196.3 34.5L198.2 31.4L200.0 28.1"/></svg></div><div class="wave"><span>1 · Triangle</span><span class="s">trojúhelník</span><svg viewBox="0 0 200 64" preserveAspectRatio="none" aria-hidden="true"><line class="axis" x1="0" y1="32" x2="200" y2="32"/><path class="l" d="M0.0 27.5L1.8 25.6L3.7 23.6L5.5 21.4L7.3 19.4L9.2 17.4L11.0 15.2L12.8 13.2L14.7 11.3L16.5 9.3L18.3 7.1L20.2 5.1L22.0 4.8L23.9 7.1L25.7 9.0L27.5 11.0L29.4 13.0L31.2 14.9L33.0 17.2L34.9 19.1L36.7 21.4L38.5 23.3L40.4 25.3L42.2 27.2L44.0 29.2L45.9 31.4L47.7 33.4L49.5 35.4L51.4 37.6L53.2 39.6L55.0 41.5L56.9 43.5L58.7 45.7L60.6 47.7L62.4 49.6L64.2 51.9L66.1 53.8L67.9 55.8L69.7 57.8L71.6 59.7L73.4 58.0L75.2 56.1L77.1 54.1L78.9 51.9L80.7 49.9L82.6 48.0L84.4 46.0L86.2 43.8L88.1 41.8L89.9 39.8L91.7 37.6L93.6 35.6L95.4 33.7L97.2 31.7L99.1 29.5L100.9 27.5L102.8 25.6L104.6 23.3L106.4 21.4L108.3 19.4L110.1 17.4L111.9 15.5L113.8 13.2L115.6 11.3L117.4 9.3L119.3 7.1L121.1 5.1L122.9 4.8L124.8 6.8L126.6 9.0L128.4 11.0L130.3 13.0L132.1 15.2L133.9 17.2L135.8 19.1L137.6 21.1L139.4 23.3L141.3 25.3L143.1 27.2L145.0 29.5L146.8 31.4L148.6 33.4L150.5 35.4L152.3 37.3L154.1 39.6L156.0 41.5L157.8 43.5L159.6 45.7L161.5 47.7L163.3 49.6L165.1 51.6L167.0 53.8L168.8 55.8L170.6 57.8L172.5 60.0L174.3 58.0L176.1 56.1L178.0 54.1L179.8 52.2L181.7 49.9L183.5 48.0L185.3 46.0L187.2 43.8L189.0 41.8L190.8 39.8L192.7 37.9L194.5 35.6L196.3 33.7L198.2 31.7L200.0 29.5"/></svg></div><div class="wave"><span>2 · Shark fin</span><span class="s">žraločí ploutev</span><svg viewBox="0 0 200 64" preserveAspectRatio="none" aria-hidden="true"><line class="axis" x1="0" y1="32" x2="200" y2="32"/><path class="l" d="M0.0 35.6L1.8 34.2L3.7 32.6L5.5 31.2L7.3 29.5L9.2 28.1L11.0 26.4L12.8 25.0L14.7 23.6L16.5 21.9L18.3 20.5L20.2 18.8L22.0 18.3L23.9 18.8L25.7 19.1L27.5 19.7L29.4 20.2L31.2 20.8L33.0 21.4L34.9 21.9L36.7 22.2L38.5 22.8L40.4 23.3L42.2 23.9L44.0 24.4L45.9 24.7L47.7 25.3L49.5 25.8L51.4 26.4L53.2 27.0L55.0 27.2L56.9 27.8L58.7 28.4L60.6 28.9L62.4 29.5L64.2 30.0L66.1 30.3L67.9 30.9L69.7 31.4L71.6 32.6L73.4 58.6L75.2 56.9L77.1 55.5L78.9 53.8L80.7 52.4L82.6 51.0L84.4 49.4L86.2 48.0L88.1 46.3L89.9 44.9L91.7 43.2L93.6 41.8L95.4 40.4L97.2 38.7L99.1 37.3L100.9 35.6L102.8 34.2L104.6 32.6L106.4 31.2L108.3 29.5L110.1 28.1L111.9 26.4L113.8 25.0L115.6 23.3L117.4 21.9L119.3 20.2L121.1 18.8L122.9 18.3L124.8 18.8L126.6 19.1L128.4 19.7L130.3 20.2L132.1 20.8L133.9 21.4L135.8 21.6L137.6 22.2L139.4 22.8L141.3 23.3L143.1 23.9L145.0 24.4L146.8 24.7L148.6 25.3L150.5 25.8L152.3 26.4L154.1 27.0L156.0 27.5L157.8 27.8L159.6 28.4L161.5 28.9L163.3 29.5L165.1 30.0L167.0 30.3L168.8 30.9L170.6 31.4L172.5 33.7L174.3 58.6L176.1 57.2L178.0 55.5L179.8 54.1L181.7 52.4L183.5 51.0L185.3 49.4L187.2 48.0L189.0 46.3L190.8 44.9L192.7 43.5L194.5 41.8L196.3 40.1L198.2 38.7L200.0 37.3"/></svg></div><div class="wave"><span>3 · Saw</span><span class="s">pila</span><svg viewBox="0 0 200 64" preserveAspectRatio="none" aria-hidden="true"><line class="axis" x1="0" y1="32" x2="200" y2="32"/><path class="l" d="M0.0 43.8L1.8 42.6L3.7 41.8L5.5 40.7L7.3 39.6L9.2 38.7L11.0 37.6L12.8 36.5L14.7 35.6L16.5 34.5L18.3 33.7L20.2 32.6L22.0 31.4L23.9 30.6L25.7 29.5L27.5 28.6L29.4 27.5L31.2 26.4L33.0 25.6L34.9 24.4L36.7 23.3L38.5 22.5L40.4 21.4L42.2 20.2L44.0 19.4L45.9 18.3L47.7 17.2L49.5 16.3L51.4 15.2L53.2 14.1L55.0 13.2L56.9 12.1L58.7 11.3L60.6 10.2L62.4 9.0L64.2 8.2L66.1 7.1L67.9 6.2L69.7 5.1L71.6 5.1L73.4 59.2L75.2 58.0L77.1 56.9L78.9 56.1L80.7 55.0L82.6 54.1L84.4 53.0L86.2 51.9L88.1 51.0L89.9 49.9L91.7 48.8L93.6 47.7L95.4 46.8L97.2 45.7L99.1 44.9L100.9 43.8L102.8 42.6L104.6 41.8L106.4 40.7L108.3 39.8L110.1 38.7L111.9 37.6L113.8 36.8L115.6 35.6L117.4 34.5L119.3 33.7L121.1 32.6L122.9 31.7L124.8 30.6L126.6 29.5L128.4 28.6L130.3 27.5L132.1 26.4L133.9 25.6L135.8 24.4L137.6 23.3L139.4 22.5L141.3 21.4L143.1 20.2L145.0 19.4L146.8 18.3L148.6 17.4L150.5 16.3L152.3 15.2L154.1 14.4L156.0 13.2L157.8 12.1L159.6 11.3L161.5 10.2L163.3 9.3L165.1 8.2L167.0 7.1L168.8 6.2L170.6 5.1L172.5 7.4L174.3 59.2L176.1 58.0L178.0 56.9L179.8 56.1L181.7 55.0L183.5 53.8L185.3 53.0L187.2 51.9L189.0 51.0L190.8 49.9L192.7 48.8L194.5 48.0L196.3 46.8L198.2 45.7L200.0 44.9"/></svg></div><div class="wave"><span>4 · Square</span><span class="s">obdélník</span><svg viewBox="0 0 200 64" preserveAspectRatio="none" aria-hidden="true"><line class="axis" x1="0" y1="32" x2="200" y2="32"/><path class="l" d="M0.0 60.0L1.8 60.0L3.7 60.0L5.5 60.0L7.3 60.0L9.2 60.0L11.0 60.0L12.8 60.0L14.7 60.0L16.5 60.0L18.3 60.0L20.2 60.0L22.0 4.0L23.9 4.0L25.7 4.0L27.5 4.0L29.4 4.0L31.2 4.0L33.0 4.0L34.9 4.0L36.7 4.0L38.5 4.0L40.4 4.0L42.2 4.0L44.0 4.0L45.9 4.0L47.7 4.0L49.5 4.0L51.4 4.0L53.2 4.0L55.0 4.0L56.9 4.0L58.7 4.0L60.6 4.0L62.4 4.0L64.2 4.0L66.1 4.0L67.9 4.0L69.7 4.0L71.6 5.1L73.4 60.0L75.2 60.0L77.1 60.0L78.9 60.0L80.7 60.0L82.6 60.0L84.4 60.0L86.2 60.0L88.1 60.0L89.9 60.0L91.7 60.0L93.6 60.0L95.4 60.0L97.2 60.0L99.1 60.0L100.9 60.0L102.8 60.0L104.6 60.0L106.4 60.0L108.3 60.0L110.1 60.0L111.9 60.0L113.8 60.0L115.6 60.0L117.4 60.0L119.3 60.0L121.1 60.0L122.9 4.0L124.8 4.0L126.6 4.0L128.4 4.0L130.3 4.0L132.1 4.0L133.9 4.0L135.8 4.0L137.6 4.0L139.4 4.0L141.3 4.0L143.1 4.0L145.0 4.0L146.8 4.0L148.6 4.0L150.5 4.0L152.3 4.0L154.1 4.0L156.0 4.0L157.8 4.0L159.6 4.0L161.5 4.0L163.3 4.0L165.1 4.0L167.0 4.0L168.8 4.0L170.6 4.0L172.5 7.4L174.3 60.0L176.1 60.0L178.0 60.0L179.8 60.0L181.7 60.0L183.5 60.0L185.3 60.0L187.2 60.0L189.0 60.0L190.8 60.0L192.7 60.0L194.5 60.0L196.3 60.0L198.2 60.0L200.0 60.0"/></svg></div></div>
 
-    <p>Pila CHOIRu a obdélník SIRENu jsou pásmově omezené: skoky se vyhlazují (BLEP). QUASAR hlídá šířku pásma FM a NEBULA má pro každou oktávu vlastní pásmově omezenou kopii tabulky. Hlasy navíc běží převzorkovaně, takže digitální aliasing vzniká jen tehdy, když ho chceš (CHARACTER Digital).</p>
+    <p>Pila CHOIRu a obdélník SIRENu jsou pásmově omezené: skoky se vyhlazují (BLEP). QUASAR hlídá šířku pásma FM a NEBULA má pro každou oktávu vlastní pásmově omezenou kopii tabulky. Hlasy navíc běží s oversamplingem, takže aliasing vzniká, jen když ho chceš (CHARACTER Digital).</p>
 
     <h2 id="gravity"><span class="num">05</span>GRAVITY</h2>
     <p>GRAVITY je srdce nástroje: jeden knob od ladění k chaosu. Hlasy se navzájem frekvenčně modulují, nejdřív v párech, pak v jednom kruhu, a nakonec do smyčky vstupuje i výstup nástroje.</p>
@@ -194,11 +195,11 @@
       <div class="z1"><b>STILL 0–25 %</b>Čisté ladění, jen pomalé zázněje mezi hlasy.</div>
       <div class="z2"><b>ORBIT 25–55 %</b>Hlasy v páru se přitahují (FM), tón se chvěje a třpytí.</div>
       <div class="z3"><b>TURBULENCE 55–85 %</b>Všechny čtyři v jedné smyčce, výstup se vrací do hlasů. Vrčí a dýchá.</div>
-      <div class="z4"><b>COLLAPSE 85–100 %</b>Smyčka se utrhne a pulzuje sama. Nikdy se neopakuje.</div>
+      <div class="z4"><b>COLLAPSE 85–100 %</b>Smyčka se vymkne kontrole a pulzuje sama. Nikdy se neopakuje.</div>
     </div>
     <p>Barevné tečky na oběžné dráze jsou hlasy v barvě svého typu, s rostoucí GRAVITY se k sobě přitahují a třesou. V horních rozích jsou <strong>X/Y figury párů</strong> 1-2 a 3-4: hlas proti partnerovi. Ve STILL je to klidná, pomalu se otáčející figura, v ORBIT se chvěje, v TURBULENCE se rozpadne. Hlasitost se mezi STILL a COLLAPSE mění jen asi o 2 dB, takže GRAVITY můžeš automatizovat bez skoků.</p>
     <ul>
-      <li><strong>Pravé tlačítko</strong> na GRAVITY → <strong>PATH</strong>: <em>Auto</em> (páry do poloviny, pak kruh), <em>Pairs</em> (vždy páry 1·2 a 3·4), <em>Ring</em> (vždy kruh 1→2→3→4→1). V menu je i <em>Modulate with</em>.</li>
+      <li><strong>PATH</strong> (výběrové tlačítko vpravo v hlavičce GRAVITY): <em>Auto</em> (páry do poloviny, pak kruh), <em>Pairs</em> (vždy páry 1·2 a 3·4), <em>Ring</em> (vždy kruh 1→2→3→4→1). Pravým tlačítkem na knob GRAVITY otevřeš <em>Modulate with</em>.</li>
       <li>Tažení nahoru a dolů (<kbd>Shift</kbd> jemně), kolečko, dvojklik = napsat hodnotu, <kbd>Cmd</kbd>/<kbd>Ctrl</kbd>-klik = výchozí 15 %.</li>
     </ul>
     <div class="duo">
@@ -215,19 +216,20 @@
     <ul>
       <li><strong>PITCH</strong>: transpozice všech čtyř hlasů najednou (±24 půltónů), intervaly mezi nimi zůstanou.</li>
       <li><strong>DUST</strong>: analogový život celého nástroje. Pomalé bloudění ladění, hlasy prosakují jeden do druhého, v pozadí tichý dech šumu (nejvýš −54 dBFS). Na rozdíl od CHARACTER působí na všechny hlasy a na jejich vztahy.</li>
+      <li><strong>GRIT</strong>: ostrost hran, kterými se hlasy navzájem modulují (GRAVITY, DUST, TIDE). 100 % = surové vrčení a praskání. Níž se hrany zaoblují a praskání mizí: na 50 % zmizí cvakání pil stažených TIDE na pár Hz a běžný tón se skoro nezmění, na 0 % je hladší i COLLAPSE.</li>
       <li><strong>VOLUME</strong>: výstupní hlasitost (−∞ až +12 dB).</li>
-      <li><strong>FILL</strong> (vpravo v hlavičce): rozloží čtyři hlasy do zvolené stupnice od zvoleného základu.</li>
+      <li><strong>FILL</strong> (výběrové tlačítko v hlavičce): rozloží čtyři hlasy do zvolené stupnice od zvoleného základu.</li>
     </ul>
 
     <h2 id="lead"><span class="num">07</span>Stránka LEAD</h2>
     <figure class="shot"><img src="img/lead.jpg" alt="Stránka LEAD" width="2400" height="1552" loading="lazy"><figcaption>Stránka <strong>LEAD</strong> s presetem Poly Strings: Poly 8, filtr SILK s pomalou obálkou, tichý drone pod tím.</figcaption></figure>
-    <p>LEAD je melodická vrstva nad dronem (nebo místo něj). Zapíná se vypínačem u záložky LEAD. Hraje přes stejný FILTER, ECHO i SPACE jako hlasy. Při ROUTING Split má vlastní FILTER B.</p>
+    <p>LEAD je melodická vrstva nad dronem (nebo místo něj). Zapíná se vypínačem u záložky LEAD. Hraje přes stejné filtry, ECHO i SPACE jako hlasy. Při ROUTING Split má vlastní FILTER B.</p>
     <div class="table-wrap"><table>
       <thead><tr><th>Panel</th><th>Ovladače</th></tr></thead>
       <tbody>
         <tr><td>LEAD OSC</td><td><strong>WAVE</strong> plynule sinus → trojúhelník → žraločí ploutev → pila → obdélník (ikony kolem knobu). <strong>OSC 2</strong> interval ±12 půltónů, <strong>OSC 2 LEVEL</strong>, <strong>SYMMETRY</strong> (šířka pulzu), <strong>OCTAVE</strong> ±2, <strong>SUB</strong> sinus o oktávu níž, <strong>SYNC</strong> = tvrdá synchronizace OSC 2.</td></tr>
-        <tr><td>LEAD FILTER</td><td>Filtr <strong>pro každou notu zvlášť</strong>: <strong>CUTOFF</strong>, <strong>RESONANCE</strong>, <strong>ENV</strong> (kolik obálka posune cutoff, ±6 oktáv), <strong>KEY</strong> (cutoff sleduje notu), <strong>MODEL</strong> (stejných pět jako FILTER) a <strong>MODE</strong> (dolní, pásmová, horní propust). Na 20 kHz bez obálky je obejitý a nic nebarví.</td></tr>
-        <tr><td>FILTER ENV</td><td>ADSR obálka filtru. Šipka v hlavičce je zdroj <strong>LEAD ENV</strong>: přetáhni ji na knob a obálka leadu bude modulovat cokoli (třeba GRAVITY).</td></tr>
+        <tr><td>LEAD FILTER</td><td>Filtr <strong>pro každou notu zvlášť</strong>: <strong>CUTOFF</strong>, <strong>RESONANCE</strong>, <strong>ENV</strong> (kolik obálka posune cutoff, ±6 oktáv), <strong>KEY</strong> (cutoff sleduje notu), <strong>MODEL</strong> (stejných pět jako FILTER) a <strong>MODE</strong> (low pass, band pass, high pass). Na 20 kHz a bez obálky je vyřazený (bypass) a zvuk nijak nebarví.</td></tr>
+        <tr><td>FILTER ENV</td><td>ADSR obálka filtru. Barevná pilulka v hlavičce je zdroj <strong>LEAD ENV</strong>: přetáhni ji na knob a obálka leadu bude modulovat cokoli (třeba GRAVITY).</td></tr>
         <tr><td>AMP ENV</td><td>ADSR hlasitosti: ATTACK 1 ms–10 s, DECAY a RELEASE 1 ms–30 s, SUSTAIN.</td></tr>
         <tr><td>LEAD VOICE</td><td><strong>VOICES</strong>: <em>Mono</em> (každá nota znovu spustí obálky), <em>Legato</em> (překrývané noty jen klouzají), <em>Poly 4</em> a <em>Poly 8</em> (akordy a melodie nad dronem). <strong>GLIDE</strong>, <strong>VELOCITY</strong> (jak moc síla úhozu mění hlasitost a obálku filtru), <strong>VIBRATO</strong>, <strong>VIB RATE</strong>, <strong>VIB DELAY</strong>, <strong>TOUCH VIB</strong>, <strong>VOLUME</strong>, <strong>PAN</strong>.</td></tr>
         <tr><td>ARP</td><td><strong>ARP</strong>, <strong>LATCH</strong>, <strong>DIRECTION</strong> Up / Down / Ping-Pong / Random, <strong>RATE</strong> 1/4 až 1/32 včetně triol, <strong>OCTAVES</strong> 1–4. Běží v tempu skladby.</td></tr>
@@ -240,12 +242,12 @@
     <figure class="shot"><img src="img/fx.jpg" alt="Stránka FX" width="2400" height="1552" loading="lazy"><figcaption>Stránka <strong>FX</strong> s presetem Stereo Filters: dva pásmové filtry v routingu Stereo, každý houpaný jiným LFO.</figcaption></figure>
     <h3>FILTER A a FILTER B</h3>
     <figure class="shot"><img src="img/filters.jpg" alt="FILTER A a B" width="1548" height="546" loading="lazy"></figure>
-    <p>Dva stereo filtry pro celý nástroj, běží převzorkovaně. Oba mají <strong>CUTOFF</strong> 20 Hz–20 kHz, <strong>RESONANCE</strong> 0–10, <strong>DRIVE</strong> 0–10, <strong>MODEL</strong> a <strong>MODE</strong> (dolní, pásmová, horní propust; s ikonami). <strong>SPREAD</strong> u A rozladí levý a pravý filtr proti sobě. FILTER B se zapíná tlačítkem <strong>ON</strong>.</p>
+    <p>Dva stereo filtry pro celý nástroj, běží s oversamplingem. Oba mají <strong>CUTOFF</strong> 20 Hz–20 kHz, <strong>RESONANCE</strong> 0–10, <strong>DRIVE</strong> 0–10, <strong>MODEL</strong> a <strong>MODE</strong> (low pass, band pass, high pass; s ikonami). <strong>SPREAD</strong> u A rozladí levý a pravý filtr proti sobě. FILTER B se zapíná tlačítkem <strong>ON</strong>.</p>
     <div class="table-wrap"><table>
       <thead><tr><th>ROUTING</th><th>Co dělá</th></tr></thead>
       <tbody>
-        <tr><td>Serial</td><td>A, pak B. Například dolní propust A + horní propust B = pásmo.</td></tr>
-        <tr><td>Parallel</td><td>A a B vedle sebe, sečtené. Dva charaktery najednou, nebo zářez.</td></tr>
+        <tr><td>Serial</td><td>Nejdřív A, pak B. Například low pass A + high pass B = pásmová propust.</td></tr>
+        <tr><td>Parallel</td><td>A a B paralelně, výstupy se sečtou. Dva charaktery najednou, nebo zářez (notch).</td></tr>
         <tr><td>Split</td><td>Drone jde přes A, LEAD přes B. Tmavý drone a jasný lead se nezakalí.</td></tr>
         <tr><td>Stereo</td><td>A vlevo, B vpravo. Široký, pohyblivý obraz.</td></tr>
       </tbody>
@@ -253,11 +255,11 @@
     <div class="table-wrap"><table>
       <thead><tr><th>Model</th><th>Strmost</th><th>Charakter</th></tr></thead>
       <tbody>
-        <tr><td>GROWL</td><td class="num">12 dB</td><td>Špinavý stavový filtr se saturujícími integrátory. Hlasitý vstup a rezonance vrčí.</td></tr>
-        <tr><td>LADDER</td><td class="num">24 dB</td><td>Tranzistorový žebřík: kulatý, při vysoké rezonanci trochu ztenčí basy a zpívá.</td></tr>
-        <tr><td>DIODE</td><td class="num">24 dB</td><td>Diodový žebřík s provázanými stupni: gumový „squelch“, rezonance spíš kouše než zvoní.</td></tr>
-        <tr><td>SCREAM</td><td class="num">12 dB</td><td>Ořezaná rezonanční smyčka: ostrý, křičí a při vytočení piští.</td></tr>
-        <tr><td>SILK</td><td class="num">12 dB</td><td>Čistý a hladký, jemně se omezuje jen vstup. Na klidné plochy.</td></tr>
+        <tr><td>GROWL</td><td class="num">12 dB</td><td>Špinavý state-variable filtr se saturací uvnitř. Při hlasitém vstupu a vyšší rezonanci vrčí.</td></tr>
+        <tr><td>LADDER</td><td class="num">24 dB</td><td>Tranzistorový ladder: kulatý, při vysoké rezonanci trochu ubere basy a zpívá.</td></tr>
+        <tr><td>DIODE</td><td class="num">24 dB</td><td>Diodový ladder s provázanými stupni: gumový, „squelchy“ zvuk, rezonance spíš kouše, než zvoní.</td></tr>
+        <tr><td>SCREAM</td><td class="num">12 dB</td><td>Rezonance prochází ořezem (clipping): ostrý, křičí a na maximu piští.</td></tr>
+        <tr><td>SILK</td><td class="num">12 dB</td><td>Čistý a hladký, jemně saturuje jen vstup. Na klidné plochy.</td></tr>
       </tbody>
     </table></div>
     <p>Při plné rezonanci si Band Pass udrží hlasitost, úzké pásmo tedy nezmizí, ale zpívá.</p>
@@ -265,8 +267,8 @@
     <figure class="shot"><img src="img/echo.jpg" alt="ECHO" width="800" height="546" loading="lazy"></figure>
     <ul>
       <li>Dvě linky (<strong>TIME 1</strong> vlevo, <strong>TIME 2</strong> vpravo, 5 ms–2 s) s křížovou zpětnou vazbou. Změna času klouže jako u pásky.</li>
-      <li><strong>FEEDBACK</strong>: nad ~55 % začne echo samo zpívat. Smyčka má strop, takže hlasitost neuteče.</li>
-      <li><strong>MIX</strong>, <strong>MOD</strong> a <strong>MOD SOURCE</strong>: <em>Self</em> = echo moduluje svůj čas samo sebou, <em>LFO</em> = pomalý sinus.</li>
+      <li><strong>FEEDBACK</strong>: nad ~55 % začne echo samo zpívat. Smyčka je omezená, takže hlasitost neuteče.</li>
+      <li><strong>MIX</strong>, <strong>MOD</strong> a <strong>MOD SOURCE</strong>: <em>Self</em> = výstup echa moduluje jeho vlastní čas, <em>LFO</em> = pomalý sinus.</li>
       <li><strong>TO VOICES</strong>: ozvěna se vrací do hlasů jako FM. Viz GRAVITY.</li>
     </ul>
     <h3>SPACE</h3>
@@ -281,42 +283,47 @@
         <tr><td>COMET</td><td>FEEDBACK · TIME · WOBBLE</td><td>Špinavý saturovaný delay, který při vysokém FEEDBACK zpívá.</td></tr>
       </tbody>
     </table></div>
-    <p>Všechny smyčky ve FX mají strop a kompenzaci podle feedbacku, stereo vyvážení se drží podle vstupu (měřeno ±3 dB, L/R do 1 dB).</p>
+    <p>Všechny zpětnovazební smyčky ve FX jsou omezené a hlasitost se kompenzuje podle FEEDBACKu. Stereo vyvážení odpovídá vstupu (měřeno ±3 dB, L/R do 1 dB).</p>
 
-    <h2 id="motion"><span class="num">09</span>MOTION a modulace</h2>
-    <figure class="shot"><img src="img/motion.jpg" alt="LFO 1, LFO 2, RANDOM" width="1572" height="546" loading="lazy"><figcaption>LFO 1, LFO 2 a RANDOM. Šipka vpravo v hlavičce je „kabel“: chyť ji a pusť na libovolný knob.</figcaption></figure>
+    <h2 id="motion"><span class="num">09</span>Stránka MOD</h2>
+    <figure class="shot"><img src="img/mod-page.jpg" alt="Stránka MOD s presetem Lunar Tide" width="2400" height="1552" loading="lazy"><figcaption>Stránka <strong>MOD</strong> s presetem <strong>Lunar Tide</strong>: LFO 1 houpe GRAVITY, LFO 2 otevírá FILTER A. Číslo u záložky MOD je počet modulací.</figcaption></figure>
+    <p>Všechny zdroje pohybu a všechny modulace jsou na jedné stránce (záložka <strong>MOD</strong>, klávesa <kbd>4</kbd>). Nahoře jsou čtyři zdroje, pod nimi matice.</p>
+    <figure class="shot"><img src="img/motion.jpg" alt="LFO 1, LFO 2, RANDOM, MOD ENV" width="2344" height="488" loading="lazy"><figcaption>Barevná pilulka vpravo v hlavičce je „kabel“: chyť ji a pusť na libovolný knob. Číslo v ní říká, kolik modulací zdroj už má. Klikem je zobrazíš v matici.</figcaption></figure>
     <div class="table-wrap"><table>
       <thead><tr><th>Zdroj</th><th>Ovladače</th></tr></thead>
       <tbody>
-        <tr><td>LFO 1 a LFO 2</td><td><strong>SHAPE</strong> sinus, trojúhelník, pila nahoru, pila dolů, obdélník, S&amp;H (nový náhodný schod v každém cyklu). <strong>RATE</strong> 0,01–40 Hz, nebo se <strong>SYNC</strong> <strong>DIVISION</strong> v tempu (8 taktů až 1/16, trioly i s tečkou). Při hrajícím transportu sedí na mřížku skladby. <strong>PHASE</strong> a <strong>RETRIG</strong> (každá nota restartuje LFO na PHASE).</td></tr>
-        <tr><td>RANDOM</td><td><strong>MODE</strong>: <em>Drift</em> (plynulé bloudění), <em>Steps</em> (náhodné schody), <em>Noise</em> (rychlé chvění). <strong>RATE</strong> nebo <strong>DIVISION</strong> se SYNC, <strong>SLEW</strong> uhladí schody.</td></tr>
-        <tr><td>LEAD ENV</td><td>Obálka filtru leadu (šipka v hlavičce FILTER ENV na stránce LEAD).</td></tr>
+        <tr><td>LFO 1 a LFO 2</td><td><strong>SHAPE</strong> sinus, trojúhelník, pila nahoru, pila dolů, obdélník, S&amp;H (nový náhodný schod v každém cyklu). <strong>RATE</strong> 0,01–40 Hz, nebo se zapnutým <strong>SYNC</strong> <strong>DIVISION</strong> v tempu (8 taktů až 1/16, trioly i noty s tečkou). Při spuštěném transportu sedí na mřížku skladby. <strong>PHASE</strong> a <strong>RETRIG</strong> (každá nota spustí LFO znovu od PHASE).</td></tr>
+        <tr><td>RANDOM</td><td><strong>MODE</strong>: <em>Drift</em> (plynulé bloudění), <em>Steps</em> (náhodné schody), <em>Noise</em> (rychlé chvění). <strong>RATE</strong>, se SYNC <strong>DIVISION</strong>. <strong>SLEW</strong> schody uhladí.</td></tr>
+        <tr><td>MOD ENV</td><td>Obálka ADSR (<strong>ATTACK</strong>, <strong>DECAY</strong>, <strong>SUSTAIN</strong>, <strong>RELEASE</strong>, časy 1 ms–30 s). Spustí ji každá zahraná klávesa, plates i LEAD, a po puštění poslední klávesy dozní. Hodí se třeba na pomalé otevření filtru nebo nástup GRAVITY s každým akordem.</td></tr>
+        <tr><td>LEAD ENV</td><td>Obálka filtru leadu (pilulka v hlavičce FILTER ENV na stránce LEAD).</td></tr>
       </tbody>
     </table></div>
-    <figure class="shot"><img src="img/mod-panel.jpg" alt="Panel modulací" width="2400" height="1552" loading="lazy"><figcaption>Panel Mod s presetem Gravity Well: tlak prstu (Pressure) táhne GRAVITY o +45 %.</figcaption></figure>
-    <p>ResoOpus má 24 modulačních slotů. Každý vede <strong>zdroj → funkce → controller → amount → cíl</strong>. Cílem může být jakýkoli spojitý knob hlasů, GRAVITY, FX i LEAD.</p>
+    <h3>Matice modulací</h3>
+    <figure class="shot"><img src="img/matrix.jpg" alt="Matice modulací" width="2344" height="396" loading="lazy"><figcaption>Řádky jsou cíle, sloupce zdroje. Buňka ukazuje hloubku v barvě zdroje.</figcaption></figure>
     <ul>
-      <li><strong>Přetažením</strong>: šipka z hlavičky LFO, RANDOM nebo FILTER ENV → pusť na knob.</li>
-      <li><strong>Pravým tlačítkem</strong> na knob → <em>Modulate with</em> → zdroj.</li>
-      <li>V panelu <strong>Mod</strong> (vpravo nahoře nebo klávesa <kbd>9</kbd>) tlačítkem <em>+ Add</em>.</li>
-      <li><strong>Zdroje</strong>: Velocity, Mod Wheel, Pressure (aftertouch), Pitch Bend, Constant, LFO 1, LFO 2, Random, Lead Env.</li>
-      <li><strong>Controller</strong> funguje jako „VCA“: modulace je jen tak silná, jak velký je druhý zdroj (např. LFO 1 → GRAVITY s controllerem Mod Wheel = houpání až po vytočení kolečka).</li>
+      <li><strong>Tažením buňky</strong> nahoru a dolů nastavíš hloubku. V prázdné buňce tím vznikne nová modulace.</li>
+      <li><strong>Dvojklikem</strong> modulaci smažeš.</li>
+      <li><strong>Pravým tlačítkem</strong> na buňku otevřeš volby: <em>Enabled</em> (dočasně vypnout), <em>Bipolar</em>, <em>Controller</em> a jeho hloubka, <em>Function</em> a její hloubka, <em>Remove</em>.</li>
+      <li><strong>+ ADD DESTINATION</strong> přidá řádek s dalším cílem. Cílem může být jakýkoli spojitý knob hlasů, GRAVITY, FX i LEADu.</li>
+      <li><strong>Zdroje</strong> (sloupce): Velocity, Mod Wheel, Pressure (aftertouch), Pitch Bend, Constant, LFO 1, LFO 2, Random, Lead Env, Mod Env. Modulací může být až 24.</li>
+      <li><strong>Controller</strong> funguje jako VCA: modulace je jen tak silná, jak velký je druhý zdroj. Například LFO 1 → GRAVITY s controllerem Mod Wheel houpe jen tolik, kolik vytočíš kolečko.</li>
       <li><strong>Function</strong>: Scale, Offset, Low / High Clip, Exponential, Norm Exponential, Low / High Pass, Slew, Low / High Slew, Sample &amp; Hold, Bounce.</li>
     </ul>
+    <p>Modulaci přidáš i jinak: <strong>přetažením</strong> pilulky zdroje na knob, nebo <strong>pravým tlačítkem</strong> na knob → <em>Modulate with</em>. Modulovaný knob má kolem sebe barevné <strong>prstence</strong>, jeden za každý zdroj. Prstenec pod myší se zvýrazní a jeho tažením měníš hloubku. Při víc než dvou modulacích se u knobu ukáže <em>+n</em>.</p>
 
     <h2 id="hrani"><span class="num">10</span>Hraní a lišty</h2>
     <figure class="strip"><img src="img/keyboard.jpg" alt="Klávesnice" width="2400" height="296" loading="lazy"><figcaption>PB (pitch bend) a MW (mod wheel), 25 kláves od C2 (Ableton: C3 = MIDI 60). Čísla 1–4 jsou plates v barvě typu hlasu. Vpravo PLAY, TOUCH a oktávy.</figcaption></figure>
     <div class="table-wrap"><table>
       <thead><tr><th>Volba</th><th>Význam</th></tr></thead>
       <tbody>
-        <tr><td>PLAY: Plates</td><td>Bílé klávesy C3, D3, E3, F3 hrají hlasy 1–4 s jejich vlastním laděním. Na výšce zahrané klávesy nezáleží, jde o dotek.</td></tr>
-        <tr><td>PLAY: Keys</td><td>Zahraná nota přeladí další volný hlas na sebe. S LEADem zapnutým hrají všechny klávesy LEAD.</td></tr>
+        <tr><td>PLAY: Plates</td><td>Bílé klávesy C3, D3, E3, F3 hrají hlasy 1–4 s jejich vlastním laděním. Plate hlas jen rozezní, výšku určuje jeho TUNE.</td></tr>
+        <tr><td>PLAY: Keys</td><td>Zahraná nota přeladí další volný hlas na svou výšku. S LEADem zapnutým hrají všechny klávesy LEAD.</td></tr>
         <tr><td>TOUCH</td><td>Co zesiluje hlas nad HOLD: <em>Velocity</em>, <em>Aftertouch</em> (tlak po úhozu, např. KeyStep) nebo <em>Both</em>.</td></tr>
-        <tr><td>Snap (dolní lišta)</td><td><em>Free</em> = mikrotonální, <em>Chromatic</em> = hlasy se přichytí k půltónům, <em>Scale</em> = ke stupnici (Major, Minor, Dorian, Phrygian, Lydian, Mixolydian, Harmonic Minor, Pentatonic Major/Minor, Whole Tone, Hirajoshi, Double Harmonic).</td></tr>
+        <tr><td>Snap (výběrové tlačítko v dolní liště)</td><td><em>Free</em> = mikrotonální, <em>Chromatic</em> = hlasy se přichytí k půltónům, <em>Scale</em> = ke stupnici (Major, Minor, Dorian, Phrygian, Lydian, Mixolydian, Harmonic Minor, Pentatonic Major/Minor, Whole Tone, Hirajoshi, Double Harmonic).</td></tr>
       </tbody>
     </table></div>
-    <figure class="strip"><img src="img/topbar.jpg" alt="Horní lišta" width="2400" height="72" loading="lazy"><figcaption>Logo, záložky DRONE, LEAD a FX (klávesy 1–3) s vypínači DRONE a LEAD, prohlížeč presetů se šipkami, undo/redo, A/B + Copy, Mod, Help a <strong>?</strong> (zapíná nápovědu, zlatá = zapnuto).</figcaption></figure>
-    <figure class="strip"><img src="img/bottombar.jpg" alt="Dolní lišta" width="2400" height="56" loading="lazy"><figcaption>Plates/Keys, Touch, Snap, kategorie a preset, oversampling 1×/2×/4×, CPU instance a špička výstupu.</figcaption></figure>
+    <figure class="strip"><img src="img/topbar.jpg" alt="Horní lišta" width="2400" height="72" loading="lazy"><figcaption>Logo, záložky DRONE, LEAD, FX a MOD (klávesy 1–4) s vypínači DRONE a LEAD a počtem modulací u MOD, prohlížeč presetů se šipkami, undo/redo, A/B + Copy, Help a <strong>?</strong> (zapíná nápovědu, zlatá = zapnuto).</figcaption></figure>
+    <figure class="strip"><img src="img/bottombar.jpg" alt="Dolní lišta" width="2400" height="56" loading="lazy"><figcaption>Výběrová tlačítka Plates/Keys, Touch, Snap a Oversampling (1×/2×/4×), uprostřed kategorie a preset, vpravo zátěž CPU touto instancí a špička výstupu.</figcaption></figure>
     <p>V menu <strong>Help</strong> najdeš velikost okna (70–150 %), ladění (A = 415 / 432 / 440 / 442 / 444 Hz), rozsah pitch bendu, posun plates a tiché přepínání presetů (při změně presetu se výstup na 6 ms ztlumí, smažou se ozvěny a staré hlasy a zvuk se plynule vrátí).</p>
 
     <h2 id="prohlizec"><span class="num">11</span>Prohlížeč presetů</h2>
@@ -360,7 +367,7 @@
     <div class="recipe">
       <div class="recipe-head"><h4>Čisté kvinty a světlo</h4><span class="where">preset Pure Fifths · Northern Lights</span></div>
       <div class="settings"><span class="chip grav">GRAVITY <b>0–10 % (STILL)</b></span><span class="chip">DUST <b>0–10 %</b></span><span class="chip choir">CHORD <b>Fifths / Unison</b></span><span class="chip choir">ATTACK <b>6 s</b></span><span class="chip choir">RELEASE <b>12 s</b></span><span class="chip">FILTER <b>SILK LP 5 kHz</b></span><span class="chip">SPACE <b>AURORA, OCT UP 40, DECAY 70, BLEND 40</b></span></div>
-      <div class="recipe-body"><p>STILL nechá jen pomalé zázněje. Rozladíš je o pár centů intervaly OSC se <kbd>Shift</kbd>. AURORA přidá třpyt o oktávu výš. Pro úplný klid dej DUST na 0.</p></div>
+      <div class="recipe-body"><p>STILL nechá jen pomalé zázněje. Jejich rychlost nastavíš jemným rozladěním intervalů OSC (se <kbd>Shift</kbd> po centech). AURORA přidá třpyt o oktávu výš. Pro úplný klid dej DUST na 0.</p></div>
     </div>
 
     <section class="genre-head" id="varhany">
@@ -415,7 +422,7 @@
     <div class="recipe">
       <div class="recipe-head"><h4>Hukot a praskání</h4><span class="where">preset Iron Hum · Deep Field Static</span></div>
       <div class="settings"><span class="chip choir">Hlasy 1–2 <b>CHOIR o 11 centů vedle sebe</b></span><span class="chip">FILTER <b>DIODE LP 900 Hz, RES 5,5, DRIVE 6</b></span><span class="chip">DUST <b>60–85 %</b></span><span class="chip">SPACE <b>SATURN, ROOM 40</b></span><span class="chip siren">Hlas 4 SIREN <b>NOISE 50, AM 100, RATE 9 Hz</b></span></div>
-      <div class="recipe-body"><p>Dva skoro stejně naladěné hlasy dají tlučení jako transformátor. DIODE s drivem přidá špínu, SATURN kovové alikvoty. Siréna sekaná rychlou AM se šumem praská jako Geigerův počítač. Zkus i TIDE nad 80 % na dně akordu.</p></div>
+      <div class="recipe-body"><p>Dva skoro stejně naladěné hlasy brumí v záznějích jako transformátor. DIODE s drivem přidá špínu, SATURN kovové alikvoty. Siréna sekaná rychlou AM se šumem praská jako Geigerův počítač. Zkus i TIDE nad 80 % na dně akordu a GRIT nech na 100 %, ať to praská.</p></div>
     </div>
 
     <section class="genre-head" id="lod">
@@ -426,7 +433,7 @@
     <div class="recipe">
       <div class="recipe-head"><h4>Loď a maják</h4><span class="where">preset Last Transmission · Morse Beacon · Shortwave</span></div>
       <div class="settings"><span class="chip choir">Hlas 1 CHOIR <b>A0–C1, HOLD 60</b></span><span class="chip pulsar">Hlas 3 PULSAR <b>TWIN +0,05 st, BLEND 50, SUB 40</b></span><span class="chip siren">Hlas 4 SIREN <b>AM 100, RATE 3 Hz, NOISE 20</b></span><span class="chip">SPACE <b>COMET, FEEDBACK 55</b></span><span class="chip">DUST <b>55 %</b></span></div>
-      <div class="recipe-body"><p>PULSAR s TWIN pár centů od unisona dá pomalé tlučení motorů. Siréna sekaná AM je maják. RATE zpomal pro delší pauzy. COMET rozmaže a zašpiní signál. Pro „ladění rádia“ přepni FILTER na SCREAM Band Pass a otáčej CUTOFF (preset Shortwave).</p></div>
+      <div class="recipe-body"><p>PULSAR s TWIN pár centů od unisona dá pomalé zázněje jako motory lodi. Siréna sekaná AM je maják. RATE zpomal pro delší pauzy. COMET rozmaže a zašpiní signál. Pro „ladění rádia“ přepni FILTER na SCREAM Band Pass a otáčej CUTOFF (preset Shortwave).</p></div>
     </div>
 
     <section class="genre-head" id="meditace">
@@ -461,10 +468,10 @@
         <tr><td>Low Saturn</td><td>Tmavý choir přes kovový SATURN, alikvoty jako zvony. Plates přivolají vzdálenou sirénu.</td></tr>
         <tr><td>Cello Ground</td><td>Pulsar jako smyčec s vibratem nad měkkým choirem. Teplé a dřevité.</td></tr>
         <tr><td>Analog Choir</td><td>Dva choiry s CHARACTER k Analog: každá pila jiná a bloudící, kulatější a teplejší. Porovnej s CHARACTER 0.</td></tr>
-        <tr><td>Iron Quasar</td><td>Nízký QUASAR s kovovým RATIO a FEEDBACK, pomalu tluče sám proti sobě (FINE). Temné stroje, hukot lodi.</td></tr>
+        <tr><td>Iron Quasar</td><td>Nízký QUASAR s kovovým RATIO a FEEDBACK, FINE přidá pomalé zázněje. Temné stroje, hukot lodi.</td></tr>
         <tr><td>Nebula Organ</td><td>NEBULA s tabulkou ORGAN: mod wheel vytahuje rejstříky od flétny po plné varhany.</td></tr>
         <tr class="cat"><td colspan="2">Cinematic</td></tr>
-        <tr><td>Slow Bloom</td><td>Ticho, dokud nehraješ: každá plate se rozvine za několik sekund a doznívá dvanáct.</td></tr>
+        <tr><td>Slow Bloom</td><td>Ticho, dokud nehraješ: každá plate se rozvine během několika sekund a doznívá dvanáct sekund.</td></tr>
         <tr><td>Microtonal Glass</td><td>Choiry pár centů od sebe, pomalé zázněje jako skleněná harmonika.</td></tr>
         <tr><td>Pulsar Field</td><td>Čtyři pulsary od měkkého po ostrý, každý rozkvete z podladění do výšky.</td></tr>
         <tr><td>Arrival</td><td>Obrovský nízký cluster a vzdálená dvoutónová siréna. GRAVITY k ORBIT, když scéna graduje.</td></tr>
@@ -482,14 +489,14 @@
         <tr><td>Wind Harp</td><td>Šumový vítr a pískající sirény s tichým choirem. NOISE hlasů 3–4 = poryvy.</td></tr>
         <tr><td>Rain Machine</td><td>Rychle sekané sirény přes RUNNER: kapky padající ve výšce. RATE = liják.</td></tr>
         <tr><td>Deep Field Static</td><td>Choir pohřbený v DUST a kruhové modulaci. Stará páska, kosmické pozadí.</td></tr>
-        <tr><td>Glass Rain</td><td>Jasné pulsary v samozpívajícím ECHU. Hraj E3 a F3 lehce.</td></tr>
+        <tr><td>Glass Rain</td><td>Jasné pulsary v ECHU, které samo zpívá. Hraj E3 a F3 lehce.</td></tr>
         <tr><td>Crushed Sirens</td><td>Sirény a choir s CHARACTER k Digital: málo bitů, nízký vzorkovací kmitočet, aliasing jako barva.</td></tr>
         <tr><td>Glass Nebula</td><td>Tabulky NEBULA GLASS procházené RANDOMem a LFO: digitální zvonkohra, která se neopakuje.</td></tr>
         <tr><td>Stereo Filters</td><td>ROUTING Stereo: pásmový FILTER A vlevo, B vpravo, každý houpaný jiným LFO. Široké a živé.</td></tr>
         <tr class="cat"><td colspan="2">Orbits</td></tr>
         <tr><td>Gravity Well</td><td>Tlak prstu stáhne GRAVITY do TURBULENCE, po puštění se hlasy uklidní.</td></tr>
         <tr><td>Collapse</td><td>Všechny hlasy v kruhu za hranou: smyčka pulzuje sama. GRAVITY pod 85 % ji zkrotí.</td></tr>
-        <tr><td>Binary Stars</td><td>Dva páry na oběžné dráze naladěné těsně vedle sebe, FM pomalu tluče.</td></tr>
+        <tr><td>Binary Stars</td><td>Dva páry na oběžné dráze naladěné těsně vedle sebe, FM dělá pomalé zázněje.</td></tr>
         <tr><td>Tidal Lock</td><td>Mod wheel = GRAVITY. Projeď ho pomalu celým rozsahem.</td></tr>
         <tr><td>Ring World</td><td>Kruh čtyř hlasů v TURBULENCE přes LADDER: živá smyčka, která se neopakuje.</td></tr>
         <tr><td>Event Horizon</td><td>Silnější tlak táhne do COLLAPSE a echo se vrací do hlasů. Hraj jemně, ať se vznášíš na hraně.</td></tr>
@@ -501,7 +508,7 @@
         <tr><td>Sync Scream</td><td>Tvrdý sync přes SCREAM filtr. Mod wheel trhá OSC 2.</td></tr>
         <tr><td>Squelch Bass</td><td>Square přes DIODE s vysokou rezonancí: gumová kyselá basa. Velocity otevírá filtr.</td></tr>
         <tr><td>Pure Lead</td><td>DRONE vypnutý, jen LEAD: všechny klávesy hrají klasický saw lead s vlastní obálkou filtru.</td></tr>
-        <tr><td>Split Worlds</td><td>ROUTING Split: drone se noří do tmavého LADDERu (A), lead září přes horní propust (B).</td></tr>
+        <tr><td>Split Worlds</td><td>ROUTING Split: drone se noří do tmavého LADDERu (A), lead září přes high pass (B).</td></tr>
         <tr class="cat"><td colspan="2">Pulse</td></tr>
         <tr><td>Pulse Engine</td><td>Arpeggio v šestnáctinách přes LADDER drone. Drž akord mimo plates.</td></tr>
         <tr><td>Constellation</td><td>Ping-pong arpeggio měkkých sinusů přes tři oktávy a shimmer. Hvězdy se rozsvěcují.</td></tr>
@@ -525,7 +532,8 @@
         <tr><td>LEAD Poly 8: akord C-E-G, rozdíl úrovní not</td><td class="num">0,7 dB</td></tr>
         <tr><td>LFO 1/4 v tempu 120 BPM: hran za 2 s</td><td class="num">8 (přesně)</td></tr>
         <tr><td>CPU: výchozí patch 2× / 4 QUASAR / 4 NEBULA / + LEAD Poly 8 / nečinnost</td><td class="num">2,8 / 4,0 / 3,0 / 6,2 / 0,7 %</td></tr>
-        <tr><td>Audit parametrů (mění každý zvuk?)</td><td class="num">257 ze 257</td></tr>
+        <tr><td>Audit parametrů (mění každý zvuk?)</td><td class="num">262 ze 262</td></tr>
+        <tr><td>GRIT 50 %: cvakání choiru s TIDE 75 % nad 1 kHz / běžný choir</td><td class="num">−23 → −43 dB / −13 → −15 dB</td></tr>
       </tbody>
     </table></div>
 
@@ -538,12 +546,13 @@
         <tr><td>Plates hrají lead místo dronu</td><td>DRONE je vypnutý, takže všechny klávesy hrají LEAD. Zapni DRONE.</td></tr>
         <tr><td>Hlas nezní</td><td>Jeho TYPE je OFF, nebo je VOL na −∞.</td></tr>
         <tr><td>FILTER B nic nedělá</td><td>Zapni tlačítko ON ve FILTER B.</td></tr>
-        <tr><td>LFO nic nedělá</td><td>LFO samo nic nemění: přetáhni šipku z hlavičky na knob, nebo ho přidej v panelu Mod.</td></tr>
+        <tr><td>LFO nic nedělá</td><td>LFO samo nic nemění: přetáhni barevnou pilulku z hlavičky na knob, nebo nastav hloubku v matici na stránce MOD.</td></tr>
         <tr><td>PATH nic nemění</td><td>PATH se uplatní až od ORBIT. Ve STILL se hlasy netahají.</td></tr>
         <tr><td>Arpeggio stojí</td><td>ARP drží jen klávesy, které hrají LEAD. Bez LATCH hraje, jen dokud klávesy držíš. Tempo bere ze skladby.</td></tr>
         <tr><td>Aftertouch nic nedělá</td><td>TOUCH přepni na Aftertouch nebo Both. Klávesy musí posílat channel pressure.</td></tr>
         <tr><td>Popisky nad knoby se neukazují</td><td>Zapni je ikonou <strong>?</strong> vpravo nahoře.</td></tr>
         <tr><td>Pískání ve výškách</td><td>Oversampling 1× v dolní liště, nebo CHARACTER otočený doleva (Digital).</td></tr>
+        <tr><td>Praskání a cvakání</td><td>Způsobuje ho TIDE nad 50 % (pily klesnou na pár Hz) a GRAVITY od ORBIT výš. Stáhni GRIT v MASTER na 30–60 %.</td></tr>
       </tbody>
     </table></div>
 
@@ -556,11 +565,12 @@
         <tr><td>Dvojklik na knob</td><td>Napsat hodnotu: <code>D2+12</code>, <code>+19 -8c</code>, <code>2.5k</code>, <code>3 s</code>, <code>L 30</code></td></tr>
         <tr><td><kbd>Cmd</kbd>/<kbd>Ctrl</kbd>-klik</td><td>Výchozí hodnota</td></tr>
         <tr><td>Pravé tlačítko na knob</td><td>Reset, napsat, Modulate with, správa modulací</td></tr>
-        <tr><td>Tažení prstence knobu</td><td>Hloubka modulace</td></tr>
-        <tr><td>Šipka v hlavičce LFO / RANDOM / FILTER ENV → knob</td><td>Nová modulace</td></tr>
+        <tr><td>Tažení prstence knobu</td><td>Hloubka modulace (zvýrazní se prstenec pod myší)</td></tr>
+        <tr><td>Pilulka v hlavičce LFO / RANDOM / MOD ENV / FILTER ENV → knob</td><td>Nová modulace</td></tr>
+        <tr><td>Matice: tažení buňky / dvojklik / pravé tlačítko</td><td>Hloubka / smazat / volby</td></tr>
         <tr><td>Klik do modulu hlasu / na SCOPE</td><td>Vybere hlas / přepne osciloskop a spektrum</td></tr>
-        <tr><td><kbd>1</kbd> / <kbd>2</kbd> / <kbd>3</kbd></td><td>Stránky DRONE / LEAD / FX</td></tr>
-        <tr><td><kbd>9</kbd> / <kbd>0</kbd>, <kbd>Esc</kbd></td><td>Panel modulací otevřít / zavřít</td></tr>
+        <tr><td><kbd>1</kbd> / <kbd>2</kbd> / <kbd>3</kbd> / <kbd>4</kbd></td><td>Stránky DRONE / LEAD / FX / MOD</td></tr>
+        <tr><td><kbd>9</kbd> / <kbd>0</kbd>, <kbd>Esc</kbd></td><td>Stránku MOD otevřít / zavřít (zpět na předchozí stránku)</td></tr>
         <tr><td><kbd>Cmd</kbd>+<kbd>Z</kbd>, <kbd>Shift</kbd>+<kbd>Cmd</kbd>+<kbd>Z</kbd></td><td>Undo / Redo</td></tr>
         <tr><td>Klávesnice dole: klik níž do klávesy</td><td>Silnější úhoz. Tažením přes klávesy glissando.</td></tr>
       </tbody>

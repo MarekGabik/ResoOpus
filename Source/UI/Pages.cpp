@@ -891,7 +891,7 @@ const char* slopeText (int model)
 FxPage::FxPage (ResoOpusProcessor& p) : Page (p)
 {
     auto sm = [] (String lo, String hi, bool bi = false) { return range (lo, hi, bi, true); };
-    const int rowH = 265, gap = 10, g6 = 6, y2 = rowH + gap;
+    const int rowH = 265, gap = 10, y2 = rowH + gap;
 
     const int half = (width - 8) / 2;
     // FILTER A

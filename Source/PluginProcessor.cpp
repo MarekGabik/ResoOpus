@@ -472,7 +472,7 @@ void ResoOpusProcessor::processChunk (AudioBuffer<float>& out, int start, int le
     {
         auto& L = leadSettings;
         float anyPressure = pressure;
-        for (auto& t : touch) anyPressure = std::max (anyPressure, t.pressure);
+        for (auto& tc : touch) anyPressure = std::max (anyPressure, tc.pressure);
         L.a4 = curG[GP::a4];
         L.wave = curG[GP::lead_wave];
         L.octave = curG[GP::lead_octave] - 2.0f;

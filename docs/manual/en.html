@@ -24,7 +24,7 @@
       <li><a href="#master">MASTER and DUST</a></li>
       <li><a href="#lead">LEAD page</a></li>
       <li><a href="#fx">FX page</a></li>
-      <li><a href="#motion">MOTION and modulation</a></li>
+      <li><a href="#motion">The MOD page</a></li>
       <li><a href="#playing">Playing and bars</a></li>
       <li><a href="#browser">Preset browser</a></li>
       <li class="genre sep"><a href="#blade">Neon and rain</a></li>
@@ -53,7 +53,7 @@
         <div class="lang" aria-label="Language"><a href="index.html" hreflang="cs" lang="cs">CS</a><span aria-current="page">EN</span></div>
       </div>
       <h1>Reso<span class="q">Opus</span></h1>
-      <p class="lede">A drone synthesizer for cinematic, ambient and experimental soundscapes. Four hand-tuned, microtonal voices in five types play as soon as the plugin is on a track. In the centre sits the GRAVITY knob, which leads from pure tuning to chaos. Add a polyphonic LEAD with a filter per note, two filters with routing, an echo, a space, two LFOs and a random source. Play the drone only, the lead only, or both.</p>
+      <p class="lede">A drone synthesizer for cinematic, ambient and experimental soundscapes. Four hand-tuned, microtonal voices in five types play as soon as the plugin is on a track. In the centre sits the GRAVITY knob, which leads from pure tuning to chaos. Add a polyphonic LEAD with a filter per note, two filters with routing, an echo, a space and a MOD page with two LFOs, a random source, a modulation envelope and a modulation matrix. Play the drone only, the lead only, or both.</p>
       <div class="meta">
         <span>VST3 · Windows / macOS</span><span>AU · macOS</span><span>instrument · drone + lead (up to 8 notes)</span><span>Ableton Live 11 / 12</span><span>4 voices · 5 types · 24 modulations · 54 presets</span>
       </div>
@@ -66,9 +66,10 @@
     <div class="table-wrap"><table>
       <thead><tr><th>Page</th><th>Contents</th></tr></thead>
       <tbody>
-        <tr><td>DRONE</td><td>Four voices (type, tuning, HOLD, PAN, volume, scope), GRAVITY, the selected voice's detail, MASTER (PITCH, DUST, VOLUME, FILL).</td></tr>
+        <tr><td>DRONE</td><td>Four voices (type, tuning, HOLD, PAN, volume, scope), GRAVITY, the selected voice's detail, MASTER (PITCH, DUST, GRIT, VOLUME, FILL).</td></tr>
         <tr><td>LEAD</td><td>The melodic layer: oscillators, a filter with its envelope per note, amp envelope, polyphony, glide, vibrato, ARP.</td></tr>
-        <tr><td>FX</td><td>FILTER A and B with routing, ECHO, SPACE and MOTION: LFO 1, LFO 2 and RANDOM.</td></tr>
+        <tr><td>FX</td><td>FILTER A and B with routing, ECHO and SPACE.</td></tr>
+        <tr><td>MOD</td><td>LFO 1, LFO 2, RANDOM, MOD ENV and the matrix of all modulations.</td></tr>
       </tbody>
     </table></div>
     <div class="chain"><span>4 voices</span><i>⇄</i><span class="me">GRAVITY · DUST</span><i>+</i><span>LEAD (1–8 notes)</span><i>→</i><span>FILTER A / B</span><i>→</i><span>ECHO</span><i>→</i><span>SPACE</span><i>→</i><span>MASTER → limiter</span></div>
@@ -119,7 +120,7 @@
     <ul>
       <li><strong>CHORD</strong> fills all five intervals at once: <em>Unison</em> (a few cents apart, beating), <em>Octaves</em>, <em>Fifths</em>, <em>Major</em> (0 4 7 12 16), <em>Minor</em> (0 3 7 12 15).</li>
       <li><strong>OSC 1–5</strong>: interval of each saw above TUNE (−24 to +36 semitones). <kbd>Shift</kbd>-drag moves in cents. The LED above the knob switches the saw off.</li>
-      <li><strong>TIDE</strong> (in the voice module): up to 50 % it pulls the whole chord down. Beyond 50 % it sinks further and the saws start to modulate each other: growl, metallic overtones and crackle at the bottom.</li>
+      <li><strong>TIDE</strong> (in the voice module): up to 50 % it pulls the whole chord down. Beyond 50 % it sinks further and the saws start to modulate each other: growl, metallic overtones and crackle at the bottom (the saws drop to a few Hz and click). Tame the crackle with GRIT in MASTER.</li>
     </ul>
     <h3>SIREN: sirens, birds, monsters, wind</h3>
     <figure class="shot"><img src="img/detail-siren.jpg" alt="SIREN detail" width="1816" height="372" loading="lazy"><figcaption>SIREN: the modulator (RATE, AM, WAVE), DIVIDER for sub-harmonics and NOISE.</figcaption></figure>
@@ -198,7 +199,7 @@
     </div>
     <p>The coloured dots on the orbit are the voices in their type colour; as GRAVITY rises they pull together and shake. The top corners show <strong>X/Y figures of the pairs</strong> 1-2 and 3-4: a voice against its partner. In STILL a calm, slowly turning figure, in ORBIT it trembles, in TURBULENCE it falls apart. Loudness changes by only about 2 dB between STILL and COLLAPSE, so you can automate GRAVITY without jumps.</p>
     <ul>
-      <li><strong>Right-click</strong> GRAVITY → <strong>PATH</strong>: <em>Auto</em> (pairs up to the middle, then a ring), <em>Pairs</em> (always pairs 1·2 and 3·4), <em>Ring</em> (always the ring 1→2→3→4→1). The menu also has <em>Modulate with</em>.</li>
+      <li><strong>PATH</strong> (select button on the right of the GRAVITY header): <em>Auto</em> (pairs up to the middle, then a ring), <em>Pairs</em> (always pairs 1·2 and 3·4), <em>Ring</em> (always the ring 1→2→3→4→1). Right-click the GRAVITY knob for <em>Modulate with</em>.</li>
       <li>Drag up / down (<kbd>Shift</kbd> = fine), mouse wheel, double-click = type a value, <kbd>Cmd</kbd>/<kbd>Ctrl</kbd>-click = default 15 %.</li>
     </ul>
     <div class="duo">
@@ -216,7 +217,8 @@
       <li><strong>PITCH</strong>: transposes all four voices together (±24 semitones), their intervals stay the same.</li>
       <li><strong>DUST</strong>: analog life for the whole instrument. Slow drift of the tuning, voices leaking into each other, a quiet breath of noise (at most −54 dBFS). Unlike CHARACTER it works on all voices and on how they relate.</li>
       <li><strong>VOLUME</strong>: output level (−∞ to +12 dB).</li>
-      <li><strong>FILL</strong> (right in the header): spreads the four voices over a chosen scale from a chosen root.</li>
+      <li><strong>GRIT</strong>: how sharp the edges are that the voices modulate each other with (GRAVITY, DUST, TIDE). 100 % = raw growl and crackle. Lower rounds the edges and the crackle goes: at 50 % the clicks of saws pulled down to a few Hz by TIDE disappear while a normal tone barely changes, at 0 % even COLLAPSE gets smoother.</li>
+      <li><strong>FILL</strong> (select button in the header): spreads the four voices over a chosen scale from a chosen root.</li>
     </ul>
 
     <h2 id="lead"><span class="num">07</span>LEAD page</h2>
@@ -227,7 +229,7 @@
       <tbody>
         <tr><td>LEAD OSC</td><td><strong>WAVE</strong> morphs sine → triangle → shark fin → saw → square (icons around the knob). <strong>OSC 2</strong> interval ±12 semitones, <strong>OSC 2 LEVEL</strong>, <strong>SYMMETRY</strong> (pulse width), <strong>OCTAVE</strong> ±2, <strong>SUB</strong> sine an octave below, <strong>SYNC</strong> = hard sync of OSC 2.</td></tr>
         <tr><td>LEAD FILTER</td><td>A filter <strong>per note</strong>: <strong>CUTOFF</strong>, <strong>RESONANCE</strong>, <strong>ENV</strong> (how far the envelope moves the cutoff, ±6 octaves), <strong>KEY</strong> (the cutoff follows the note), <strong>MODEL</strong> (the same five as FILTER) and <strong>MODE</strong> (low, band, high pass). At 20 kHz with no envelope it is bypassed and colours nothing.</td></tr>
-        <tr><td>FILTER ENV</td><td>ADSR of the filter. The arrow in the header is the <strong>LEAD ENV</strong> source: drag it onto a knob and the lead envelope modulates anything (GRAVITY, say).</td></tr>
+        <tr><td>FILTER ENV</td><td>ADSR of the filter. The coloured pill in the header is the <strong>LEAD ENV</strong> source: drag it onto a knob and the lead envelope modulates anything (GRAVITY, say).</td></tr>
         <tr><td>AMP ENV</td><td>ADSR of the level: ATTACK 1 ms–10 s, DECAY and RELEASE 1 ms–30 s, SUSTAIN.</td></tr>
         <tr><td>LEAD VOICE</td><td><strong>VOICES</strong>: <em>Mono</em> (every note restarts the envelopes), <em>Legato</em> (overlapping notes only slide), <em>Poly 4</em> and <em>Poly 8</em> (chords and melodies over the drone). <strong>GLIDE</strong>, <strong>VELOCITY</strong> (how much the strike sets level and filter envelope), <strong>VIBRATO</strong>, <strong>VIB RATE</strong>, <strong>VIB DELAY</strong>, <strong>TOUCH VIB</strong>, <strong>VOLUME</strong>, <strong>PAN</strong>.</td></tr>
         <tr><td>ARP</td><td><strong>ARP</strong>, <strong>LATCH</strong>, <strong>DIRECTION</strong> Up / Down / Ping-Pong / Random, <strong>RATE</strong> 1/4 to 1/32 including triplets, <strong>OCTAVES</strong> 1–4. Locked to the song tempo.</td></tr>
@@ -283,26 +285,31 @@
     </table></div>
     <p>Every loop in the FX has a ceiling and feedback compensation, and the stereo balance follows the input (measured within ±3 dB, L/R within 1 dB).</p>
 
-    <h2 id="motion"><span class="num">09</span>MOTION and modulation</h2>
-    <figure class="shot"><img src="img/motion.jpg" alt="LFO 1, LFO 2, RANDOM" width="1572" height="546" loading="lazy"><figcaption>LFO 1, LFO 2 and RANDOM. The arrow on the right of the header is a "cable": grab it and drop it on any knob.</figcaption></figure>
+    <h2 id="motion"><span class="num">09</span>The MOD page</h2>
+    <figure class="shot"><img src="img/mod-page.jpg" alt="The MOD page with the Lunar Tide preset" width="2400" height="1552" loading="lazy"><figcaption>The <strong>MOD</strong> page with the <strong>Lunar Tide</strong> preset: LFO 1 swings GRAVITY, LFO 2 opens FILTER A. The number on the MOD tab counts the modulations.</figcaption></figure>
+    <p>All motion sources and all modulations live on one page (the <strong>MOD</strong> tab, key <kbd>4</kbd>). Four sources at the top, the matrix below them.</p>
+    <figure class="shot"><img src="img/motion.jpg" alt="LFO 1, LFO 2, RANDOM, MOD ENV" width="2344" height="488" loading="lazy"><figcaption>The coloured pill on the right of the header is a "cable": grab it and drop it on any knob. Its number tells how many modulations the source already drives; click it to show them in the matrix.</figcaption></figure>
     <div class="table-wrap"><table>
       <thead><tr><th>Source</th><th>Controls</th></tr></thead>
       <tbody>
         <tr><td>LFO 1 and LFO 2</td><td><strong>SHAPE</strong> sine, triangle, saw up, saw down, square, S&amp;H (a new random step every cycle). <strong>RATE</strong> 0.01–40 Hz, or with <strong>SYNC</strong> a <strong>DIVISION</strong> in tempo (8 bars to 1/16, triplets and dotted). While the transport runs it locks to the song grid. <strong>PHASE</strong> and <strong>RETRIG</strong> (every note restarts the LFO at PHASE).</td></tr>
         <tr><td>RANDOM</td><td><strong>MODE</strong>: <em>Drift</em> (smooth wandering), <em>Steps</em> (random steps), <em>Noise</em> (fast jitter). <strong>RATE</strong>, or <strong>DIVISION</strong> with SYNC, <strong>SLEW</strong> smooths the steps.</td></tr>
-        <tr><td>LEAD ENV</td><td>The lead's filter envelope (arrow in the FILTER ENV header on the LEAD page).</td></tr>
+        <tr><td>MOD ENV</td><td>An ADSR envelope (<strong>ATTACK</strong>, <strong>DECAY</strong>, <strong>SUSTAIN</strong>, <strong>RELEASE</strong>, 1 ms–30 s). Every key you play starts it, plates and LEAD alike, and it fades after the last key is let go. Good for slowly opening a filter or bringing GRAVITY in with every chord.</td></tr>
+        <tr><td>LEAD ENV</td><td>The lead's filter envelope (pill in the FILTER ENV header on the LEAD page).</td></tr>
       </tbody>
     </table></div>
-    <figure class="shot"><img src="img/mod-panel.jpg" alt="Modulation panel" width="2400" height="1552" loading="lazy"><figcaption>The Mod panel with the Gravity Well preset: finger pressure (Pressure) pulls GRAVITY by +45 %.</figcaption></figure>
-    <p>ResoOpus has 24 modulation slots. Each one runs <strong>source → function → controller → amount → destination</strong>. Any continuous knob of the voices, GRAVITY, FX and LEAD can be a destination.</p>
+    <h3>Modulation matrix</h3>
+    <figure class="shot"><img src="img/matrix.jpg" alt="Modulation matrix" width="2344" height="396" loading="lazy"><figcaption>Rows are destinations, columns are sources. A cell shows the depth in the source's colour.</figcaption></figure>
     <ul>
-      <li><strong>Drag</strong>: the arrow from the LFO, RANDOM or FILTER ENV header → drop on a knob.</li>
-      <li><strong>Right-click</strong> a knob → <em>Modulate with</em> → source.</li>
-      <li>In the <strong>Mod</strong> panel (top right or key <kbd>9</kbd>) with <em>+ Add</em>.</li>
-      <li><strong>Sources</strong>: Velocity, Mod Wheel, Pressure (aftertouch), Pitch Bend, Constant, LFO 1, LFO 2, Random, Lead Env.</li>
+      <li><strong>Drag a cell</strong> up or down to set the depth. In an empty cell this creates a new modulation.</li>
+      <li><strong>Double-click</strong> removes it.</li>
+      <li><strong>Right-click</strong> a cell for options: <em>Enabled</em> (switch off for now), <em>Bipolar</em>, <em>Controller</em> and its amount, <em>Function</em> and its amount, <em>Remove</em>.</li>
+      <li><strong>+ ADD DESTINATION</strong> adds a row with another destination. Any continuous knob of the voices, GRAVITY, FX and LEAD can be one.</li>
+      <li><strong>Sources</strong> (columns): Velocity, Mod Wheel, Pressure (aftertouch), Pitch Bend, Constant, LFO 1, LFO 2, Random, Lead Env, Mod Env. Up to 24 modulations.</li>
       <li><strong>Controller</strong> works like a VCA: the modulation is only as strong as a second source (e.g. LFO 1 → GRAVITY with Mod Wheel as controller = swings only as far as the wheel is up).</li>
       <li><strong>Function</strong>: Scale, Offset, Low / High Clip, Exponential, Norm Exponential, Low / High Pass, Slew, Low / High Slew, Sample &amp; Hold, Bounce.</li>
     </ul>
+    <p>You can also add a modulation by <strong>dragging</strong> a source's pill onto a knob, or by <strong>right-clicking</strong> a knob → <em>Modulate with</em>. A modulated knob gets coloured <strong>rings</strong>, one per source. The ring under the mouse lights up; drag it to change its depth. With more than two modulations the knob shows <em>+n</em>.</p>
 
     <h2 id="playing"><span class="num">10</span>Playing and bars</h2>
     <figure class="strip"><img src="img/keyboard.jpg" alt="Keyboard" width="2400" height="296" loading="lazy"><figcaption>PB (pitch bend) and MW (mod wheel), 25 keys from C2 (Ableton: C3 = MIDI 60). The numbers 1–4 are the plates in their voice type colour. On the right PLAY, TOUCH and octave.</figcaption></figure>
@@ -312,11 +319,11 @@
         <tr><td>PLAY: Plates</td><td>The white keys C3, D3, E3, F3 play voices 1–4 at their own tuning. The pitch of the key doesn't matter, the touch does.</td></tr>
         <tr><td>PLAY: Keys</td><td>A played note retunes the next free voice to itself. With the LEAD on, every key plays the LEAD.</td></tr>
         <tr><td>TOUCH</td><td>What lifts a voice above HOLD: <em>Velocity</em>, <em>Aftertouch</em> (pressure after the strike, e.g. KeyStep) or <em>Both</em>.</td></tr>
-        <tr><td>Snap (bottom bar)</td><td><em>Free</em> = microtonal, <em>Chromatic</em> = voices snap to semitones, <em>Scale</em> = to a scale (Major, Minor, Dorian, Phrygian, Lydian, Mixolydian, Harmonic Minor, Pentatonic Major/Minor, Whole Tone, Hirajoshi, Double Harmonic).</td></tr>
+        <tr><td>Snap (select button in the bottom bar)</td><td><em>Free</em> = microtonal, <em>Chromatic</em> = voices snap to semitones, <em>Scale</em> = to a scale (Major, Minor, Dorian, Phrygian, Lydian, Mixolydian, Harmonic Minor, Pentatonic Major/Minor, Whole Tone, Hirajoshi, Double Harmonic).</td></tr>
       </tbody>
     </table></div>
-    <figure class="strip"><img src="img/topbar.jpg" alt="Top bar" width="2400" height="72" loading="lazy"><figcaption>Logo, tabs DRONE, LEAD and FX (keys 1–3) with the DRONE and LEAD switches, preset browser with arrows, undo/redo, A/B + Copy, Mod, Help and <strong>?</strong> (tooltips on / off, gold = on).</figcaption></figure>
-    <figure class="strip"><img src="img/bottombar.jpg" alt="Bottom bar" width="2400" height="56" loading="lazy"><figcaption>Plates/Keys, Touch, Snap, category and preset, oversampling 1×/2×/4×, this instance's CPU and output peak.</figcaption></figure>
+    <figure class="strip"><img src="img/topbar.jpg" alt="Top bar" width="2400" height="72" loading="lazy"><figcaption>Logo, tabs DRONE, LEAD, FX and MOD (keys 1–4) with the DRONE and LEAD switches and the modulation count on MOD, preset browser with arrows, undo/redo, A/B + Copy, Help and <strong>?</strong> (tooltips on / off, gold = on).</figcaption></figure>
+    <figure class="strip"><img src="img/bottombar.jpg" alt="Bottom bar" width="2400" height="56" loading="lazy"><figcaption>Select buttons Plates/Keys, Touch, Snap and Oversampling (1×/2×/4×), category and preset in the middle, this instance's CPU and output peak.</figcaption></figure>
     <p>The <strong>Help</strong> menu has the window size (70–150 %), tuning (A = 415 / 432 / 440 / 442 / 444 Hz), pitch bend range, plates position and silent preset changes (the output fades for 6 ms, echoes and old voices are cleared and the sound fades back in).</p>
 
     <h2 id="browser"><span class="num">11</span>Preset browser</h2>
@@ -415,7 +422,7 @@
     <div class="recipe">
       <div class="recipe-head"><h4>Hum and crackle</h4><span class="where">preset Iron Hum · Deep Field Static</span></div>
       <div class="settings"><span class="chip choir">Voices 1–2 <b>CHOIR 11 cents apart</b></span><span class="chip">FILTER <b>DIODE LP 900 Hz, RES 5.5, DRIVE 6</b></span><span class="chip">DUST <b>60–85 %</b></span><span class="chip">SPACE <b>SATURN, ROOM 40</b></span><span class="chip siren">Voice 4 SIREN <b>NOISE 50, AM 100, RATE 9 Hz</b></span></div>
-      <div class="recipe-body"><p>Two voices tuned almost the same throb like a transformer, DIODE with drive adds dirt, SATURN metallic overtones. A siren chopped by fast AM with noise crackles like a Geiger counter. Also try TIDE above 80 % at the bottom of the chord.</p></div>
+      <div class="recipe-body"><p>Two voices tuned almost the same throb like a transformer, DIODE with drive adds dirt, SATURN metallic overtones. A siren chopped by fast AM with noise crackles like a Geiger counter. Also try TIDE above 80 % at the bottom of the chord, with GRIT at 100 % so it crackles.</p></div>
     </div>
 
     <section class="genre-head" id="ship">
@@ -525,7 +532,8 @@
         <tr><td>LEAD Poly 8: chord C-E-G, level difference between notes</td><td class="num">0.7 dB</td></tr>
         <tr><td>LFO 1/4 in tempo at 120 BPM: edges in 2 s</td><td class="num">8 (exact)</td></tr>
         <tr><td>CPU: default patch 2× / 4 QUASAR / 4 NEBULA / + LEAD Poly 8 / idle</td><td class="num">2.8 / 4.0 / 3.0 / 6.2 / 0.7 %</td></tr>
-        <tr><td>Parameter audit (does each one change the sound?)</td><td class="num">257 of 257</td></tr>
+        <tr><td>Parameter audit (does each one change the sound?)</td><td class="num">262 of 262</td></tr>
+        <tr><td>GRIT 50 %: clicks of a TIDE 75 % choir above 1 kHz / a normal choir</td><td class="num">−23 → −43 dB / −13 → −15 dB</td></tr>
       </tbody>
     </table></div>
 
@@ -538,12 +546,13 @@
         <tr><td>The plates play the lead instead of the drone</td><td>The DRONE is off, so every key plays the LEAD. Switch the DRONE on.</td></tr>
         <tr><td>A voice is silent</td><td>Its TYPE is OFF, or VOL is at −∞.</td></tr>
         <tr><td>FILTER B does nothing</td><td>Switch ON in FILTER B.</td></tr>
-        <tr><td>The LFO does nothing</td><td>An LFO changes nothing by itself: drag the arrow from its header onto a knob, or add it in the Mod panel.</td></tr>
+        <tr><td>The LFO does nothing</td><td>An LFO changes nothing by itself: drag the coloured pill from its header onto a knob, or set a depth in the matrix on the MOD page.</td></tr>
         <tr><td>PATH changes nothing</td><td>PATH only matters from ORBIT up; in STILL the voices don't pull.</td></tr>
         <tr><td>The arpeggio stops</td><td>ARP only takes keys that play the LEAD. Without LATCH it plays only while you hold the keys. It follows the song tempo.</td></tr>
         <tr><td>Aftertouch does nothing</td><td>Set TOUCH to Aftertouch or Both. The keyboard must send channel pressure.</td></tr>
         <tr><td>No tooltips over the knobs</td><td>Switch them on with the <strong>?</strong> icon at the top right.</td></tr>
         <tr><td>Whistling in the highs</td><td>Oversampling is 1× in the bottom bar, or CHARACTER is turned left (Digital).</td></tr>
+        <tr><td>Crackle and clicks</td><td>They come from TIDE above 50 % (the saws drop to a few Hz) and GRAVITY from ORBIT up. Turn GRIT in MASTER down to 30–60 %.</td></tr>
       </tbody>
     </table></div>
 
@@ -556,11 +565,12 @@
         <tr><td>Double-click a knob</td><td>Type a value: <code>D2+12</code>, <code>+19 -8c</code>, <code>2.5k</code>, <code>3 s</code>, <code>L 30</code></td></tr>
         <tr><td><kbd>Cmd</kbd>/<kbd>Ctrl</kbd>-click</td><td>Default value</td></tr>
         <tr><td>Right-click a knob</td><td>Reset, type, Modulate with, manage modulations</td></tr>
-        <tr><td>Drag a knob's ring</td><td>Modulation depth</td></tr>
-        <tr><td>Arrow in the LFO / RANDOM / FILTER ENV header → knob</td><td>New modulation</td></tr>
+        <tr><td>Drag a knob's ring</td><td>Modulation depth (the ring under the mouse lights up)</td></tr>
+        <tr><td>Pill in the LFO / RANDOM / MOD ENV / FILTER ENV header → knob</td><td>New modulation</td></tr>
+        <tr><td>Matrix: drag a cell / double-click / right-click</td><td>Depth / remove / options</td></tr>
         <tr><td>Click a voice module / the SCOPE</td><td>Selects the voice / switches scope and spectrum</td></tr>
-        <tr><td><kbd>1</kbd> / <kbd>2</kbd> / <kbd>3</kbd></td><td>Pages DRONE / LEAD / FX</td></tr>
-        <tr><td><kbd>9</kbd> / <kbd>0</kbd>, <kbd>Esc</kbd></td><td>Open / close the modulation panel</td></tr>
+        <tr><td><kbd>1</kbd> / <kbd>2</kbd> / <kbd>3</kbd> / <kbd>4</kbd></td><td>Pages DRONE / LEAD / FX / MOD</td></tr>
+        <tr><td><kbd>9</kbd> / <kbd>0</kbd>, <kbd>Esc</kbd></td><td>Open / close the MOD page (back to the previous page)</td></tr>
         <tr><td><kbd>Cmd</kbd>+<kbd>Z</kbd>, <kbd>Shift</kbd>+<kbd>Cmd</kbd>+<kbd>Z</kbd></td><td>Undo / Redo</td></tr>
         <tr><td>On-screen keyboard: click lower on a key</td><td>Harder strike. Drag across keys for a glissando.</td></tr>
       </tbody>
