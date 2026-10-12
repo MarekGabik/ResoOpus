@@ -525,6 +525,29 @@ static double clickDb (const AudioBuffer<float>& out, double skip, double sr = 4
     return 10.0 * std::log10 (worst / (all / std::max (1, n) + 1e-30) + 1e-30);
 }
 
+// clicks as bursts: the loudest 5 ms block above 3 kHz minus the median block (dB). Steady highs score ~0
+static double spikeDb (const AudioBuffer<float>& out, double skip, double sr = 48000.0)
+{
+    IIRFilter hp1, hp2;
+    hp1.setCoefficients (IIRCoefficients::makeHighPass (sr, 3000.0));
+    hp2.setCoefficients (IIRCoefficients::makeHighPass (sr, 3000.0));
+    const int blk = (int) (0.005 * sr), start = (int) (skip * sr);
+    std::vector<double> e;
+    double acc = 0.0; int inBlk = 0;
+    for (int i = 0; i < out.getNumSamples(); ++i)
+    {
+        const float y = hp2.processSingleSampleRaw (hp1.processSingleSampleRaw (out.getSample (0, i)));
+        if (i < start) continue;
+        acc += (double) y * y;
+        if (++inBlk == blk) { e.push_back (acc / blk + 1e-30); acc = 0.0; inBlk = 0; }
+    }
+    if (e.empty()) return 0.0;
+    auto sorted = e;
+    std::nth_element (sorted.begin(), sorted.begin() + (long) sorted.size() / 2, sorted.end());
+    const double median = sorted[sorted.size() / 2];
+    return 10.0 * std::log10 (*std::max_element (e.begin(), e.end()) / median);
+}
+
 static double inharmonicDb (const AudioBuffer<float>& out, double sr, int start, double f1, double f2)
 {
     const auto db = spectrum (out, start, 15);
@@ -1033,7 +1056,44 @@ static void testEffects()
         setParam (*p, "v1_hold", 0.0f);
         auto tail = render (*p, 1.5, {});
         const double f = peakFrequency (tail, sr, 300.0, 600.0, (int) (0.3 * sr));
-        check (std::abs (cents (f, 440.0)) < 100.0, "RUNNER Z 100 %: repeats rise an octave (220 Hz -> " + String (f, 1) + " Hz, grain sidebands included)");
+        check (std::abs (cents (f, 440.0)) < 30.0, "RUNNER Z 100 %: repeats rise an octave (220 Hz -> " + String (f, 1) + " Hz)");
+    }
+    {
+        // RUNNER: Z clicks into musical steps (4/6 of the way = +5 semitones, a fourth)
+        auto p = makeProc (sr);
+        soloVoice1 (*p, 57.0f, VP::Quasar);
+        setParam (*p, "v1_q_index", 0.0f); setParam (*p, "v1_release", 0.01f); setParam (*p, "echo_mix", 0.0f);
+        setParam (*p, "space_algo", 2.0f); setParam (*p, "space_blend", 100.0f);
+        setParam (*p, "space_x", 40.0f); setParam (*p, "space_y", 40.0f); setParam (*p, "space_z", 400.0f / 6.0f);
+        render (*p, 2.5);
+        setParam (*p, "v1_hold", 0.0f);
+        auto tail = render (*p, 1.5);
+        const double f = peakFrequency (tail, sr, 250.0, 320.0, (int) (0.3 * sr));
+        check (std::abs (cents (f, 220.0 * std::exp2 (5.0 / 12.0))) < 30.0, "RUNNER Z at the 4th step: repeats a fourth up (" + String (f, 1) + " Hz, 293.7 expected)");
+    }
+    {
+        // COMET: wow & flutter move the tape smoothly, no jitter hiss on a pure sine
+        auto p = makeProc (sr);
+        soloVoice1 (*p, 57.0f, VP::Quasar);
+        setParam (*p, "v1_q_index", 0.0f); setParam (*p, "echo_mix", 0.0f);
+        setParam (*p, "space_algo", 4.0f); setParam (*p, "space_blend", 100.0f);
+        setParam (*p, "space_x", 50.0f); setParam (*p, "space_y", 30.0f); setParam (*p, "space_z", 100.0f);
+        const double highs = clickDb (render (*p, 6.0), 2.0, sr);
+        check (highs < -60.0, "COMET wow & flutter 100 % on a 220 Hz sine: nothing above 3 kHz (" + String (highs, 1) + " dB)");
+    }
+    {
+        // AURORA: the octave is there, the glassy pile-up of ever higher octaves is not
+        auto p = makeProc (sr);
+        soloVoice1 (*p, 57.0f, VP::Quasar);
+        setParam (*p, "v1_q_index", 0.0f); setParam (*p, "echo_mix", 0.0f);
+        setParam (*p, "space_algo", 0.0f); setParam (*p, "space_blend", 100.0f);
+        setParam (*p, "space_x", 70.0f); setParam (*p, "space_y", 0.0f); setParam (*p, "space_z", 80.0f);
+        const auto out = render (*p, 6.0);
+        const auto db = spectrum (out, (int) (3.0 * sr), 15);
+        const double binHz = sr / 32768.0;
+        auto band = [&] (double f) { double e = 0.0; for (long k = std::lround (f * 0.94 / binHz); k <= std::lround (f * 1.06 / binHz); ++k) e += std::pow (10.0, db[(size_t) k] / 10.0); return 10.0 * std::log10 (e + 1e-30); };
+        const double up = band (440.0) - band (220.0), up2 = band (880.0) - band (220.0), highs = clickDb (out, 2.0, sr);
+        check (up > -20.0 && up2 < up - 15.0 && highs < -65.0, "AURORA OCT UP 70 %: octave " + String (up, 1) + " dB, two octaves " + String (up2, 1) + " dB, above 3 kHz " + String (highs, 1) + " dB");
     }
 }
 
@@ -1943,6 +2003,68 @@ int main (int argc, char* argv[])
         editor->setPresetBrowser (false);
         ed.reset();
         std::cout << "done" << std::endl;
+        return 0;
+    }
+    if (argc > 1 && String (argv[1]) == "--shifter")
+    {
+        // the pitch shifter alone: 220 Hz sine, +12 / +7 / -12 st; strongest spectral peaks
+        for (float st : { 12.0f, 7.0f, -12.0f })
+        {
+            ::dsp::PitchShifter ps;
+            ps.prepare (48000.0);
+            AudioBuffer<float> b (2, 48000 * 4);
+            for (int i = 0; i < b.getNumSamples(); ++i)
+            {
+                const float y = ps.process ((float) std::sin (MathConstants<double>::twoPi * 220.0 * i / 48000.0), st);
+                b.setSample (0, i, y); b.setSample (1, i, y);
+            }
+            const auto db = spectrum (b, 48000, 15);
+            const double binHz = 48000.0 / 32768.0;
+            std::vector<std::pair<double, double>> peaks;
+            for (size_t k = 2; k + 2 < db.size() / 2; ++k)
+                if (db[k] > db[k - 1] && db[k] >= db[k + 1] && db[k] > -60.0) peaks.push_back ({ db[k], k * binHz });
+            std::sort (peaks.rbegin(), peaks.rend());
+            String line = String (st) + " st:";
+            for (size_t i = 0; i < std::min<size_t> (6, peaks.size()); ++i) line << "  " << String (peaks[i].second, 1) << " Hz " << String (peaks[i].first, 1);
+            std::cout << line << std::endl;
+        }
+        return 0;
+    }
+    if (argc > 1 && String (argv[1]) == "--space")
+    {
+        // every SPACE algorithm: level vs dry (default drone), roughness on a pure sine (worst 5 ms above 3 kHz),
+        // octave content of the tail (220 Hz sine: 440 / 880 Hz vs 220 Hz) and render time
+        static const char* names[] = { "AURORA", "VOID", "RUNNER", "SATURN", "COMET" };
+        auto drone = [] (int a, float x, float y, float z)
+        {
+            auto p = makeProc();
+            setParam (*p, "echo_mix", 0.0f);
+            setParam (*p, "space_algo", (float) a); setParam (*p, "space_x", x); setParam (*p, "space_y", y);
+            setParam (*p, "space_z", z); setParam (*p, "space_blend", a < 0 ? 0.0f : 100.0f);
+            const auto t0 = Time::getMillisecondCounterHiRes();
+            const auto out = render (*p, 8.0);
+            const double ms = Time::getMillisecondCounterHiRes() - t0;
+            return std::make_pair (rmsDb (out, 3 * 48000, out.getNumSamples()), ms / 8.0);
+        };
+        const double dry = drone (-1, 0, 0, 0).first;
+        for (int a = 0; a < 5; ++a)
+            for (auto xyz : std::vector<std::array<float, 3>> { { 30, 30, 55 }, { 70, 20, 80 }, { 70, 0, 80 }, { 100, 100, 100 } })
+            {
+                const auto d = drone (a, xyz[0], xyz[1], xyz[2]);
+                auto p = makeProc();
+                soloVoice1 (*p, 57.0f, VP::Quasar);
+                setParam (*p, "v1_q_index", 0.0f); setParam (*p, "echo_mix", 0.0f);
+                setParam (*p, "space_algo", (float) a); setParam (*p, "space_x", xyz[0]); setParam (*p, "space_y", xyz[1]);
+                setParam (*p, "space_z", xyz[2]); setParam (*p, "space_blend", 100.0f);
+                const auto sine = render (*p, 6.0);
+                const auto db = spectrum (sine, 3 * 48000, 15);
+                const double binHz = 48000.0 / 32768.0;
+                // energy in a band around f (the grains spread a tone a little)
+                auto at = [&] (double f) { double e = 0.0; for (long k = std::lround (f * 0.94 / binHz); k <= std::lround (f * 1.06 / binHz); ++k) e += std::pow (10.0, db[(size_t) k] / 10.0); return 10.0 * std::log10 (e + 1e-30); };
+                std::cout << names[a] << " X" << xyz[0] << " Y" << xyz[1] << " Z" << xyz[2] << ":  level " << String (d.first - dry, 1) << " dB,  highs "
+                          << String (clickDb (sine, 2.0), 1) << " dB, spikes " << String (spikeDb (sine, 2.0), 1) << " dB,  oct+ " << String (at (440.0) - at (220.0), 1) << " / " << String (at (880.0) - at (220.0), 1)
+                          << "  oct- " << String (at (110.0) - at (220.0), 1) << " dB,  " << String (d.second, 1) << " ms/s" << std::endl;
+            }
         return 0;
     }
     if (argc > 1 && String (argv[1]) == "--comet")

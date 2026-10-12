@@ -261,7 +261,11 @@ private:
 class PitchShifter
 {
 public:
-    void prepare (double fs) { sr = fs; line.prepare ((int) (fs * 0.2)); win = 0.06 * fs; phase = 0.0; }
+    // Two grains half a window apart (sin^2 + cos^2 = 1). More grains sound smoother on paper but cancel the
+    // shifted tone itself and leave sidebands a grain-rate x grains away (measured: 4 grains put +12 st of 220 Hz
+    // at 420 / 470 Hz); with two the sidebands sit at +-grain rate, heard as a gentle shimmer on the right pitch.
+    // A 90 ms window keeps that rate low (an octave up: 11 Hz)
+    void prepare (double fs) { sr = fs; line.prepare ((int) (fs * 0.2)); win = 0.09 * fs; phase = 0.0; }
     void reset() { line.reset(); phase = 0.0; }
     float process (float x, float semitones)
     {
@@ -276,7 +280,7 @@ public:
 
 private:
     DelayLine line;
-    double sr = 48000.0, win = 2880.0, phase = 0.0;
+    double sr = 48000.0, win = 4320.0, phase = 0.0;
 };
 
 //==============================================================================
@@ -363,6 +367,43 @@ private:
 };
 
 //==============================================================================
+// Schroeder all-pass: smears a sound in time without colouring it (diffusion)
+struct Allpass
+{
+    std::vector<float> buf;
+    int w = 0;
+    float g = 0.6f;
+    void prepare (double fs, double ms, float gain) { buf.assign ((size_t) std::max (1, (int) (ms * 0.001 * fs)), 0.0f); w = 0; g = gain; }
+    void reset() { std::fill (buf.begin(), buf.end(), 0.0f); w = 0; }
+    float process (float x)
+    {
+        const float d = buf[(size_t) w];
+        const float v = x + g * d;
+        buf[(size_t) w] = v;
+        if (++w >= (int) buf.size()) w = 0;
+        return d - g * v;
+    }
+};
+
+// Band pass with a constant 0 dB peak (RBJ), for ringing modes
+struct Resonator
+{
+    float b0 = 0.0f, a1 = 0.0f, a2 = 0.0f, x1 = 0.0f, x2 = 0.0f, y1 = 0.0f, y2 = 0.0f;
+    void reset() { x1 = x2 = y1 = y2 = 0.0f; }
+    void set (double hz, double q, double fs)
+    {
+        const double w = twoPi * std::min (hz, 0.45 * fs) / fs, alpha = std::sin (w) / (2.0 * q), a0 = 1.0 + alpha;
+        b0 = (float) (alpha / a0); a1 = (float) (-2.0 * std::cos (w) / a0); a2 = (float) ((1.0 - alpha) / a0);
+    }
+    float process (float x)
+    {
+        const float y = b0 * (x - x2) - a1 * y1 - a2 * y2;
+        x2 = x1; x1 = x; y2 = y1; y1 = y;
+        return y;
+    }
+};
+
+//==============================================================================
 // 8-line feedback delay network reverb (Householder mix), modulated lines, damping. Used by AURORA, VOID, SATURN.
 class Fdn
 {
@@ -392,7 +433,7 @@ public:
         float y[8];
         for (int i = 0; i < 8; ++i)
         {
-            const double wob = 1.0 + 0.004 * std::sin (twoPi * (lfo + i * 0.125));
+            const double wob = 1.0 + modDepth * std::sin (twoPi * (lfo + i * 0.125));
             y[i] = lines[i].read (base[i] * size * wob);
         }
         const bool freeze = decay >= 59.0f;
@@ -412,6 +453,9 @@ public:
     }
 
 private:
+public:
+    double modDepth = 0.004;   // chorus of the lines (AURORA a little more: lusher)
+private:
     double sr = 48000.0, lfo = 0.0, preLfo = 0.0, pdS = -1.0, base[8] {};
     DelayLine lines[8], pre;
     OnePole damp[8];
@@ -420,11 +464,14 @@ private:
 
 //==============================================================================
 // SPACE: five algorithms with three shared controls X / Y / Z and BLEND (dry / wet).
-//  AURORA  X octave up, Y octave down, Z decay       - shimmer reverb (pitch shifters in the loop)
+//  AURORA  X octave up, Y octave down, Z decay       - airy shimmer: diffused input, soft four-grain octaves, long bright tail
 //  VOID    X pre-delay, Y pre-delay wobble, Z decay   - huge dark space, FREEZE at the top of Z
-//  RUNNER  X feedback, Y time, Z pitch per repeat     - repeats that rise or fall
-//  SATURN  X ring frequency, Y stepping rate, Z room  - metallic ring modulation with a small room
-//  COMET   X feedback, Y time, Z wobble               - dirty, saturated, self-oscillating tape-like delay
+//  RUNNER  X feedback, Y time, Z pitch per repeat     - a staircase in space: ping-pong repeats that step by musical
+//                                                       intervals (-12 -7 -5 0 +5 +7 +12) and melt into a small room
+//  SATURN  X ring frequency, Y stepping rate, Z room  - bells and bowls: ring modulation by two harmonic sines rings
+//                                                       three bowl modes; STEPS jumps by pentatonic notes
+//  COMET   X feedback, Y time, Z wow & flutter        - tape echo: saturation and a darkening, thinning loop, smooth wow,
+//                                                       flutter and drift, hiss from DUST
 class Space
 {
 public:
@@ -438,6 +485,10 @@ public:
         for (auto& p : shiftDown) p.prepare (fs);
         for (auto& p : runShift) p.prepare (fs);
         for (auto& l : delay) l.prepare ((int) (fs * 2.2));
+        static const double diffMs[4] = { 4.7, 7.3, 11.1, 16.9 };
+        for (int i = 0; i < 4; ++i) diffuse[i].prepare (fs, diffMs[i], 0.62f);
+        static const double runMs[2][2] = { { 3.1, 7.9 }, { 4.3, 9.7 } };
+        for (int c = 0; c < 2; ++c) for (int i = 0; i < 2; ++i) runDiff[c][i].prepare (fs, runMs[c][i], 0.5f);
         balance.prepare (fs);
         reset();
     }
@@ -445,15 +496,34 @@ public:
     {
         balance.reset();
         fdn.reset();
+        fdn.modDepth = 0.004;
         for (auto& p : shiftUp) p.reset();
         for (auto& p : shiftDown) p.reset();
         for (auto& p : runShift) p.reset();
         for (auto& l : delay) l.reset();
         for (auto& d : damp) d.reset();
-        fbL = fbR = 0.0f; ringPhase = 0.0; shPhase = 0.0; ringHz = 200.0; wob = 0.0; lastAlgo = -1;
+        for (auto& d : low) d.reset();
+        for (auto& a : diffuse) a.reset();
+        for (auto& c : runDiff) for (auto& a : c) a.reset();
+        for (auto& c : bowl) for (auto& r : c) r.reset();
+        inHp.reset(); shimLp.reset(); shimLp2.reset(); shimHp.reset();
+        fbL = fbR = 0.0f; ringPhase = ringPhase2 = 0.0; shPhase = 0.0; ringHz = ringTarget = 200.0; bowlHz = -1.0;
+        wob = flutter = 0.0; driftS = driftTarget = 0.0f; driftCount = 0; lastAlgo = -1;
         inEnv = loopEnv = 0.0f; duck = 1.0f;
         xR.reset (0.0f); yR.reset (0.0f); zR.reset (0.0f); bR.reset (0.0f);
         primed = false;
+    }
+
+    // RUNNER: Z -> semitones per repeat. Seven musical steps, each held over most of its range (a snapped plateau)
+    // with a short glide to the next, so the knob both clicks into intervals and can sweep
+    static float runnerSemitones (float z)
+    {
+        static const float steps[7] = { -12.0f, -7.0f, -5.0f, 0.0f, 5.0f, 7.0f, 12.0f };
+        const float u = clampf (z, 0.0f, 1.0f) * 6.0f;
+        const int i = std::min (5, (int) u);
+        const float f = clampf ((u - (float) i - 0.35f) / 0.3f, 0.0f, 1.0f);
+        const float s = f * f * (3.0f - 2.0f * f);
+        return steps[i] + (steps[i + 1] - steps[i]) * s;
     }
 
     void process (float* L, float* R, int n, int algo, float x, float y, float z, float blend, float dust, Rng& rng)
@@ -466,18 +536,43 @@ public:
         else { xR.reset (x); yR.reset (y); zR.reset (z); bR.reset (blend); primed = true; }
         const float dampC = OnePole::coefFor (9000.0 - 5000.0 * dust, sr);
         const float envC = (float) (1.0 - std::exp (-1.0 / (0.3 * sr))), duckC = (float) (1.0 - std::exp (-1.0 / (0.05 * sr)));
+        fdn.modDepth = algo == Aurora ? 0.007 : 0.004;
         for (int k = 0; k < n; ++k)
         {
             const float X = xR.next(), Y = yR.next(), Z = zR.next(), B = bR.next();
             float wl = 0.0f, wr = 0.0f;
             const float dl = L[k], dr = R[k];
+            // a feedback loop may be at most ~6 dB above what comes in (or -30 dBFS on its own), then it takes its
+            // own feedback back (RUNNER, COMET)
+            auto loopGuard = [&] (float a, float b)
+            {
+                inEnv += envC * (std::max (std::abs (dl), std::abs (dr)) - inEnv);
+                loopEnv += envC * (std::max (std::abs (a), std::abs (b)) - loopEnv);
+                const float limit = std::max (2.0f * inEnv, 0.03f);
+                duck += duckC * ((loopEnv > limit ? limit / loopEnv : 1.0f) - duck);
+                return duck;
+            };
             switch (algo)
             {
                 case Aurora:
                 {
-                    // shimmer: the reverb output is pitch shifted and fed back into the loop
-                    const float inject = 0.35f * (X * shiftUp[0].process (fbL, 12.0f) + Y * shiftDown[0].process (fbL, -12.0f));
-                    fdn.process (dl, dr, wl, wr, 1.2f, 1.0f + 14.0f * Z * Z, 0.02f, 0.0f, OnePole::coefFor (6500.0, sr), inject);
+                    // light, airy shimmer: the input loses its lows (150 Hz) and its attacks (four all-passes), the
+                    // octaves come from a soft four-grain shifter, are kept between 70 Hz and 5.5 kHz, and float
+                    // back into a long, gently chorused tail where they keep rising (up) or sinking (down)
+                    float in = 0.5f * (dl + dr);
+                    in -= inHp.lp (in, OnePole::coefFor (150.0, sr));
+                    for (auto& a : diffuse) in = a.process (in);
+                    // the octaves of what comes in go straight into the room (clear, no pile-up of ever higher
+                    // octaves); the octaves of the tail itself feed back gently, so it keeps drifting up or down
+                    const float direct = 0.09f * (X * shiftUp[1].process (in, 12.0f) + Y * shiftDown[1].process (in, -12.0f));
+                    in += direct;
+                    float shim = X * shiftUp[0].process (fbL, 12.0f) + Y * shiftDown[0].process (fbL, -12.0f);
+                    shim = shimLp.lp (shim, OnePole::coefFor (5500.0, sr));
+                    shim = shimLp2.lp (shim, OnePole::coefFor (5500.0, sr));
+                    shim -= shimHp.lp (shim, OnePole::coefFor (70.0, sr));
+                    // the loop gain of the octaves stays under 1 even with both at 100 % (X + Y share it)
+                    const float inject = ceilingClip (0.2f * shim / std::max (1.0f, 0.75f * (X + Y)), 0.5f);
+                    fdn.process (in, in, wl, wr, 1.5f, 1.5f + 18.0f * Z * Z, 0.035f, 0.0f, OnePole::coefFor (7500.0, sr), inject);
                     fbL = 0.5f * (wl + wr);
                     break;
                 }
@@ -487,49 +582,94 @@ public:
                     break;
                 case Runner:
                 {
+                    // ping-pong repeats, each one pitched by the chosen interval, rounded (6.5 kHz, 120 Hz), smeared by
+                    // two all-passes and soft-saturated; a small room behind them
                     const double t = (0.06 + 1.9 * Y * Y) * sr;
-                    const float semis = -12.0f + 24.0f * Z;
-                    const float r0 = delay[0].read (t), r1 = delay[1].read (t * 1.003);
-                    delay[0].push (dl + ceilingClip (0.95f * X * runShift[0].process (r0, semis), 0.6f));
-                    delay[1].push (dr + ceilingClip (0.95f * X * runShift[1].process (r1, semis), 0.6f));
-                    const float comp = 1.0f / (1.0f + 1.5f * X * X);
-                    wl = r0 * comp; wr = r1 * comp;
+                    const float semis = runnerSemitones (Z);
+                    const float r0 = delay[0].read (t), r1 = delay[1].read (t);
+                    const float fb = 0.92f * X * loopGuard (r0, r1);
+                    auto shape = [&] (int c, float v)
+                    {
+                        v = runShift[c].process (v, semis);
+                        v = damp[c].lp (v, OnePole::coefFor (6500.0, sr));
+                        v -= low[c].lp (v, OnePole::coefFor (120.0, sr));
+                        for (auto& a : runDiff[c]) v = a.process (v);
+                        return ceilingClip (fb * v, 0.6f);
+                    };
+                    delay[0].push (dl + shape (1, r1));
+                    delay[1].push (dr + shape (0, r0));
+                    float rl = 0.0f, rr = 0.0f;
+                    fdn.process (r0, r1, rl, rr, 0.8f, 1.8f, 0.01f, 0.0f, OnePole::coefFor (6000.0, sr));
+                    const float comp = 1.0f / (1.0f + 0.8f * X * X);
+                    wl = (0.8f * r0 + 0.45f * rl) * comp;
+                    wr = (0.8f * r1 + 0.45f * rr) * comp;
                     break;
                 }
                 case Saturn:
                 {
-                    // ring frequency jumps to a new random value at the stepping rate (Y = 0: steady)
-                    const double target = 20.0 * std::pow (100.0, (double) X);
+                    // the ring frequency: X, or (STEPS) a new pentatonic note above it at the stepping rate, reached
+                    // with a 35 ms glide so a jump does not click
+                    const double base = 20.0 * std::pow (100.0, (double) X);
                     if (Y > 0.01f)
                     {
                         shPhase += (0.2 + 15.0 * Y * Y) / sr;
-                        if (shPhase >= 1.0) { shPhase -= 1.0; ringHz = target * std::exp2 ((double) rng.next() * 1.5); }
+                        if (shPhase >= 1.0)
+                        {
+                            static const int penta[9] = { 0, 2, 4, 7, 9, 12, 14, 16, 19 };
+                            shPhase -= 1.0;
+                            ringTarget = base * std::exp2 (penta[std::min (8, (int) (rng.next01() * 9.0f))] / 12.0);
+                        }
                     }
-                    else ringHz = target;
+                    else ringTarget = base;
+                    ringHz += (ringTarget - ringHz) * (1.0 - std::exp (-1.0 / (0.035 * sr)));
                     ringPhase += ringHz / sr; ringPhase -= std::floor (ringPhase);
-                    const float c = (float) std::sin (twoPi * ringPhase);
+                    ringPhase2 += 2.0 * ringHz / sr; ringPhase2 -= std::floor (ringPhase2);
+                    // two harmonic sines (the octave quieter): rounder than one, still clean
+                    const float c = (float) (0.75 * std::sin (twoPi * ringPhase) + 0.35 * std::sin (twoPi * ringPhase2));
+                    // three bowl modes (ratios of a singing bowl) ring on the ring-modulated sound
+                    if (std::abs (ringHz - bowlHz) > 0.002 * bowlHz || bowlHz < 0.0)
+                    {
+                        bowlHz = ringHz;
+                        static const double ratio[3] = { 1.0, 2.71, 5.15 }, q[3] = { 90.0, 120.0, 140.0 };
+                        for (int ch = 0; ch < 2; ++ch) for (int m = 0; m < 3; ++m) bowl[ch][m].set (std::max (60.0, bowlHz * ratio[m]), q[m], sr);
+                        for (int m = 0; m < 3; ++m) bowlGain[m] = (float) (bowlHz * ratio[m] < 4500.0 ? 1.0 : std::max (0.0, 1.0 - (bowlHz * ratio[m] - 4500.0) / 2000.0));
+                    }
+                    float ring[2] = { dl * c, dr * c }, ringing[2] = { 0.0f, 0.0f };
+                    for (int ch = 0; ch < 2; ++ch)
+                    {
+                        ring[ch] = damp[ch].lp (ring[ch], OnePole::coefFor (7000.0, sr));
+                        // modes above ~4.5 kHz fade out: bowls, not glass splinters
+                        ringing[ch] = 2.2f * bowlGain[0] * bowl[ch][0].process (ring[ch]) + 1.6f * bowlGain[1] * bowl[ch][1].process (ring[ch])
+                                      + 1.1f * bowlGain[2] * bowl[ch][2].process (ring[ch]);
+                    }
                     float rl = 0.0f, rr = 0.0f;
-                    fdn.process (dl * c, dr * c, rl, rr, 0.5f, 0.6f + 2.5f * Z, 0.005f, 0.0f, OnePole::coefFor (8000.0, sr));
-                    wl = dl * c * (1.0f - 0.5f * Z) + rl * Z;
-                    wr = dr * c * (1.0f - 0.5f * Z) + rr * Z;
+                    fdn.process (ring[0] + ringing[0], ring[1] + ringing[1], rl, rr, 0.7f, 0.8f + 3.5f * Z, 0.01f, 0.0f, OnePole::coefFor (7000.0, sr));
+                    const float direct = 0.55f - 0.25f * Z;
+                    wl = 1.6f * (ring[0] * direct + ringing[0] * 0.6f + rl * 0.9f * Z);
+                    wr = 1.6f * (ring[1] * direct + ringing[1] * 0.6f + rr * 0.9f * Z);
                     break;
                 }
                 default:   // Comet
                 {
-                    wob += (0.6 + 4.0 * Z) / sr; wob -= std::floor (wob);
-                    const double t = (0.04 + 1.0 * Y * Y) * sr * (1.0 + 0.012 * Z * std::sin (twoPi * wob) + 0.004 * Z * rng.next());
+                    // tape: wow (0.4-1.2 Hz), flutter (7 Hz) and a slow random drift move the tape speed smoothly;
+                    // each pass saturates, loses highs (DUST darker) and lows (90 Hz) like a worn loop
+                    wob += (0.4 + 0.8 * Z) / sr; wob -= std::floor (wob);
+                    flutter += 7.0 / sr; flutter -= std::floor (flutter);
+                    if (--driftCount <= 0) { driftTarget = rng.next(); driftCount = (int) (0.3 * sr); }
+                    driftS += (float) (1.0 - std::exp (-1.0 / (0.15 * sr))) * (driftTarget - driftS);
+                    const double speed = 1.0 + Z * (0.009 * std::sin (twoPi * wob) + 0.0012 * std::sin (twoPi * flutter) + 0.004 * driftS);
+                    const double t = (0.04 + 1.0 * Y * Y) * sr * speed;
                     const float r0 = delay[0].read (t), r1 = delay[1].read (t * 1.01);
-                    // FEEDBACK stays under 1 up to 85 % (repeats that fade), above it the loop sings (up to 1.1).
-                    // The loop may be at most ~6 dB above what comes in (or -30 dBFS on its own): above that it takes
-                    // its own feedback back, so a quiet note no longer grows into a loud, never ending howl
                     const float want = X < 0.85f ? 1.153f * X : 0.98f + 0.8f * (X - 0.85f);
-                    inEnv += envC * (std::max (std::abs (dl), std::abs (dr)) - inEnv);
-                    loopEnv += envC * (std::max (std::abs (r0), std::abs (r1)) - loopEnv);
-                    const float limit = std::max (2.0f * inEnv, 0.03f);
-                    duck += duckC * ((loopEnv > limit ? limit / loopEnv : 1.0f) - duck);
-                    const float fb = want * duck;
-                    delay[0].push (dl + damp[0].lp (ceilingClip (fb * r1, 0.4f), dampC) + 0.002f * dust * rng.next());
-                    delay[1].push (dr + damp[1].lp (ceilingClip (fb * r0, 0.4f), dampC));
+                    const float fb = want * loopGuard (r0, r1);
+                    auto tape = [&] (int c, float v)
+                    {
+                        v = damp[c].lp (v, dampC);
+                        v -= low[c].lp (v, OnePole::coefFor (90.0, sr));
+                        return ceilingClip (1.4f * fb * v, 0.5f) / 1.4f * 1.0f;
+                    };
+                    delay[0].push (dl + tape (0, r1) + 0.002f * dust * rng.next());
+                    delay[1].push (dr + tape (1, r0));
                     const float g = std::min (0.95f, want);
                     const float comp = std::sqrt (1.0f - g * g);
                     wl = r0 * comp; wr = r1 * comp;
@@ -546,14 +686,17 @@ public:
     }
 
 private:
-    double sr = 48000.0, ringPhase = 0.0, shPhase = 0.0, ringHz = 200.0, wob = 0.0;
+    double sr = 48000.0, ringPhase = 0.0, ringPhase2 = 0.0, shPhase = 0.0, ringHz = 200.0, ringTarget = 200.0, bowlHz = -1.0, wob = 0.0, flutter = 0.0;
     Fdn fdn;
-    PitchShifter shiftUp[1], shiftDown[1], runShift[2];
+    PitchShifter shiftUp[2], shiftDown[2], runShift[2];
     DelayLine delay[2];
-    OnePole damp[2];
+    OnePole damp[2], low[2], inHp, shimLp, shimLp2, shimHp;
+    Allpass diffuse[4], runDiff[2][2];
+    Resonator bowl[2][3];
+    float bowlGain[3] { 1.0f, 1.0f, 1.0f };
     Ramp xR, yR, zR, bR;
-    float fbL = 0.0f, fbR = 0.0f, inEnv = 0.0f, loopEnv = 0.0f, duck = 1.0f;
-    int lastAlgo = -1;
+    float fbL = 0.0f, fbR = 0.0f, inEnv = 0.0f, loopEnv = 0.0f, duck = 1.0f, driftS = 0.0f, driftTarget = 0.0f;
+    int lastAlgo = -1, driftCount = 0;
     bool primed = false;
     Sleeper sleeper;
     AutoBalance balance;

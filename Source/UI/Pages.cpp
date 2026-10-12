@@ -969,15 +969,15 @@ void FxPage::refreshLive()
     if (a == shownAlgo) return;
     shownAlgo = a;
     static const char* labels[5][3] = { { "OCT UP", "OCT DOWN", "DECAY" }, { "PRE-DELAY", "WOBBLE", "DECAY" },
-                                        { "FEEDBACK", "TIME", "PITCH" }, { "FREQUENCY", "STEPS", "ROOM" }, { "FEEDBACK", "TIME", "WOBBLE" } };
+                                        { "FEEDBACK", "TIME", "PITCH" }, { "FREQUENCY", "STEPS", "ROOM" }, { "FEEDBACK", "TIME", "WOW" } };
     for (int i = 0; i < 3; ++i) xyz[i]->setLabel (labels[jlimit (0, 4, a)][i]);
     spacePanel->setRightText (Params::findDef ("space_algo")->choices[jlimit (0, 4, a)].toUpperCase());
     static const char* info[5] = {
-        "Shimmer: the reverb rises (OCT UP) or falls (OCT DOWN) an octave as it decays.",
+        "Airy shimmer: soft octaves above (OCT UP) or below (OCT DOWN) that keep drifting as the tail fades.",
         "Huge dark space. DECAY at the very top freezes what is sounding.",
-        "Repeats that rise or fall: PITCH per repeat (middle = none).",
-        "Metallic ring. STEPS jumps to random notes, ROOM adds a space.",
-        "Dirty, saturated delay that sings at high FEEDBACK." };
+        "A staircase in space: every repeat steps by PITCH (-12 -7 -5 0 +5 +7 +12) and melts into a room.",
+        "Bells and bowls: the ring rings three bowl tones. STEPS jumps by pentatonic notes, ROOM adds a space.",
+        "Tape echo: repeats saturate, darken and thin out. WOW = wow and flutter. Above 85 % it sings." };
     spaceInfo->setText (info[jlimit (0, 4, a)], dontSendNotification);
 }
 
