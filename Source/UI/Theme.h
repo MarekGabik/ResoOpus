@@ -82,6 +82,7 @@ namespace Icons
     juce::Path resize();
     juce::Path scissors();
     juce::Path chevron (bool right);
+    juce::Path chevronDown();
     juce::Path drag();
     juce::Path star();
     juce::Path pin();

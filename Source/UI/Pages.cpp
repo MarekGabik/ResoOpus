@@ -449,7 +449,19 @@ DronePage::DronePage (ResoOpusProcessor& p) : Page (p)
     }
 
     // GRAVITY
-    auto* gpanel = panel ("GRAVITY", Palette::gravity, { gw + gap, 0, width - 2 * (gw + gap), gh });
+    auto* gpanel = panel ("GRAVITY", Palette::gravity, { gw + gap, 0, width - 2 * (gw + gap), gh }, -1, "PATH AUTO");
+    gravityPanel = gpanel;
+    gpanel->onRightClick = [this] (Component& c)
+    {
+        PopupMenu m;
+        const int cur = roundToInt (proc.getParamReal ("gravity_path"));
+        m.addSectionHeader ("PATH: who pulls on whom");
+        m.addItem (1, "Auto: pairs 1-2 and 3-4, then one ring", true, cur == 0);
+        m.addItem (2, "Pairs: always 1-2 and 3-4", true, cur == 1);
+        m.addItem (3, "Ring: always 1-2-3-4-1", true, cur == 2);
+        m.showMenuAsync (PopupMenu::Options().withTargetComponent (&c).withTargetScreenArea (c.localAreaToGlobal (gravityPanel->rightButtonArea().toNearestInt())),
+                         [this] (int r) { if (r > 0) proc.setParamReal ("gravity_path", (float) (r - 1)); });
+    };
     gravity = new GravityView (proc);
     owned.add (gravity);
     gravity->setBounds (0, ModulePanel::headerHeight + 2, gpanel->getWidth(), gh - ModulePanel::headerHeight - 2);
@@ -461,16 +473,17 @@ DronePage::DronePage (ResoOpusProcessor& p) : Page (p)
     owned.add (master);
     master->setBounds (width - mw, gh + gap, mw, dh);
     addAndMakeVisible (master);
-    const char* mIds[] = { "pitch", "dust", "master_vol" };
-    const char* mNames[] = { "PITCH", "DUST", "VOLUME" };
-    const Knob::Style mSt[] = { range ("-24", "+24", true), range ("0", "LO-FI"), range ("-inf", "+12") };
-    for (int i = 0; i < 3; ++i)
+    const char* mIds[] = { "pitch", "dust", "grit", "master_vol" };
+    const char* mNames[] = { "PITCH", "DUST", "GRIT", "VOLUME" };
+    for (int i = 0; i < 4; ++i)
     {
-        auto st = mSt[i];
+        Knob::Style st;
         st.small = true;
+        st.width = 62;
+        st.bipolar = i == 0;
         auto* k = knob (mIds[i], mNames[i], Palette::master, st);
         master->addAndMakeVisible (k);
-        k->setTopLeftPosition (4 + i * 82, 48);
+        k->setTopLeftPosition (3 + i * 62, 48);
     }
 
     // detail of the selected voice
@@ -831,6 +844,13 @@ void DronePage::refreshLive()
         c->scope->update (t == VP::Off ? 0.0f : lv);
     }
     gravity->refresh();
+    const int path = roundToInt (proc.getParamReal ("gravity_path"));
+    if (path != shownPath)
+    {
+        shownPath = path;
+        static const char* pathNames[] = { "PATH AUTO", "PATH PAIRS", "PATH RING" };
+        gravityPanel->setRightText (pathNames[jlimit (0, 2, path)]);
+    }
     // DRONE off (LEAD only): the whole page is dimmed
     const float pageAlpha = proc.getParamReal ("drone_on") > 0.5f ? 1.0f : 0.45f;
     for (auto* ch : getChildren())
@@ -873,8 +893,9 @@ FxPage::FxPage (ResoOpusProcessor& p) : Page (p)
     auto sm = [] (String lo, String hi, bool bi = false) { return range (lo, hi, bi, true); };
     const int rowH = 265, gap = 10, g6 = 6, y2 = rowH + gap;
 
+    const int half = (width - 8) / 2;
     // FILTER A
-    filterPanel = panel ("FILTER A", Palette::filter, { 0, 0, 360, rowH }, -1, "GROWL 12 dB");
+    filterPanel = panel ("FILTER A", Palette::filter, { 0, 0, half, rowH }, -1, "GROWL 12 dB");
     auto* model = new LedRadio (proc, "flt_model", "MODEL", { "GROWL", "LADDER", "DIODE", "SCREAM", "SILK" });
     model->setTooltip (Params::findDef ("flt_model")->tip);
     owned.add (model);
@@ -888,7 +909,7 @@ FxPage::FxPage (ResoOpusProcessor& p) : Page (p)
         model, mode, knob ("flt_spread", "SPREAD", Palette::filter, sm ("0", "100")) });
 
     // FILTER B with ROUTING
-    filterBPanel = panel ("FILTER B", Palette::filter, { 360 + g6, 0, 400, rowH }, -1, "SILK 12 dB");
+    filterBPanel = panel ("FILTER B", Palette::filter, { half + 8, 0, width - half - 8, rowH }, -1, "SILK 12 dB");
     auto* modelB = new LedRadio (proc, "flt2_model", "MODEL", { "GROWL", "LADDER", "DIODE", "SCREAM", "SILK" });
     owned.add (modelB);
     auto* modeB = new LedRadio (proc, "flt2_mode", "MODE", { "LOW", "BAND", "HIGH" });
@@ -904,7 +925,7 @@ FxPage::FxPage (ResoOpusProcessor& p) : Page (p)
     filterBControls = { cutB, resB, drvB, modelB, modeB, route };
 
     // ECHO
-    auto* echoPanel = panel ("ECHO", Palette::mixer, { 766 + g6, 0, width - 772, rowH }, -1, "2 LINES");
+    auto* echoPanel = panel ("ECHO", Palette::mixer, { 0, y2, half, rowH }, -1, "2 LINES");
     auto* src = new LedRadio (proc, "echo_self", "MOD SOURCE", { "SELF", "LFO" });
     owned.add (src);
     echoPanel->setGrid ({ 1.0f, 1.0f, 1.0f, 1.0f }, {
@@ -916,7 +937,7 @@ FxPage::FxPage (ResoOpusProcessor& p) : Page (p)
         knob ("echo_voices", "TO VOICES", Palette::mixer, sm ("0", "100")), nullptr });
 
     // SPACE
-    spacePanel = panel ("SPACE", Palette::fx2, { 0, y2, 380, rowH }, -1, "VOID");
+    spacePanel = panel ("SPACE", Palette::fx2, { half + 8, y2, width - half - 8, rowH }, -1, "VOID");
     auto* algo = new LedRadio (proc, "space_algo", "ALGORITHM", { "AURORA", "VOID", "RUNNER", "SATURN", "COMET" });
     algo->setTooltip (Params::findDef ("space_algo")->tip);
     owned.add (algo);
@@ -931,33 +952,6 @@ FxPage::FxPage (ResoOpusProcessor& p) : Page (p)
     spaceInfo->setSize (118, 96);
     spacePanel->setGrid ({ 1.25f, 1.0f, 1.0f }, { algo, xyz[0], xyz[1], spaceInfo, xyz[2], knob ("space_blend", "BLEND", Palette::fx2, sm ("DRY", "WET")) });
 
-    // MOTION: LFO 1, LFO 2, RANDOM (drag the arrow in the header onto any knob)
-    const Colour lfoCol[] = { Mod::sourceColour (Mod::Lfo1), Mod::sourceColour (Mod::Lfo2), Mod::sourceColour (Mod::Random) };
-    for (int l = 0; l < 2; ++l)
-    {
-        const String P = "lfo" + String (l + 1) + "_";
-        auto* lp = panel ("LFO " + String (l + 1), lfoCol[l], { 386 + l * 258, y2, 252, rowH }, Mod::Lfo1 + l);
-        auto* shape = new LedRadio (proc, P + "shape", "SHAPE", { "SIN", "TRI", "UP", "DOWN", "SQR", "S&H" });
-        shape->setIcons ({ "sine", "tri", "rampup", "rampdown", "square", "sh" }, same (lfoCol[l], 6));
-        owned.add (shape);
-        rates[l] = knob (P + "rate", "RATE", lfoCol[l], sm (".01", "40"));
-        divisions[l] = knob (P + "div", "DIVISION", lfoCol[l], sm ("8b", "1/8"));
-        lp->setGrid ({ 1.4f, 1.0f, 1.0f }, {
-            shape, rates[l], divisions[l],
-            static_cast<Component*> (owned.add (new LedButton (proc, P + "sync", "SYNC"))),
-            knob (P + "phase", "PHASE", lfoCol[l], sm ("0", "360")),
-            static_cast<Component*> (owned.add (new LedButton (proc, P + "retrig", "RETRIG"))) });
-    }
-    auto* rp = panel ("RANDOM", lfoCol[2], { 902, y2, width - 902, rowH }, Mod::Random);
-    auto* rmode = new LedRadio (proc, "rnd_mode", "MODE", { "DRIFT", "STEPS", "NOISE" });
-    rmode->setIcons ({ "sine", "sh", "noise" }, same (lfoCol[2], 3));
-    owned.add (rmode);
-    rates[2] = knob ("rnd_rate", "RATE", lfoCol[2], sm (".01", "20"));
-    divisions[2] = knob ("rnd_div", "DIVISION", lfoCol[2], sm ("8b", "1/8"));
-    rp->setGrid ({ 1.3f, 1.0f, 1.0f }, {
-        rmode, rates[2], divisions[2],
-        static_cast<Component*> (owned.add (new LedButton (proc, "rnd_sync", "SYNC"))),
-        knob ("rnd_slew", "SLEW", lfoCol[2], sm ("0", "10")), nullptr });
     refreshLive();
 }
 
@@ -971,13 +965,6 @@ void FxPage::refreshLive()
     const bool bOn = proc.getParamReal ("flt2_on") > 0.5f;
     for (auto* c : filterBControls)
         if (std::abs (c->getAlpha() - (bOn ? 1.0f : 0.4f)) > 0.01f) c->setAlpha (bOn ? 1.0f : 0.4f);
-    const char* syncIds[] = { "lfo1_sync", "lfo2_sync", "rnd_sync" };
-    for (int i = 0; i < 3; ++i)
-    {
-        const bool sync = proc.getParamReal (syncIds[i]) > 0.5f;
-        if (std::abs (rates[i]->getAlpha() - (sync ? 0.35f : 1.0f)) > 0.01f) rates[i]->setAlpha (sync ? 0.35f : 1.0f);
-        if (std::abs (divisions[i]->getAlpha() - (sync ? 1.0f : 0.35f)) > 0.01f) divisions[i]->setAlpha (sync ? 1.0f : 0.35f);
-    }
     const int a = roundToInt (proc.getParamReal ("space_algo"));
     if (a == shownAlgo) return;
     shownAlgo = a;
@@ -992,6 +979,63 @@ void FxPage::refreshLive()
         "Metallic ring. STEPS jumps to random notes, ROOM adds a space.",
         "Dirty, saturated delay that sings at high FEEDBACK." };
     spaceInfo->setText (info[jlimit (0, 4, a)], dontSendNotification);
+}
+
+//==============================================================================
+ModPage::ModPage (ResoOpusProcessor& p) : Page (p), matrix (p)
+{
+    auto sm = [] (String lo, String hi, bool bi = false) { return range (lo, hi, bi, true); };
+    const int mh = 236, pw = (width - 24) / 4;
+    // MOTION: LFO 1, LFO 2, RANDOM (drag the arrow in the header onto any knob)
+    const Colour lfoCol[] = { Mod::sourceColour (Mod::Lfo1), Mod::sourceColour (Mod::Lfo2), Mod::sourceColour (Mod::Random) };
+    for (int l = 0; l < 2; ++l)
+    {
+        const String P = "lfo" + String (l + 1) + "_";
+        auto* lp = panel ("LFO " + String (l + 1), lfoCol[l], { l * (pw + 8), 0, pw, mh }, Mod::Lfo1 + l);
+        auto* shape = new LedRadio (proc, P + "shape", "SHAPE", { "SIN", "TRI", "UP", "DOWN", "SQR", "S&H" });
+        shape->setIcons ({ "sine", "tri", "rampup", "rampdown", "square", "sh" }, same (lfoCol[l], 6));
+        owned.add (shape);
+        rates[l] = knob (P + "rate", "RATE", lfoCol[l], sm (".01", "40"));
+        divisions[l] = knob (P + "div", "DIVISION", lfoCol[l], sm ("8b", "1/8"));
+        lp->setGrid ({ 1.4f, 1.0f, 1.0f }, {
+            shape, rates[l], divisions[l],
+            static_cast<Component*> (owned.add (new LedButton (proc, P + "sync", "SYNC"))),
+            knob (P + "phase", "PHASE", lfoCol[l], sm ("0", "360")),
+            static_cast<Component*> (owned.add (new LedButton (proc, P + "retrig", "RETRIG"))) });
+    }
+    auto* rp = panel ("RANDOM", lfoCol[2], { 2 * (pw + 8), 0, pw, mh }, Mod::Random);
+    auto* rmode = new LedRadio (proc, "rnd_mode", "MODE", { "DRIFT", "STEPS", "NOISE" });
+    rmode->setIcons ({ "sine", "sh", "noise" }, same (lfoCol[2], 3));
+    owned.add (rmode);
+    rates[2] = knob ("rnd_rate", "RATE", lfoCol[2], sm (".01", "20"));
+    divisions[2] = knob ("rnd_div", "DIVISION", lfoCol[2], sm ("8b", "1/8"));
+    rp->setGrid ({ 1.3f, 1.0f, 1.0f }, {
+        rmode, rates[2], divisions[2],
+        static_cast<Component*> (owned.add (new LedButton (proc, "rnd_sync", "SYNC"))),
+        knob ("rnd_slew", "SLEW", lfoCol[2], sm ("0", "10")), nullptr });
+    // MOD ENV: an envelope started by every key (plates or LEAD)
+    const auto ec = Mod::sourceColour (Mod::ModEnv);
+    auto* ep = panel ("MOD ENV", ec, { 3 * (pw + 8), 0, width - 3 * (pw + 8), mh }, Mod::ModEnv);
+    ep->setEnvelopeIcon (4);
+    ep->setGrid ({ 1.0f, 1.0f }, {
+        knob ("menv_attack", "ATTACK", ec, sm ("1ms", "30s")), knob ("menv_decay", "DECAY", ec, sm ("1ms", "30s")),
+        knob ("menv_sustain", "SUSTAIN", ec, sm ("0", "100")), knob ("menv_release", "RELEASE", ec, sm ("1ms", "30s")) });
+    addAndMakeVisible (matrix);
+    matrix.setBounds (0, mh + 10, width, height - mh - 10);
+    refreshLive();
+}
+
+void ModPage::refreshLive()
+{
+    Page::refreshLive();
+    matrix.refresh();
+    const char* syncIds[] = { "lfo1_sync", "lfo2_sync", "rnd_sync" };
+    for (int i = 0; i < 3; ++i)
+    {
+        const bool sync = proc.getParamReal (syncIds[i]) > 0.5f;
+        if (std::abs (rates[i]->getAlpha() - (sync ? 0.35f : 1.0f)) > 0.01f) rates[i]->setAlpha (sync ? 0.35f : 1.0f);
+        if (std::abs (divisions[i]->getAlpha() - (sync ? 1.0f : 0.35f)) > 0.01f) divisions[i]->setAlpha (sync ? 1.0f : 0.35f);
+    }
 }
 
 //==============================================================================

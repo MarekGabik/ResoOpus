@@ -122,12 +122,12 @@ const std::vector<ParamDef>& Params::globalDefs()
         d.push_back (F ("dust", "Dust", 0.0f, 100.0f, 20.0f, Unit::Percent,
                         "The analog life: slow drift of the tuning, voices leaking into each other and a breath of background noise. 0 = clean digital"));
         // FILTER
-        d.push_back (LogF ("flt_cutoff", "Cutoff", 20.0f, 20000.0f, 20000.0f, Unit::Hz, "Filter cutoff (left and right, see SPREAD)"));
-        d.push_back (F ("flt_res", "Resonance", 0.0f, 10.0f, 0.0f, Unit::Scale10, "Filter resonance; near 10 it sings on its own and keeps the lows"));
-        d.push_back (F ("flt_drive", "Drive", 0.0f, 10.0f, 0.0f, Unit::Scale10, "Drives the filter into its dirty, growling saturation"));
-        d.push_back (C ("flt_mode", "Filter Mode", { "Low Pass", "Band Pass", "High Pass" }, 0,
+        d.push_back (LogF ("flt_cutoff", "Filter A Cutoff", 20.0f, 20000.0f, 20000.0f, Unit::Hz, "Filter cutoff (left and right, see SPREAD)"));
+        d.push_back (F ("flt_res", "Filter A Resonance", 0.0f, 10.0f, 0.0f, Unit::Scale10, "Filter resonance; near 10 it sings on its own and keeps the lows"));
+        d.push_back (F ("flt_drive", "Filter A Drive", 0.0f, 10.0f, 0.0f, Unit::Scale10, "Drives the filter into its dirty, growling saturation"));
+        d.push_back (C ("flt_mode", "Filter A Mode", { "Low Pass", "Band Pass", "High Pass" }, 0,
                         "Low pass: darker. Band pass: thin, vocal. High pass: takes the lows away for clear, high drones"));
-        d.push_back (F ("flt_spread", "Spread", 0.0f, 100.0f, 10.0f, Unit::Percent, "Detunes the left and right filters against each other: a wider stereo image"));
+        d.push_back (F ("flt_spread", "Filter A Spread", 0.0f, 100.0f, 10.0f, Unit::Percent, "Detunes the left and right filters against each other: a wider stereo image"));
         // ECHO
         d.push_back (LogF ("echo_time1", "Echo Time 1", 0.005f, 2.0f, 0.34f, Unit::Seconds, "Delay time of the left line"));
         d.push_back (LogF ("echo_time2", "Echo Time 2", 0.005f, 2.0f, 0.52f, Unit::Seconds, "Delay time of the right line"));
@@ -172,7 +172,7 @@ const std::vector<ParamDef>& Params::globalDefs()
         d.push_back (C ("arp_octaves", "Arp Octaves", { "1", "2", "3", "4" }, 0, "How many octaves the arpeggio climbs"));
         d.push_back (B ("arp_latch", "Latch", false, "Keeps the arpeggio running after you let go of the keys"));
         // appended later (parameter IDs stay in their order)
-        d.push_back (C ("flt_model", "Filter Model", { "Growl", "Ladder", "Diode", "Scream", "Silk" }, 0,
+        d.push_back (C ("flt_model", "Filter A Model", { "Growl", "Ladder", "Diode", "Scream", "Silk" }, 0,
                         "Character of the filter. Growl: dirty 12 dB that growls. Ladder: round 24 dB transistor ladder that sings. "
                         "Diode: rubbery squelch, bites more than it rings. Scream: harsh 12 dB, screeches when pushed. Silk: clean and smooth"));
         d.push_back (B ("drone_on", "Drone", true,
@@ -225,6 +225,13 @@ const std::vector<ParamDef>& Params::globalDefs()
         d.push_back (B ("rnd_sync", "Random Sync", false, "Locks RANDOM to the song tempo (DIVISION)"));
         d.push_back (C ("rnd_div", "Random Division", divisions, 5, "Length of one RANDOM step in the song tempo"));
         d.push_back (F ("lead_sym", "Lead Symmetry", 0.0f, 100.0f, 50.0f, Unit::Percent, "Symmetry of the LEAD shape; for the square it is the pulse width"));
+        d.push_back (F ("grit", "Grit", 0.0f, 100.0f, 100.0f, Unit::Percent,
+                        "How raw the voices pull on each other (GRAVITY, DUST, TIDE). 100 % = the raw saw and square edges modulate: "
+                        "crackle and grit. Lower = the modulation is smoothed: the same pull, clean and calm"));
+        d.push_back (LogF ("menv_attack", "Mod Env Attack", 0.001f, 30.0f, 0.5f, Unit::Seconds, "MOD ENV: rise after a key is played (any key: plates or LEAD)"));
+        d.push_back (LogF ("menv_decay", "Mod Env Decay", 0.001f, 30.0f, 1.5f, Unit::Seconds, "MOD ENV: fall to SUSTAIN"));
+        d.push_back (F ("menv_sustain", "Mod Env Sustain", 0.0f, 100.0f, 40.0f, Unit::Percent, "MOD ENV: level while keys are held"));
+        d.push_back (LogF ("menv_release", "Mod Env Release", 0.001f, 30.0f, 3.0f, Unit::Seconds, "MOD ENV: fall to zero after the last key is let go"));
         return d;
     }();
     return defs;
@@ -571,7 +578,7 @@ double Mod::divisionBeats (int index)
 
 const StringArray& Mod::sourceNames()
 {
-    static const StringArray s { "None", "Velocity", "Mod Wheel", "Pressure", "Pitch Bend", "Constant", "LFO 1", "LFO 2", "Random", "Lead Env" };
+    static const StringArray s { "None", "Velocity", "Mod Wheel", "Pressure", "Pitch Bend", "Constant", "LFO 1", "LFO 2", "Random", "Lead Env", "Mod Env" };
     return s;
 }
 
@@ -579,7 +586,7 @@ String Mod::shortSourceName (int src) { return sourceNames()[jlimit (0, numSourc
 
 Colour Mod::sourceColour (int src)
 {
-    static const uint32 c[] = { 0xff5e5f68, 0xffffb86b, 0xff7fd4ff, 0xffe6e6ea, 0xff8f8cff, 0xff9a9ba4, 0xff5ee0c8, 0xff4cb2ff, 0xffff9a4d, 0xffa5e844 };
+    static const uint32 c[] = { 0xff5e5f68, 0xffffb86b, 0xff7fd4ff, 0xffe6e6ea, 0xff8f8cff, 0xff9a9ba4, 0xff5ee0c8, 0xff4cb2ff, 0xffff9a4d, 0xffa5e844, 0xffffd166 };
     return Colour (c[jlimit (0, numSources - 1, src)]);
 }
 

@@ -39,6 +39,7 @@ public:
     juce::Rectangle<float> dronePowerArea() const { return area (DronePower); }
 private:
     bool leadOn = false, droneOn = true;
+    int modCount = 0;
     void changeListenerCallback (juce::ChangeBroadcaster*) override { repaint(); }
     int itemAt (juce::Point<float>) const;
     void showHelpMenu();

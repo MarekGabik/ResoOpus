@@ -90,6 +90,7 @@ void ResoOpusProcessor::prepareToPlay (double sampleRate, int)
     space.prepare (sr);
     for (int i = 0; i < maxLead; ++i) leads[i].prepare (sr * (1 << osIndex), 0x7a11u + (uint32_t) i * 131u);
     leadSusNum = 0; arpNote = -1; lastLeadPitch = -1.0;
+    modEnv.setSampleRate (sr); modEnv.hardReset(); keysHeld = 0;
     lfos[0].reset (0.0); lfos[1].reset (0.0); lfoRng.seed (0x51f0u); motionRnd.seed (0x7e57u); chunkPpq = hostPpq = 0.0;
     leadNum = arpNum = 0;
     arpPos = 0.0; arpGate = false;
@@ -156,6 +157,8 @@ void ResoOpusProcessor::noteOn (int note, float vel)
 {
     lastVelocity = vel;
     noteTrigger = true;
+    ++keysHeld;
+    modEnv.noteOn (false);   // MOD ENV: every key restarts it from where it is
     int v = -1;
     const bool leadOn = globalRaw[GP::lead_on]->load() > 0.5f;
     if (globalRaw[GP::drone_on]->load() < 0.5f)
@@ -201,6 +204,8 @@ void ResoOpusProcessor::noteOn (int note, float vel)
 
 void ResoOpusProcessor::noteOff (int note)
 {
+    keysHeld = std::max (0, keysHeld - 1);
+    if (keysHeld == 0) modEnv.noteOff();
     leadNoteOff (note);
     for (int v = 0; v < Params::numVoices; ++v)
         if (touch[v].gate && touch[v].note == note)
@@ -212,6 +217,8 @@ void ResoOpusProcessor::noteOff (int note)
 
 void ResoOpusProcessor::releaseAll()
 {
+    keysHeld = 0;
+    modEnv.noteOff();
     leadNum = 0;
     if (globalRaw[GP::arp_latch]->load() < 0.5f) arpNum = 0;
     leadSusNum = 0;
@@ -389,6 +396,11 @@ void ResoOpusProcessor::runMotion (double seconds)
                                                   sync && hostPlaying, hostPhase - std::floor (hostPhase));
     }
     sources[Mod::LeadEnv] = leads[leadLast].isActive() ? leads[leadLast].getFilterEnv() : 0.0f;
+    modEnv.set (0.0f, globalRaw[GP::menv_attack]->load(), 0.0f, globalRaw[GP::menv_decay]->load(),
+                globalRaw[GP::menv_sustain]->load() / 100.0f, globalRaw[GP::menv_release]->load());
+    float me = modEnv.getValue();
+    for (int k = 0, n = std::max (1, (int) std::lround (seconds * sr)); k < n; ++k) me = modEnv.next();
+    sources[Mod::ModEnv] = me;
     noteTrigger = false;
 }
 
@@ -520,6 +532,7 @@ void ResoOpusProcessor::processChunk (AudioBuffer<float>& out, int start, int le
         s.sub = p[VP::sub] / 100.0f;
         s.vibrato = p[VP::vibrato] / 100.0f;
         s.sym = p[VP::sym] / 100.0f;
+        s.gritK = gritK;
         s.character = p[VP::character] / 100.0f;
         s.qRatio = p[VP::q_ratio]; s.qIndex = p[VP::q_index] / 100.0f; s.qFb = p[VP::q_fb] / 100.0f;
         s.qTrack = p[VP::q_track] / 100.0f; s.qFine = p[VP::q_fine];
@@ -567,6 +580,13 @@ void ResoOpusProcessor::processChunk (AudioBuffer<float>& out, int start, int le
         set (fbRamp, Params::gravityFeedback (gravity));
         set (dustRamp, 6.0f * dust);   // Hz of leakage between the voices
         networkPrimed = true;
+        // GRIT: 100 % = raw modulators, lower = one-pole smoothing from ~19 kHz down to 150 Hz
+        {
+            const float g = curG[GP::grit] / 100.0f;
+            const double fc = 150.0 * std::exp2 (7.0 * (double) g);
+            gritC = g >= 0.999f ? 1.0f : (float) (1.0 - std::exp (-MathConstants<double>::twoPi * fc / (sr * (1 << osIndex))));
+            gritK = g >= 0.999f ? 0.0f : 6.0f * std::exp2 (6.0f * g);   // CHOIR edges: 6x .. 384x the lowest saw
+        }
         toVoices = curG[GP::echo_voices] / 100.0f;
 
         // filter coefficients at the oversampled rate (left / right spread apart)
@@ -686,14 +706,16 @@ void ResoOpusProcessor::renderVoices (float* L, float* R, float* leadL, float* l
     {
         const float dev = devRamp.next(), ring = ringRamp.next(), dustDev = dustRamp.next();
         const float echoIn = echoPrevLen > 0 ? toVoices * 2.0f * echoPrev[std::min (echoPrevLen - 1, k >> osIndex)] : 0.0f;
-        const float fb = fbRamp.next() * lastMono + echoIn;
-        const float total = voiceMod[0] + voiceMod[1] + voiceMod[2] + voiceMod[3];
+        fbS += gritC * (fbRamp.next() * lastMono + echoIn - fbS);
+        for (int v = 0; v < Params::numVoices; ++v) modS[v] += gritC * (voiceMod[v] - modS[v]);
+        const float fb = fbS;
+        const float total = modS[0] + modS[1] + modS[2] + modS[3];
         float now[Params::numVoices];
         for (int v = 0; v < Params::numVoices; ++v)
         {
             if (! on[v]) { now[v] = 0.0f; continue; }
-            const float in = (1.0f - ring) * voiceMod[v ^ 1] + ring * voiceMod[(v + 1) % Params::numVoices] + fb;
-            const double fmHz = (double) (dev * in + dustDev * (total - voiceMod[v]));
+            const float in = (1.0f - ring) * modS[v ^ 1] + ring * modS[(v + 1) % Params::numVoices] + fb;
+            const double fmHz = (double) (dev * in + dustDev * (total - modS[v]));
             now[v] = voices[v].tick (fmHz, L[k], R[k]);
         }
         for (int v = 0; v < Params::numVoices; ++v) voiceMod[v] = now[v];

@@ -29,7 +29,7 @@ public:
 
     void setKnobColour (juce::Colour c) { if (c != colour) { colour = c; repaint(); } }
     static int preferredWidth (const Style& s)  { return s.width > 0 ? s.width : (s.small ? 80 : 96); }
-    static int preferredHeight (const Style& s) { return (s.small ? 84 : 98) + (s.marks.isEmpty() ? 0 : 12); }
+    static int preferredHeight (const Style& s) { return (s.small ? 88 : 102) + (s.marks.isEmpty() ? 0 : 12); }
 
     // Called by the editor timer: picks up modulation routings and live values; repaints only on change
     void refreshLive();
@@ -67,6 +67,7 @@ private:
     juce::Point<float> centre() const;
     float radius() const { return style.small ? 16.0f : 21.0f; }
     bool hitsRing (juce::Point<float>) const;
+    int ringAt (juce::Point<float>) const;   // which modulation ring (0, 1) is under the mouse, -1 = none
     void showMenu();
     void showEditor();
     void setNormalised (float v);

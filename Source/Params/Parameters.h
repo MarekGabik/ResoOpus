@@ -112,7 +112,7 @@ namespace Params
 namespace Mod
 {
     // Source list is append-only (stored as choice index)
-    enum Source { None = 0, Velocity, ModWheel, Pressure, PitchBend, Constant, Lfo1, Lfo2, Random, LeadEnv, numSources };
+    enum Source { None = 0, Velocity, ModWheel, Pressure, PitchBend, Constant, Lfo1, Lfo2, Random, LeadEnv, ModEnv, numSources };
 
     const juce::StringArray& sourceNames();
     juce::String shortSourceName (int src);
@@ -171,7 +171,8 @@ namespace GP
         lfo1_rate, lfo1_shape, lfo1_sync, lfo1_div, lfo1_phase, lfo1_retrig,
         lfo2_rate, lfo2_shape, lfo2_sync, lfo2_div, lfo2_phase, lfo2_retrig,
         rnd_rate, rnd_mode, rnd_slew, rnd_sync, rnd_div,
-        lead_sym,
+        lead_sym, grit,
+        menv_attack, menv_decay, menv_sustain, menv_release,
         count
     };
     enum PlayMode { Plates = 0, Keys };

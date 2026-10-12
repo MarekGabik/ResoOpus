@@ -3,6 +3,7 @@
 #include "Widgets.h"
 #include "Params/Parameters.h"
 #include <juce_dsp/juce_dsp.h>
+#include "ModMatrix.h"
 
 class ResoOpusProcessor;
 
@@ -108,9 +109,20 @@ private:
     ModulePanel* filterBPanel = nullptr;
     juce::Label* spaceInfo = nullptr;
     juce::Array<juce::Component*> filterBControls;
+    int shownAlgo = -1, shownModel = -1, shownModelB = -1;
+};
+
+// MOD: the motion sources (LFO 1, LFO 2, RANDOM, MOD ENV) on top, the modulation matrix below
+class ModPage : public Page
+{
+public:
+    explicit ModPage (ResoOpusProcessor&);
+    void refreshLive() override;
+    ModMatrixView matrix;
+
+private:
     Knob* rates[3] {};      // LFO 1, LFO 2, RANDOM: RATE (free) and DIVISION (tempo), one of them is dimmed
     Knob* divisions[3] {};
-    int shownAlgo = -1, shownModel = -1, shownModelB = -1;
 };
 
 // LEAD: oscillators, filter per note with its envelope, amp envelope, voices / glide / vibrato, ARP
@@ -198,8 +210,10 @@ private:
 
     struct MasterPanel : public ModulePanel
     {
-        MasterPanel (DronePage& o) : ModulePanel ("MASTER", Palette::master, -1, "FILL"), owner (o) {}
-        void mouseDown (const juce::MouseEvent& e) override { if (e.y < headerHeight && e.x > getWidth() - 80) owner.showFillMenu (this); }
+        MasterPanel (DronePage& o) : ModulePanel ("MASTER", Palette::master, -1, "FILL"), owner (o)
+        {
+            onRightClick = [this] (juce::Component& c) { owner.showFillMenu (&c); };
+        }
         DronePage& owner;
     };
 
@@ -207,6 +221,8 @@ private:
     Detail details[Params::numVoices];
     ModulePanel* detailPanel = nullptr;
     GravityView* gravity = nullptr;
+    ModulePanel* gravityPanel = nullptr;
+    int shownPath = -1;
     juce::Label* offNote = nullptr;
     int selected = 0;
     int shownType[Params::numVoices] { -1, -1, -1, -1 };

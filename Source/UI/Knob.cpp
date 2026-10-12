@@ -50,15 +50,18 @@ Knob::~Knob() = default;
 
 Point<float> Knob::centre() const
 {
-    const float top = 13.0f + (style.marks.isEmpty() ? 0.0f : 12.0f);
+    const float top = 17.0f + (style.marks.isEmpty() ? 0.0f : 12.0f);   // room above for two modulation rings
     return { getWidth() * 0.5f, top + (style.small ? 26.0f : 32.0f) };
 }
 
-bool Knob::hitsRing (Point<float> pos) const
+bool Knob::hitsRing (Point<float> pos) const { return ringAt (pos) >= 0; }
+
+int Knob::ringAt (Point<float> pos) const
 {
-    if (mods.isEmpty()) return false;
-    const float d = pos.getDistanceFrom (centre());
-    return d >= radius() + 6.0f && d <= radius() + 15.0f;
+    if (mods.isEmpty()) return -1;
+    const float d = pos.getDistanceFrom (centre()) - radius();
+    if (d < 7.0f || d > 16.5f) return -1;
+    return (d < 11.8f || mods.size() < 2) ? 0 : 1;
 }
 
 void Knob::refreshLive()
@@ -145,8 +148,8 @@ void Knob::paint (Graphics& g)
         g.strokePath (arc, PathStrokeType (2.4f, PathStrokeType::curved, PathStrokeType::rounded));
     }
 
-    // modulation ring(s)
-    float ringR = R + 10.5f;
+    // modulation ring(s): two thin lanes just outside the scale; the one under the mouse is highlighted
+    float ringR = R + 10.0f;
     for (int i = 0; i < mods.size() && i < 2; ++i)
     {
         const auto& m = mods.getReference (i);
@@ -156,19 +159,25 @@ void Knob::paint (Graphics& g)
         float a0 = both ? a - std::abs (span) : a, a1 = a + span;
         a0 = jlimit (startAngle, startAngle + sweep, a0);
         a1 = jlimit (startAngle, startAngle + sweep, a1);
-        const bool hot = ringHover || ringDragging;
+        const bool hot = (ringHover || ringDragging) && m.slot == ringSlot;
         if (hot)
         {
-            g.setColour (mc.withAlpha (0.18f));
-            g.strokePath (arcPath (c, ringR, a0, a1), PathStrokeType (8.0f));
+            g.setColour (mc.withAlpha (0.22f));
+            g.strokePath (arcPath (c, ringR, a0, a1), PathStrokeType (5.0f));
         }
-        g.setColour (mc);
-        g.strokePath (arcPath (c, ringR, a0, a1), PathStrokeType (hot ? 3.2f : 2.6f, PathStrokeType::curved, PathStrokeType::rounded));
-        ringR += 4.0f;
+        g.setColour (hot || ! (ringHover || ringDragging) ? mc : mc.withMultipliedAlpha (0.45f));
+        g.strokePath (arcPath (c, ringR, a0, a1), PathStrokeType (hot ? 2.8f : 2.2f, PathStrokeType::curved, PathStrokeType::rounded));
+        ringR += 3.6f;
+    }
+    if (mods.size() > 2)   // more than two: a small count next to the outer lane
+    {
+        g.setColour (Palette::textDim);
+        g.setFont (Fonts::mono (8.5f));
+        g.drawText ("+" + String (mods.size() - 2), Rectangle<float> (16.0f, 9.0f).withCentre (onCircle (c, R + 17.0f, startAngle + sweep + 0.25f)), Justification::centred, false);
     }
     if (live >= 0.0f && ! mods.isEmpty())
     {
-        const auto p = onCircle (c, R + 10.5f, startAngle + live * sweep);
+        const auto p = onCircle (c, R + 10.0f, startAngle + live * sweep);
         g.setColour (Colours::white);
         g.fillEllipse (Rectangle<float> (4.8f, 4.8f).withCentre (p));
     }
@@ -258,11 +267,13 @@ void Knob::mouseEnter (const MouseEvent& e) { hover = true; mouseMove (e); repai
 
 void Knob::mouseMove (const MouseEvent& e)
 {
-    const bool r = hitsRing (e.position);
-    if (r != ringHover)
+    const int ri = ringAt (e.position);
+    const bool r = ri >= 0;
+    const int slotUnder = r ? mods.getReference (ri).slot : ringSlot;
+    if (r != ringHover || (r && slotUnder != ringSlot))
     {
         ringHover = r;
-        if (r && ringSlot < 0 && ! mods.isEmpty()) ringSlot = mods.getReference (0).slot;
+        if (r) ringSlot = slotUnder;
         setMouseCursor (r ? Cursors::ringDrag() : MouseCursor::NormalCursor);
         repaint();
     }

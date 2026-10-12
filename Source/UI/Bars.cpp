@@ -6,7 +6,7 @@ using namespace juce;
 
 const StringArray& TopBar::tabNames()
 {
-    static const StringArray t { "DRONE", "LEAD", "FX" };
+    static const StringArray t { "DRONE", "LEAD", "FX", "MOD" };
     return t;
 }
 
@@ -23,7 +23,7 @@ TopBar::~TopBar()
 Rectangle<float> TopBar::area (int item) const
 {
     const float h = (float) height;
-    auto tabW = [] (int i) { return (float) GlyphArrangement::getStringWidthInt (Fonts::bold (11.0f), tabNames()[i]) + 22.0f + (i <= 1 ? 22.0f : 0.0f); };
+    auto tabW = [] (int i) { return (float) GlyphArrangement::getStringWidthInt (Fonts::bold (11.0f), tabNames()[i]) + 22.0f + (i <= 1 ? 22.0f : 0.0f) + (i == 3 ? 16.0f : 0.0f); };
     const int numTabs = tabNames().size();
     if (item >= Tab0 && item < Tab0 + numTabs)
     {
@@ -45,7 +45,7 @@ Rectangle<float> TopBar::area (int item) const
         case Redo: return { w - 258.0f, 8.0f, 20.0f, 20.0f };
         case AB:   return { w - 226.0f, 6.0f, 32.0f, 24.0f };
         case Copy: return { w - 190.0f, 6.0f, 38.0f, 24.0f };
-        case Mod:  return { w - 142.0f, 6.0f, 42.0f, 24.0f };
+        case Mod:  return {};   // the MOD page is a tab now
         case Help: return { w - 96.0f, 6.0f, 40.0f, 24.0f };
         case Tips: return { w - 52.0f, 8.0f, 20.0f, 20.0f };
         default:   return {};
@@ -66,7 +66,11 @@ void TopBar::refresh()
     const auto n = proc.getPresetName();
     const bool lo = proc.getParamReal ("lead_on") > 0.5f, dr = proc.getParamReal ("drone_on") > 0.5f;
     const bool mod = proc.presets->isModified();
-    if (n != shownName || lo != leadOn || dr != droneOn || mod != shownModified) { shownName = n; leadOn = lo; droneOn = dr; shownModified = mod; repaint(); }
+    int mc = 0;
+    for (int s = 0; s < Params::numModSlots; ++s)
+        if (proc.getParamReal (Params::modID (s, "src")) > 0.5f && proc.getParamReal (Params::modID (s, "dst")) > 0.5f) ++mc;
+    if (n != shownName || lo != leadOn || dr != droneOn || mod != shownModified || mc != modCount)
+    { shownName = n; leadOn = lo; droneOn = dr; shownModified = mod; modCount = mc; repaint(); }
 }
 
 void TopBar::paint (Graphics& g)
@@ -99,7 +103,23 @@ void TopBar::paint (Graphics& g)
         }
         g.setColour (on ? Palette::text : (hover == i ? Palette::textDim : Palette::textFaint));
         g.setFont (Fonts::bold (11.0f).withExtraKerningFactor (0.06f));
-        g.drawText (tabNames()[i], r, Justification::centred, false);
+        if (i == 3)
+        {
+            // MOD: the number of routings in a small gold badge
+            const auto tr = r.withTrimmedRight (16.0f);
+            g.drawText (tabNames()[i], tr, Justification::centred, false);
+            if (modCount > 0)
+            {
+                const auto b = Rectangle<float> (16.0f, 14.0f).withCentre ({ tr.getRight() + 4.0f, r.getCentreY() });
+                g.setColour (Palette::curve.withAlpha (on ? 1.0f : 0.7f));
+                g.fillRoundedRectangle (b, 7.0f);
+                g.setColour (Palette::bar);
+                g.setFont (Fonts::bold (9.5f));
+                g.drawText (String (modCount), b, Justification::centred, false);
+            }
+        }
+        else
+            g.drawText (tabNames()[i], r, Justification::centred, false);
         if (on)
         {
             g.setColour (Palette::curve);
@@ -139,16 +159,7 @@ void TopBar::paint (Graphics& g)
     g.drawText (proc.getPresetName() + (shownModified ? " *" : ""), nr.reduced (24.0f, 0.0f), Justification::centred, true);
 
     // Mod, Help
-    const bool modOpen = isModOpen && isModOpen();
-    auto mr = area (Mod);
-    if (modOpen)
-    {
-        g.setColour (Colour (0xff2a2415));
-        g.fillRoundedRectangle (mr, 4.0f);
-    }
     g.setFont (Fonts::regular (12.0f));
-    g.setColour (modOpen ? Palette::curve : (hover == Mod ? Palette::text : Palette::textDim));
-    g.drawText ("Mod", mr, Justification::centred, false);
     g.setColour (hover == Help ? Palette::text : Palette::textDim);
     g.drawText ("Help", area (Help), Justification::centred, false);
 
@@ -259,9 +270,9 @@ Rectangle<float> BottomBar::area (int item) const
     switch (item)
     {
         case Play:     return { 10.0f, 0.0f, 120.0f, (float) height };
-        case TouchSrc: return { 134.0f, 0.0f, 130.0f, (float) height };
-        case SnapMode: return { 268.0f, 0.0f, 170.0f, (float) height };
-        case OS:       return { (float) getWidth() - 316.0f, 0.0f, 120.0f, (float) height };
+        case TouchSrc: return { 136.0f, 0.0f, 136.0f, (float) height };
+        case SnapMode: return { 278.0f, 0.0f, 196.0f, (float) height };
+        case OS:       return { (float) getWidth() - 330.0f, 0.0f, 134.0f, (float) height };
         default:       return {};
     }
 }
@@ -301,14 +312,31 @@ void BottomBar::paint (Graphics& g)
     g.drawHorizontalLine (0, 0.0f, (float) getWidth());
     g.setFont (Fonts::regular (12.0f));
 
+    // select buttons: dark pill, label dim, value bright, a down arrow
+    auto pillButton = [&g] (Rectangle<float> a, const String& label, const String& value)
+    {
+        auto b = a.reduced (0.0f, 4.0f);
+        g.setColour (Palette::button);
+        g.fillRoundedRectangle (b, 4.0f);
+        g.setColour (Colours::white.withAlpha (0.07f));
+        g.drawRoundedRectangle (b.reduced (0.5f), 4.0f, 1.0f);
+        auto t = b.reduced (8.0f, 0.0f).withTrimmedRight (12.0f);
+        g.setFont (Fonts::regular (11.5f));
+        if (label.isNotEmpty())
+        {
+            g.setColour (Palette::textDim);
+            const int lw = GlyphArrangement::getStringWidthInt (Fonts::regular (11.5f), label) + 6;
+            g.drawText (label, t.removeFromLeft ((float) lw), Justification::centredLeft, false);
+        }
+        g.setColour (Palette::text);
+        g.drawText (value, t, Justification::centredLeft, true);
+        Icons::draw (g, Icons::chevronDown(), Rectangle<float> (8.0f, 8.0f).withCentre ({ b.getRight() - 10.0f, b.getCentreY() }), Palette::textDim, 1.4f);
+    };
     const bool plates = roundToInt (proc.getParamReal ("play_mode")) == GP::Plates;
-    g.setColour (Palette::text);
-    g.drawText (plates ? "Plates " + KeyboardNames::range (proc.plateNote (0), proc.plateNote (Params::numVoices - 1)) : String ("Keys"), area (Play), Justification::centredLeft, false);
-    g.setColour (Palette::textDim);
-    g.drawText ("Touch - " + choiceText (proc, "touch"), area (TouchSrc), Justification::centredLeft, false);
+    pillButton (area (Play), {}, plates ? "Plates " + KeyboardNames::range (proc.plateNote (0), proc.plateNote (Params::numVoices - 1)) : String ("Keys"));
+    pillButton (area (TouchSrc), "Touch", choiceText (proc, "touch"));
     const int snap = roundToInt (proc.getParamReal ("snap"));
-    g.drawText ("Snap - " + (snap == GP::SnapScale ? choiceText (proc, "snap_root") + " " + choiceText (proc, "snap_scale") : choiceText (proc, "snap")),
-                area (SnapMode), Justification::centredLeft, true);
+    pillButton (area (SnapMode), "Snap", snap == GP::SnapScale ? choiceText (proc, "snap_root") + " " + choiceText (proc, "snap_scale") : choiceText (proc, "snap"));
 
     // preset pill
     const float w = 240.0f;
@@ -323,8 +351,7 @@ void BottomBar::paint (Graphics& g)
     g.drawText ((cat.isNotEmpty() ? cat + " - " : String()) + preset, pill.withTrimmedLeft (26.0f).withTrimmedRight (10.0f), Justification::centred, true);
 
     const int os = roundToInt (proc.getParamReal ("oversampling"));
-    g.setColour (Palette::textDim);
-    g.drawText ("Oversampling " + String (1 << os) + "x", area (OS), Justification::centredRight, false);
+    pillButton (area (OS), "Oversampling", String (1 << os) + "x");
     g.setFont (Fonts::mono (11.5f));
     g.setColour (Palette::text);
     g.drawText ("CPU " + String (roundToInt (cpu)) + " %", getWidth() - 186, 0, 74, height, Justification::centredRight, false);

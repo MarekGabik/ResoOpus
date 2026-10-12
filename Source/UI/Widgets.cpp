@@ -177,13 +177,29 @@ void LedRadio::mouseDown (const MouseEvent& e)
 //==============================================================================
 SourceHandle::SourceHandle (int s) : source (s)
 {
-    setTooltip ("Drag onto a knob to modulate it with " + Mod::sourceNames()[s]);
+    setTooltip ("Drag onto a knob to modulate it with " + Mod::sourceNames()[s] + ". Click: show its routings on the MOD page");
     setMouseCursor (MouseCursor::DraggingHandCursor);
 }
 
 void SourceHandle::paint (Graphics& g)
 {
-    Icons::draw (g, Icons::drag(), getLocalBounds().toFloat().reduced (3.0f), Palette::plateText.withAlpha (isMouseOver() ? 1.0f : 0.7f), 1.6f);
+    // a pill in the colour of the source: drag the arrow onto a knob; the number = routings using this source
+    auto r = getLocalBounds().toFloat().reduced (0.5f);
+    const auto col = Mod::sourceColour (source);
+    g.setColour (isMouseOver() ? col.brighter (0.25f) : col);
+    g.fillRoundedRectangle (r, r.getHeight() * 0.5f);
+    g.setColour (Colours::black.withAlpha (0.35f));
+    g.drawRoundedRectangle (r, r.getHeight() * 0.5f, 1.0f);
+    const int n = countFor ? countFor (source) : 0;
+    Icons::draw (g, Icons::drag(), Rectangle<float> (16.0f, 13.0f).withCentre ({ r.getX() + 13.0f, r.getCentreY() }), Palette::plateText, 1.6f);
+    g.setColour (Palette::plateText);
+    g.setFont (Fonts::bold (10.5f));
+    g.drawText (n > 0 ? String (n) : String ("MOD"), r.withTrimmedLeft (22.0f).withTrimmedRight (5.0f), Justification::centred, false);
+}
+
+void SourceHandle::mouseUp (const MouseEvent& e)
+{
+    if (! e.mouseWasDraggedSinceMouseDown() && onOpen) onOpen (source);
 }
 
 void SourceHandle::mouseDrag (const MouseEvent&)
@@ -261,17 +277,28 @@ void ModulePanel::paint (Graphics& g)
     g.setColour (colour.withAlpha (0.3f + 0.7f * live));
     g.fillEllipse (dot);
 
-    if (rightText.isNotEmpty())
+    if (rightText.isNotEmpty() && onRightClick)
+    {
+        // select button: dark pill on the light plate, text and a down arrow
+        const auto b = rightButtonArea();
+        g.setColour (Colour (0xff1c1d22));
+        g.fillRoundedRectangle (b, 4.0f);
+        g.setColour (Palette::text);
+        g.setFont (Fonts::mono (10.0f).boldened());
+        g.drawText (rightText, b.withTrimmedLeft (7.0f).withTrimmedRight (16.0f), Justification::centredLeft, false);
+        Icons::draw (g, Icons::chevronDown(), Rectangle<float> (8.0f, 8.0f).withCentre ({ b.getRight() - 9.0f, b.getCentreY() }), Palette::textDim, 1.4f);
+    }
+    else if (rightText.isNotEmpty())
     {
         g.setColour (Colour (0xff2c2c30));
         g.setFont (Fonts::mono (10.0f).boldened());
-        g.drawText (rightText, 0, 0, getWidth() - (handle ? 30 : 10), headerHeight, Justification::centredRight, false);
+        g.drawText (rightText, 0, 0, getWidth() - (handle ? 74 : 10), headerHeight, Justification::centredRight, false);
     }
 
     if (envIcon > 0)
     {
         Path p;
-        const float x = (float) getWidth() - (handle ? 82.0f : 58.0f), y0 = 7.0f, y1 = 18.0f;
+        const float x = handle ? 26.0f : (float) getWidth() - 58.0f, y0 = 7.0f, y1 = 18.0f;
         if (envIcon == 4)
         {
             p.startNewSubPath (x, y1); p.lineTo (x + 6.0f, y0); p.lineTo (x + 14.0f, y0 + 5.0f);
@@ -290,9 +317,20 @@ void ModulePanel::paint (Graphics& g)
     g.drawRoundedRectangle (r.reduced (0.5f), 8.0f, 1.0f);
 }
 
+Rectangle<float> ModulePanel::rightButtonArea() const
+{
+    const float w = (float) GlyphArrangement::getStringWidthInt (Fonts::mono (10.0f).boldened(), rightText) + 26.0f;
+    return { (float) getWidth() - w - (handle ? 66.0f : 6.0f), 3.0f, w, (float) headerHeight - 6.0f };
+}
+
+void ModulePanel::mouseDown (const MouseEvent& e)
+{
+    if (onRightClick && rightText.isNotEmpty() && rightButtonArea().contains (e.position)) onRightClick (*this);
+}
+
 void ModulePanel::resized()
 {
-    if (handle) handle->setBounds (getWidth() - 26, 3, 20, 19);
+    if (handle) handle->setBounds (getWidth() - 62, 3, 56, 19);
     if (items.empty() || weights.empty()) return;
 
     auto body = getLocalBounds().withTrimmedTop (headerHeight + 2).reduced (6, 6);

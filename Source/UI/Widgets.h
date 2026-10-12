@@ -53,6 +53,10 @@ public:
     explicit SourceHandle (int sourceIndex);
     void paint (juce::Graphics&) override;
     void mouseDrag (const juce::MouseEvent&) override;
+    void mouseUp (const juce::MouseEvent&) override;
+    // set by the editor: how many routings use a source, and what a click (not a drag) opens
+    static inline std::function<int (int)> countFor;
+    static inline std::function<void (int)> onOpen;
     void mouseEnter (const juce::MouseEvent&) override { repaint(); }
     void mouseExit (const juce::MouseEvent&) override { repaint(); }
 
@@ -70,6 +74,10 @@ public:
     // Lays out children in a grid: column weights, items row-major (nullptr = empty cell)
     void setGrid (std::vector<float> columnWeights, std::vector<juce::Component*> items);
     void setRightText (const juce::String& t) { rightText = t; repaint(); }
+    // makes the right header text a select button (pill with an arrow); called with the panel as menu target
+    std::function<void (juce::Component&)> onRightClick;
+    void mouseDown (const juce::MouseEvent&) override;
+    juce::Rectangle<float> rightButtonArea() const;
     const juce::String& getTitle() const { return title; }
     void setTitleAndColour (const juce::String& t, juce::Colour c) { title = t; colour = c; repaint(); }
     void setEnvelopeIcon (int stages) { envIcon = stages; repaint(); }   // 4 = ADSR, 6 = DAHDSR

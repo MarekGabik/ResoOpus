@@ -462,7 +462,6 @@ void PresetBrowser::paint (Graphics& g)
     // the four voices: type, plate note, HOLD
     auto voices = r.removeFromTop (54);
     const int vw = (voices.getWidth() - 3 * 6) / 4;
-    static const char* typeNames[] = { "OFF", "CHOIR", "SIREN", "PULSAR" };
     for (int v = 0; v < Params::numVoices; ++v)
     {
         auto box = voices.removeFromLeft (vw).toFloat();
@@ -474,7 +473,7 @@ void PresetBrowser::paint (Graphics& g)
         g.setColour (c.withAlpha (type == 0 ? 0.25f : 0.6f));
         g.drawRoundedRectangle (box.reduced (0.5f), 4.0f, 1.0f);
         g.setFont (Fonts::bold (10.0f));
-        g.drawText (typeNames[jlimit (0, 3, type)], box.removeFromTop (20.0f), Justification::centred);
+        g.drawText (Params::findDef ("v1_type")->choices[jlimit (0, Params::findDef ("v1_type")->choices.size() - 1, type)].toUpperCase(), box.removeFromTop (20.0f), Justification::centred);
         if (type != 0)
         {
             g.setColour (Palette::text);

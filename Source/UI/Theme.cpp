@@ -120,6 +120,15 @@ Path scissors()
     return p;
 }
 
+Path chevronDown()
+{
+    Path p;
+    p.startNewSubPath (0.15f, 0.35f);
+    p.lineTo (0.5f, 0.7f);
+    p.lineTo (0.85f, 0.35f);
+    return p;
+}
+
 Path chevron (bool right)
 {
     Path p;

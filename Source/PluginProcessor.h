@@ -71,6 +71,7 @@ public:
     juce::ValueTree uiState { "UI" };
     std::unique_ptr<StateHistory> history;
     std::unique_ptr<PresetManager> presets;
+    float modS[Params::numVoices] {}, fbS = 0.0f, gritC = 1.0f, gritK = 0.0f;   // GRIT: smoothed voice modulators
     static inline bool loadUserDefault = true;   // tests switch it off: the user's default preset must not change them
     juce::MidiKeyboardState keyboardState;
 
@@ -179,6 +180,8 @@ private:
     ::dsp::RandomGen motionRnd;
     double hostPpq = 0.0, chunkPpq = 0.0;
     bool hostPlaying = false, noteTrigger = false;
+    ::dsp::Envelope modEnv;
+    int keysHeld = 0;
     void runMotion (double seconds);
     float modOut[Params::numModSlots] {};
     float modSum[Mod::maxDestCode + 1] {};

@@ -6,7 +6,7 @@
 #include "UI/Pages.h"
 #include "UI/Keyboard.h"
 #include "UI/Bars.h"
-#include "UI/ModDrawer.h"
+#include "UI/ModMatrix.h"
 #include "UI/PresetBrowser.h"
 
 // Panel background with a fine grain and a faint star field; hosts the current page
@@ -41,7 +41,8 @@ public:
     void setModDrawer (bool open, int selectSlot = -1);
     void setPresetBrowser (bool open);
     bool isPresetBrowserOpen() const { return browser.isVisible(); }
-    bool isModDrawerOpen() const { return drawer.isVisible(); }
+    bool isModDrawerOpen() const { return page == modPageIndex; }
+    void showModulation (int source = -1, int slot = -1);   // MOD page, optionally filtered by source / with a slot selected
     void setScalePercent (int percent);
     Page* getPageComponent (int i) { return pages[i]; }
     DronePage* getDronePage() { return dynamic_cast<DronePage*> (pages[0]); }
@@ -64,7 +65,8 @@ private:
     juce::OwnedArray<Page> pages;
     KeyboardPanel keyboard;
     BottomBar bottom;
-    ModDrawer drawer;
+    static constexpr int modPageIndex = 3;
+    int pageBeforeMod = 0;
     PresetBrowser browser;
     std::unique_ptr<juce::TooltipWindow> tooltips;
     juce::ComponentBoundsConstrainer constrainer;

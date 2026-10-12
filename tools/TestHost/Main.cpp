@@ -188,7 +188,7 @@ static void testParameters()
                                     "flt2_on", "flt2_cutoff", "flt2_res", "flt2_drive", "flt2_mode", "flt2_model", "flt_route",
                                     "lfo1_rate", "lfo1_shape", "lfo1_sync", "lfo1_div", "lfo1_phase", "lfo1_retrig",
                                     "lfo2_rate", "lfo2_shape", "lfo2_sync", "lfo2_div", "lfo2_phase", "lfo2_retrig",
-                                    "rnd_rate", "rnd_mode", "rnd_slew", "rnd_sync", "rnd_div", "lead_sym" };
+                                    "rnd_rate", "rnd_mode", "rnd_slew", "rnd_sync", "rnd_div", "lead_sym", "grit", "menv_attack", "menv_decay", "menv_sustain", "menv_release" };
     ok = (int) Params::globalDefs().size() == GP::count;
     for (int i = 0; i < globalOrder.size() && ok; ++i) ok = globalOrder[i] == Params::globalDefs()[(size_t) i].id;
     check (ok, "global table matches the GP index constants (" + String ((int) Params::globalDefs().size()) + ")");
@@ -558,6 +558,30 @@ static void testNewOscillators()
         const double cleanIn = inharmonicDb (clean, sr, (int) (0.5 * sr), 110.0, 110.0), digiIn = inharmonicDb (digital, sr, (int) (0.5 * sr), 110.0, 110.0);
         check (rounder > 3.0 && digiIn - cleanIn > 20.0 && allFinite (analog) && allFinite (digital),
                "CHARACTER: analog rounds the highs (3 kHz -" + String (rounder, 1) + " dB), digital adds aliasing (" + String (cleanIn, 0) + " -> " + String (digiIn, 0) + " dB off the harmonics)");
+    }
+    {
+        // GRIT: TIDE drops the saws to a few Hz (clicks); below 100 % the edges soften by pitch, a normal tone stays
+        auto hfShare = [&] (float tide, float grit)
+        {
+            auto p = makeProc (sr);
+            soloVoice1 (*p, 45.0f);
+            setParam (*p, "v1_tide", tide); setParam (*p, "grit", grit);
+            const auto out = render (*p, 2.0);
+            IIRFilter hp1, hp2;
+            hp1.setCoefficients (IIRCoefficients::makeHighPass (sr, 1000.0));
+            hp2.setCoefficients (IIRCoefficients::makeHighPass (sr, 1000.0));
+            double all = 0.0, hf = 0.0;
+            for (int i = 0; i < out.getNumSamples(); ++i)
+            {
+                const float x = out.getSample (0, i), y = hp2.processSingleSampleRaw (hp1.processSingleSampleRaw (x));
+                if (i >= (int) (0.5 * sr)) { all += (double) x * x; hf += (double) y * y; }
+            }
+            return 10.0 * std::log10 (hf / (all + 1e-30) + 1e-30);
+        };
+        const double raw = hfShare (75.0f, 100.0f), half = hfShare (75.0f, 50.0f), toneRaw = hfShare (0.0f, 100.0f), toneHalf = hfShare (0.0f, 50.0f);
+        check (raw - half > 12.0 && std::abs (toneRaw - toneHalf) < 1.5,
+               "GRIT 50 %: clicks of a TIDE 75 % choir above 1 kHz " + String (raw, 1) + " -> " + String (half, 1) + " dB, a normal choir "
+               + String (toneRaw, 1) + " -> " + String (toneHalf, 1) + " dB");
     }
     auto quasar = [&] (float midi, float ratio, float index)
     {
@@ -1390,6 +1414,17 @@ static void testPresets()
                "browser load = program change, name shown, not modified (" + String (diff) + " differ)");
         setParam (*b, "gravity", 77.0f);
         check (b->presets->isModified(), "a turned knob marks the preset as modified");
+        {
+            String dirty;
+            auto q = makeProc();
+            for (int i = 0; i < q->presets->numFactory(); ++i)
+            {
+                q->presets->load (i, false);
+                render (*q, 0.05);
+                if (q->presets->isModified()) dirty << q->presets->getPresets()[i].name << " ";
+            }
+            check (dirty.isEmpty(), "no factory preset shows as modified right after loading " + dirty);
+        }
 
         // user preset: save as, rescan, load back, delete
         const String name = "zz ResoOpus test " + String (Random::getSystemRandom().nextInt (100000));
@@ -1576,14 +1611,22 @@ static void testEditor()
     setParam (*p, "flt2_on", 1.0f);
     for (int i = 0; i < 3; ++i) { render (*p, 0.05); pumpMessages (40); }
     saveShot (*ed, "fx", 2.0f);
-    check (editor->getPage() == 2 && editor->getTopBar().tabNames().size() == 3, "FX page opens from the third tab");
+    check (editor->getPage() == 2 && editor->getTopBar().tabNames().size() == 4, "FX page opens from the third tab (DRONE, LEAD, FX, MOD)");
     if (auto* kx = editor->getPageComponent (2)->findKnob ("space_x"))
         check (true, "SPACE X knob found");
     editor->showPage (0);
 
+    p->addModulation (Mod::Lfo1, "gravity", 0.3f);
+    p->addModulation (Mod::Lfo2, "v1_tide", -0.4f);
+    p->addModulation (Mod::ModEnv, "flt_cutoff", 0.5f);
+    p->addModulation (Mod::Velocity, "v1_tide", 0.2f);
     editor->setModDrawer (true);
-    pumpMessages (60);
-    check (editor->isModDrawerOpen(), "modulation panel opens");
+    for (int i = 0; i < 3; ++i) { render (*p, 0.05); pumpMessages (40); }
+    saveShot (*ed, "mod", 2.0f);
+    check (editor->isModDrawerOpen(), "MOD page opens (key 9) with the matrix");
+    editor->showPage (0);
+    for (int i = 0; i < 3; ++i) { render (*p, 0.05); pumpMessages (40); }
+    saveShot (*ed, "drone-mods", 2.0f);
     editor->setModDrawer (false);
 
     {
@@ -1784,15 +1827,27 @@ int main (int argc, char* argv[])
         save ("filters", areaOf ("FILTER A").getUnion (areaOf ("FILTER B")));
         save ("echo", areaOf ("ECHO"));
         save ("space", areaOf ("SPACE"));
-        save ("motion", areaOf ("LFO 1").getUnion (areaOf ("RANDOM")));
         editor->showPage (0);
 
-        preset ("Gravity Well");
+        preset ("Lunar Tide");
+        editor->showPage (3);
+        live (2.0, { { 0.1, MidiMessage::noteOn (1, 62, 0.8f) } });
+        save ("mod-page", full);
+        save ("motion", areaOf ("LFO 1").getUnion (areaOf ("MOD ENV")));
+        std::function<ModMatrixView* (Component&)> findMatrix = [&] (Component& c) -> ModMatrixView*
+        {
+            for (auto* ch : c.getChildren())
+            {
+                if (auto* m = dynamic_cast<ModMatrixView*> (ch)) return m;
+                if (auto* r = findMatrix (*ch)) return r;
+            }
+            return nullptr;
+        };
+        if (auto* m = findMatrix (*ed)) save ("matrix", ed->getLocalArea (m, m->getLocalBounds()).withHeight (190).expanded (4));
+        live (0.1, { { 0.0, MidiMessage::noteOff (1, 62) } });
         editor->showPage (0);
-        editor->setModDrawer (true, 0);
-        live (1.5);
-        save ("mod-panel", full);
-        editor->setModDrawer (false);
+        live (1.0);
+        save ("drone-mods", full);
 
         preset ("Northern Lights");
         editor->setPresetBrowser (true);
@@ -1801,6 +1856,90 @@ int main (int argc, char* argv[])
         editor->setPresetBrowser (false);
         ed.reset();
         std::cout << "done" << std::endl;
+        return 0;
+    }
+    if (argc > 1 && String (argv[1]) == "--crackle")
+    {
+        {
+            // share of the energy above 1 kHz (dB): one choir voice (110 Hz) plus its partner, GRAVITY / TIDE high, GRIT 100 / 50 / 0
+            auto offHarm = [] (float gravity, float tide, float grit, float dust, float os = 1.0f)
+            {
+                auto p = makeProc();
+                setParam (*p, "oversampling", os);
+                soloVoice1 (*p, 45.0f);
+                setParam (*p, "v2_type", (float) VP::Choir); setParam (*p, "v2_tune", 57.0f); setParam (*p, "v2_hold", 100.0f);
+                for (int i = 1; i <= 5; ++i) setParam (*p, "v2_on" + String (i), i == 1 ? 1.0f : 0.0f);
+                setParam (*p, "v1_on2", 1.0f); setParam (*p, "v1_int2", 7.0f);
+                if (tide > 0.0f) for (int v = 1; v < Params::numVoices; ++v) setParam (*p, Params::voiceID (v, "type"), (float) VP::Off);   // TIDE: voice 1 alone
+                setParam (*p, "gravity", gravity); setParam (*p, "v1_tide", tide); setParam (*p, "grit", grit); setParam (*p, "dust", dust);
+                auto out = render (*p, 3.0);
+                // crackle of subsonic saws: share of the energy above 1 kHz (dB)
+                IIRFilter hp1, hp2;
+                hp1.setCoefficients (IIRCoefficients::makeHighPass (48000.0, 1000.0));
+                hp2.setCoefficients (IIRCoefficients::makeHighPass (48000.0, 1000.0));
+                double all = 0.0, hf = 0.0;
+                for (int i = 0; i < out.getNumSamples(); ++i)
+                {
+                    const float x = out.getSample (0, i), y = hp2.processSingleSampleRaw (hp1.processSingleSampleRaw (x));
+                    if (i < 48000) continue;
+                    all += (double) x * x; hf += (double) y * y;
+                }
+                return 10.0 * std::log10 (hf / (all + 1e-30) + 1e-30);
+            };
+            for (auto cfg : std::vector<std::array<float, 3>> { { 10, 0, 0 }, { 45, 0, 0 }, { 70, 0, 0 }, { 92, 0, 0 }, { 10, 0, 80 }, { 10, 30, 0 }, { 10, 50, 0 }, { 10, 60, 0 }, { 10, 75, 0 }, { 10, 95, 0 } })
+                std::cout << "gravity " << cfg[0] << " tide " << cfg[1] << " dust " << cfg[2] << ":  grit100 " << String (offHarm (cfg[0], cfg[1], 100, cfg[2]), 1)
+                          << "  grit50 " << String (offHarm (cfg[0], cfg[1], 50, cfg[2]), 1) << "  grit0 " << String (offHarm (cfg[0], cfg[1], 0, cfg[2]), 1) << std::endl;
+            for (float os : { 0.0f, 1.0f, 2.0f })
+                std::cout << "tide 75, oversampling " << (1 << (int) os) << "x:  grit100 " << String (offHarm (10, 75, 100, 0, os), 1) << "  grit0 " << String (offHarm (10, 75, 0, 0, os), 1) << std::endl;
+            return 0;
+        }
+        // counts short clicks: 5 ms blocks where the 2nd difference (a crude high pass) has a crest factor above 8
+        auto clicks = [] (const AudioBuffer<float>& b)
+        {
+            const int n = b.getNumSamples(), blk = 240;
+            int count = 0;
+            for (int start = 48000; start + blk < n; start += blk)
+            {
+                double sq = 0.0, pk = 0.0;
+                for (int i = start; i < start + blk; ++i)
+                {
+                    const double d = 0.5 * ((double) b.getSample (0, i) + b.getSample (1, i)) - ((double) b.getSample (0, i - 1) + b.getSample (1, i - 1))
+                                     + 0.5 * ((double) b.getSample (0, i - 2) + b.getSample (1, i - 2));
+                    sq += d * d; pk = std::max (pk, std::abs (d));
+                }
+                const double rms = std::sqrt (sq / blk);
+                if (rms > 1.0e-5 && pk / rms > 8.0) ++count;
+            }
+            return count;
+        };
+        auto run = [&] (int idx, std::function<void (ResoOpusProcessor&)> tweak)
+        {
+            auto p = makeProc();
+            p->presets->load (idx, false);
+            if (tweak) tweak (*p);
+            std::vector<Ev> ev { { 1.0, MidiMessage::noteOn (1, 60, 0.7f) }, { 1.0, MidiMessage::noteOn (1, 64, 0.6f) }, { 3.0, MidiMessage::noteOn (1, 62, 0.8f) },
+                                 { 5.0, MidiMessage::noteOff (1, 60) }, { 5.0, MidiMessage::noteOff (1, 64) }, { 5.5, MidiMessage::noteOff (1, 62) } };
+            return clicks (render (*p, 8.0, ev));
+        };
+        auto ref = makeProc();
+        const auto& all = ref->presets->getPresets();
+        for (int i = 0; i < ref->presets->numFactory(); ++i)
+        {
+            const int base = run (i, nullptr);
+            if (base < 3) { std::cout << all[i].name << ": " << base << std::endl; continue; }
+            auto setAll = [] (ResoOpusProcessor& p, const char* suffix, float v) { for (int k = 0; k < Params::numVoices; ++k) setParam (p, Params::voiceID (k, suffix), v); };
+            const int grit0 = run (i, [] (ResoOpusProcessor& p) { setParam (p, "grit", 0.0f); });
+            const int grit50 = run (i, [] (ResoOpusProcessor& p) { setParam (p, "grit", 50.0f); });
+            std::cout << "  grit50 " << grit50 << "  grit0 " << grit0;
+            const int noDust = run (i, [] (ResoOpusProcessor& p) { setParam (p, "dust", 0.0f); });
+            const int noGrav = run (i, [] (ResoOpusProcessor& p) { setParam (p, "gravity", 0.0f); for (int k = 0; k < Params::numModSlots; ++k) p.removeModulation (k); });
+            const int noTide = run (i, [&] (ResoOpusProcessor& p) { setAll (p, "tide", 0.0f); });
+            const int noChar = run (i, [&] (ResoOpusProcessor& p) { setAll (p, "character", 0.0f); });
+            const int noNoise = run (i, [&] (ResoOpusProcessor& p) { setAll (p, "siren_noise", 0.0f); setAll (p, "siren_am", 0.0f); });
+            const int noFx = run (i, [] (ResoOpusProcessor& p) { setParam (p, "echo_mix", 0.0f); setParam (p, "space_blend", 0.0f); setParam (p, "flt_drive", 0.0f); setParam (p, "flt2_drive", 0.0f); });
+            std::cout << all[i].name << ": " << base << "  dust0 " << noDust << "  grav0 " << noGrav << "  tide0 " << noTide << "  char0 " << noChar
+                      << "  noise/am0 " << noNoise << "  fx0 " << noFx << std::endl;
+        }
         return 0;
     }
     if (argc > 1 && String (argv[1]) == "--repeat")
@@ -1847,6 +1986,7 @@ int main (int argc, char* argv[])
                     setParam (*p, id.upToFirstOccurrenceOf ("_", true, false) + "phase", 90.0f);
                 if (id == "rnd_slew") setParam (*p, "rnd_mode", 1.0f);
             }
+            if (id.startsWith ("menv_")) { setParam (*p, "flt_cutoff", 900.0f); p->addModulation (Mod::ModEnv, "flt_cutoff", 0.5f); }
             if (id.startsWith ("echo_") && id != "echo_mix") setParam (*p, "echo_mix", 50.0f);
             if (id == "echo_self") setParam (*p, "echo_mod", 60.0f);
             if (id == "echo_voices") setParam (*p, "gravity", 0.0f);

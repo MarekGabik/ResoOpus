@@ -334,7 +334,7 @@ const std::vector<FactoryPreset>& factoryPresets()
             { "v3_type", 0.0f }, { "v4_type", 0.0f }, { "flt_model", 1.0f }, { "flt_cutoff", 1800.0f }, { "space_algo", 3.0f }, { "space_blend", 25.0f } }, {} },
 
         { "Nebula Voices", "Cinematic",
-          "NEBULA with the VOCAL table: hums and vowels that open as you play (SCAN) and wander on their own (DRIFT). A choir of strange throats.",
+          "NEBULA with the VOCAL table: hums and vowels that open as you play (SCAN) and wander on their own (DRIFT). A crowd of strange throats.",
           { { "v1_type", 5.0f }, { "v1_tune", 45.0f }, { "v1_hold", 55.0f }, { "v1_n_table", 0.0f }, { "v1_n_pos", 20.0f }, { "v1_n_scan", 60.0f }, { "v1_n_drift", 40.0f },
             { "v2_type", 5.0f }, { "v2_tune", 52.0f }, { "v2_hold", 40.0f }, { "v2_n_table", 0.0f }, { "v2_n_pos", 50.0f }, { "v2_n_scan", 50.0f }, { "v2_n_drift", 60.0f },
             { "v3_type", 0.0f }, { "v4_type", 0.0f }, { "space_algo", 1.0f }, { "space_z", 75.0f }, { "space_blend", 40.0f } }, {} },

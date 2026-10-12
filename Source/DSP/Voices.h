@@ -112,6 +112,7 @@ struct VoiceSettings
 
     // every type
     float character = 0.0f;       // -1 digital .. 0 clean .. +1 analog
+    float gritK = 0.0f;           // GRIT for CHOIR: edge softening cutoff in multiples of the lowest saw (0 = raw)
 
     // QUASAR (two-operator FM)
     float qRatio = 2.0f, qIndex = 0.3f, qFb = 0.0f, qTrack = 0.5f, qFine = 0.0f;   // ratio, 0..1, 0..1, 0..1, cents
@@ -243,19 +244,26 @@ private:
     {
         const float pull = pullR.next();
         float sum = 0.0f;
-        float now[5];
+        float now[5], bases[5];
         for (int i = 0; i < 5; ++i)
         {
-            const float base = inc[i].next();
+            const float base = bases[i] = inc[i].next();
             if (! s.on[i]) { now[i] = 0.0f; continue; }
             const int m = ringNext[i];
             const double dt = (m == i ? (double) base : (double) base * (1.0 + (double) (pull * last[m]))) + fmDt;
             now[i] = saws[i].tick (dt);
             sum += now[i];
         }
-        for (int i = 0; i < 5; ++i) last[i] = now[i];
+        float lowest = 1.0f;
+        for (int i = 0; i < 5; ++i) { last[i] = now[i]; if (s.on[i]) lowest = std::min (lowest, bases[i]); }
         stepLevel();
-        return sum;
+        // GRIT: a saw pulled down by TIDE to a few Hz is a train of clicks. Below 100 % two one-pole low passes
+        // tuned to a multiple of the lowest saw soften the edges: at 50 % only the subsonic saws, at 0 % everything
+        if (s.gritK <= 0.0f) { edge1 = edge2 = sum; return sum; }
+        const float c = std::min (1.0f, s.gritK * 6.2831853f * lowest);
+        edge1 += c * (sum - edge1);
+        edge2 += c * (edge1 - edge2);
+        return edge2;
     }
 
     // SIREN: a low modulator (square to triangle) sweeps a square tone exponentially (FM) and/or chops it (AM).
@@ -442,7 +450,7 @@ private:
     ShapeOsc pulsar, twinOsc, subOsc;
     double vibRate = 5.0, vibPhase = 0.0, vibInc = 0.0, modPhase = 0.0, modInc = 0.0;
     Rng rng;
-    float last[5] {};
+    float last[5] {}, edge1 = 0.0f, edge2 = 0.0f;
     int ringNext[5] {};
     float level = 0.0f, target = 0.0f, aC = 0.0f, rC = 0.0f, modSmooth = 0.0f, smooth = 0.0f, unitScale = 0.0f;
     int engine = 1, lastEngine = 1, div = 1;
