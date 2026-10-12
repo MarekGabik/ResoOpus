@@ -506,6 +506,25 @@ static void gravityPatch (ResoOpusProcessor& p, float gravity, int path = 0, flo
 }
 
 // Share of the energy (dB) that is NOT on the harmonics of f1 or f2: rises when the voices modulate each other
+// the loudest 5 ms block above 3 kHz relative to the RMS of the whole signal (dB), after `skip` seconds
+static double clickDb (const AudioBuffer<float>& out, double skip, double sr = 48000.0)
+{
+    IIRFilter hp1, hp2;
+    hp1.setCoefficients (IIRCoefficients::makeHighPass (sr, 3000.0));
+    hp2.setCoefficients (IIRCoefficients::makeHighPass (sr, 3000.0));
+    const int blk = (int) (0.005 * sr), start = (int) (skip * sr);
+    double all = 0.0, acc = 0.0, worst = 0.0; int n = 0, inBlk = 0;
+    for (int i = 0; i < out.getNumSamples(); ++i)
+    {
+        const float x = out.getSample (0, i), y = hp2.processSingleSampleRaw (hp1.processSingleSampleRaw (x));
+        if (i < start) continue;
+        all += (double) x * x; ++n;
+        acc += (double) y * y;
+        if (++inBlk == blk) { worst = std::max (worst, acc / blk); acc = 0.0; inBlk = 0; }
+    }
+    return 10.0 * std::log10 (worst / (all / std::max (1, n) + 1e-30) + 1e-30);
+}
+
 static double inharmonicDb (const AudioBuffer<float>& out, double sr, int start, double f1, double f2)
 {
     const auto db = spectrum (out, start, 15);
@@ -582,6 +601,36 @@ static void testNewOscillators()
         check (raw - half > 12.0 && std::abs (toneRaw - toneHalf) < 1.5,
                "GRIT 50 %: clicks of a TIDE 75 % choir above 1 kHz " + String (raw, 1) + " -> " + String (half, 1) + " dB, a normal choir "
                + String (toneRaw, 1) + " -> " + String (toneHalf, 1) + " dB");
+    }
+    {
+        // SPACE VOID: WOBBLE used to jump the pre-delay every 3.2 s (wrapped LFO phase); turning PRE-DELAY must glide too
+        auto p = makeProc (sr);
+        soloVoice1 (*p, 57.0f, VP::Quasar);
+        setParam (*p, "v1_q_index", 0.0f);
+        setParam (*p, "space_algo", 1.0f); setParam (*p, "space_x", 74.0f); setParam (*p, "space_y", 40.0f);
+        setParam (*p, "space_z", 13.0f); setParam (*p, "space_blend", 100.0f);
+        const auto steady = render (*p, 8.0);
+        const double wobble = clickDb (steady, 2.0, sr);
+        setParam (*p, "space_x", 20.0f);
+        const auto moved = render (*p, 2.0);
+        AudioBuffer<float> both (2, steady.getNumSamples() + moved.getNumSamples());   // one buffer: no filter start-up at the jump
+        for (int c = 0; c < 2; ++c) { both.copyFrom (c, 0, steady, c, 0, steady.getNumSamples()); both.copyFrom (c, steady.getNumSamples(), moved, c, 0, moved.getNumSamples()); }
+        const double jump = clickDb (both, 7.0, sr);
+        check (wobble < -70.0 && jump < -60.0, "SPACE VOID with WOBBLE: worst click " + String (wobble, 1) + " dB, PRE-DELAY 74 -> 20 % at once " + String (jump, 1) + " dB");
+    }
+    {
+        // COMET: one quiet note at FEEDBACK 100 % must not grow into a loud, endless howl (it used to reach -23 dBFS)
+        auto p = makeProc (sr);
+        for (int v = 0; v < Params::numVoices; ++v) setParam (*p, Params::voiceID (v, "hold"), 0.0f);
+        setParam (*p, "space_algo", 4.0f); setParam (*p, "space_x", 100.0f); setParam (*p, "space_y", 5.0f);
+        setParam (*p, "space_z", 30.0f); setParam (*p, "space_blend", 50.0f);
+        const auto out = render (*p, 10.0, note (60, 0.2, 0.5, 0.4f));
+        const double noteDb = rmsDb (out, (int) (0.2 * sr), (int) (0.5 * sr));
+        double loudest = -200.0;
+        for (int sec = 1; sec < 10; ++sec) loudest = std::max (loudest, rmsDb (out, sec * (int) sr, (sec + 1) * (int) sr));
+        const double early = rmsDb (out, 3 * (int) sr, 4 * (int) sr), late = rmsDb (out, 9 * (int) sr, 10 * (int) sr);
+        check (loudest < -38.0 && late < early + 1.5, "COMET at FEEDBACK 100 % after one quiet note (" + String (noteDb, 1) + " dB): the loop sings at "
+               + String (loudest, 1) + " dBFS at most and does not grow (" + String (early, 1) + " -> " + String (late, 1) + ")");
     }
     auto quasar = [&] (float midi, float ratio, float index)
     {
@@ -1624,6 +1673,44 @@ static void testEditor()
     for (int i = 0; i < 3; ++i) { render (*p, 0.05); pumpMessages (40); }
     saveShot (*ed, "mod", 2.0f);
     check (editor->isModDrawerOpen(), "MOD page opens (key 9) with the matrix");
+    {
+        // "+ ADD DESTINATION": every destination exactly once; the last touched knob on top
+        std::function<ModMatrixView* (Component&)> findMatrix = [&] (Component& c) -> ModMatrixView*
+        {
+            for (auto* ch : c.getChildren())
+            {
+                if (auto* m = dynamic_cast<ModMatrixView*> (ch)) return m;
+                if (auto* r = findMatrix (*ch)) return r;
+            }
+            return nullptr;
+        };
+        if (auto* mx = findMatrix (*ed))
+        {
+            std::map<int, int> seen;
+            auto menu = mx->buildAddMenu();
+            for (PopupMenu::MenuItemIterator it (menu, true); it.next();)
+                if (it.getItem().itemID > 0) ++seen[it.getItem().itemID];
+            for (PopupMenu::MenuItemIterator it (menu, false); it.next();)   // the "last touched knob" entry repeats one on purpose
+                if (it.getItem().itemID > 0 && it.getItem().subMenu == nullptr) { --seen[it.getItem().itemID]; break; }
+            int missing = 0, twice = 0;
+            for (int c : Mod::allDestinations()) { if (seen[c] == 0) ++missing; if (seen[c] > 1) ++twice; }
+            String tops;
+            for (PopupMenu::MenuItemIterator it (menu, false); it.next();)
+                if (it.getItem().subMenu != nullptr) tops << it.getItem().text << " | ";
+            check (missing == 0 && twice == 0 && tops.startsWith ("Voice 1") && tops.contains ("Gravity & Master | Lead | FX | Mod | Setup"),
+                   "ADD DESTINATION menu: " + String (Mod::allDestinations().size()) + " destinations, missing " + String (missing) + ", twice " + String (twice) + " (" + tops.trimCharactersAtEnd (" |") + ")");
+            auto* cutoff = p->getParameters()[0];
+            for (auto* prm : p->getParameters())
+                if (auto* pw = dynamic_cast<AudioProcessorParameterWithID*> (prm); pw != nullptr && pw->paramID == "flt2_cutoff") cutoff = prm;
+            cutoff->beginChangeGesture(); cutoff->endChangeGesture();
+            auto menu2 = mx->buildAddMenu();
+            PopupMenu::MenuItemIterator it2 (menu2, false);
+            int first = 0;
+            while (it2.next()) if (it2.getItem().itemID > 0) { first = it2.getItem().itemID; break; }
+            check (first == Mod::destCode ("flt2_cutoff"), "ADD DESTINATION offers the last touched knob first (" + Mod::destName (first) + ")");
+        }
+        else check (false, "matrix found on the MOD page");
+    }
     editor->showPage (0);
     for (int i = 0; i < 3; ++i) { render (*p, 0.05); pumpMessages (40); }
     saveShot (*ed, "drone-mods", 2.0f);
@@ -1856,6 +1943,66 @@ int main (int argc, char* argv[])
         editor->setPresetBrowser (false);
         ed.reset();
         std::cout << "done" << std::endl;
+        return 0;
+    }
+    if (argc > 1 && String (argv[1]) == "--comet")
+    {
+        // COMET loudness: default patch, BLEND 100, a grid of X (feedback), Y (time), Z (wobble); level vs dry and the loudest 0.5 s
+        const int algo = argc > 2 ? String (argv[2]).getIntValue() : 4;
+        auto level = [algo] (float x, float y, float z, float blend)
+        {
+            auto p = makeProc();
+            setParam (*p, "echo_mix", 0.0f);
+            setParam (*p, "space_algo", (float) algo); setParam (*p, "space_x", x); setParam (*p, "space_y", y);
+            setParam (*p, "space_z", z); setParam (*p, "space_blend", blend);
+            const auto out = render (*p, 10.0);
+            double worst = -200.0;
+            for (int a = 48000; a + 24000 <= out.getNumSamples(); a += 24000) worst = std::max (worst, rmsDb (out, a, a + 24000));
+            return std::make_pair (rmsDb (out, 4 * 48000, out.getNumSamples()), worst);
+        };
+        if (argc > 3 && String (argv[3]) == "pluck")
+        {
+            // one short quiet note, HOLD 0: does the loop run away on its own? level per second (dBFS)
+            for (float x : { 60.0f, 75.0f, 85.0f, 100.0f })
+                for (float y : { 5.0f, 40.0f, 100.0f })
+                {
+                    auto p = makeProc();
+                    for (int v = 0; v < Params::numVoices; ++v) setParam (*p, Params::voiceID (v, "hold"), 0.0f);
+                    setParam (*p, "echo_mix", 0.0f);
+                    setParam (*p, "space_algo", (float) algo); setParam (*p, "space_x", x); setParam (*p, "space_y", y);
+                    setParam (*p, "space_z", 30.0f); setParam (*p, "space_blend", 50.0f);
+                    const auto out = render (*p, 10.0, note (60, 0.2, 0.5, 0.4f));
+                    String line = "X " + String (x) + " Y " + String (y) + ":";
+                    for (int sec = 0; sec < 10; ++sec) line << " " << String (rmsDb (out, sec * 48000, (sec + 1) * 48000), 0);
+                    std::cout << line << std::endl;
+                }
+            return 0;
+        }
+        const double dry = level (0, 0, 0, 0).first;
+        std::cout << "dry " << String (dry, 1) << " dB" << std::endl;
+        for (float x : { 50.0f, 70.0f, 85.0f, 100.0f })
+            for (float y : { 0.0f, 20.0f, 50.0f, 100.0f })
+                for (float z : { 0.0f, 100.0f })
+                {
+                    const auto r = level (x, y, z, 100.0f);
+                    std::cout << "X " << x << " Y " << y << " Z " << z << ":  " << String (r.first - dry, 1) << " dB, loudest 0.5 s " << String (r.second - dry, 1) << std::endl;
+                }
+        return 0;
+    }
+    if (argc > 1 && String (argv[1]) == "--void")
+    {
+        // VOID clicks: a pure 220 Hz sine through SPACE VOID, the loudest 5 ms block above 3 kHz relative to the signal
+        for (auto cfg : std::vector<std::array<float, 3>> { { 74, 40, 13 }, { 74, 0, 13 }, { 30, 40, 55 }, { 100, 100, 13 } })
+        {
+            auto p = makeProc();
+            soloVoice1 (*p, 57.0f, VP::Quasar);
+            setParam (*p, "v1_q_index", 0.0f);
+            setParam (*p, "space_algo", 1.0f); setParam (*p, "space_x", cfg[0]); setParam (*p, "space_y", cfg[1]);
+            setParam (*p, "space_z", cfg[2]); setParam (*p, "space_blend", 100.0f);
+            setParam (*p, "echo_mix", 0.0f);
+            const auto out = render (*p, 12.0);
+            std::cout << "X " << cfg[0] << " Y " << cfg[1] << " Z " << cfg[2] << ":  worst click " << String (clickDb (out, 2.0), 1) << " dB" << std::endl;
+        }
         return 0;
     }
     if (argc > 1 && String (argv[1]) == "--crackle")

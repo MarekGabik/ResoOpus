@@ -280,7 +280,7 @@
         <tr><td>VOID</td><td>PRE-DELAY · WOBBLE · DECAY</td><td>Obrovský tmavý prostor. DECAY úplně nahoře zmrazí, co zní (FREEZE).</td></tr>
         <tr><td>RUNNER</td><td>FEEDBACK · TIME · PITCH</td><td>Opakování, která stoupají nebo klesají.</td></tr>
         <tr><td>SATURN</td><td>FREQUENCY · STEPS · ROOM</td><td>Kovový kruhový modulátor. STEPS skáče po náhodných notách.</td></tr>
-        <tr><td>COMET</td><td>FEEDBACK · TIME · WOBBLE</td><td>Špinavý saturovaný delay, který při vysokém FEEDBACK zpívá.</td></tr>
+        <tr><td>COMET</td><td>FEEDBACK · TIME · WOBBLE</td><td>Špinavý saturovaný delay. Do 85 % FEEDBACK opakování doznívají, nad 85 % smyčka začne zpívat. Smyčka nikdy nepřeroste vstup o víc než ~6 dB, takže tichá nota nevybuchne.</td></tr>
       </tbody>
     </table></div>
     <p>Všechny zpětnovazební smyčky ve FX jsou omezené a hlasitost se kompenzuje podle FEEDBACKu. Stereo vyvážení odpovídá vstupu (měřeno ±3 dB, L/R do 1 dB).</p>
@@ -299,13 +299,13 @@
       </tbody>
     </table></div>
     <h3>Matice modulací</h3>
-    <figure class="shot"><img src="img/matrix.jpg" alt="Matice modulací" width="2344" height="396" loading="lazy"><figcaption>Řádky jsou cíle, sloupce zdroje. Buňka ukazuje hloubku v barvě zdroje.</figcaption></figure>
+    <figure class="shot"><img src="img/matrix.jpg" alt="Matice modulací" width="2344" height="396" loading="lazy"><figcaption>Řádky jsou cíle, sloupce zdroje: nejdřív ty z této stránky (LFO 1, LFO 2, RANDOM, MOD ENV), pak LEAD ENV a ovladače. Buňka ukazuje hloubku v barvě zdroje. Gravity, Filter A Cutoff a Filter A Resonance jsou připravené jako prázdné řádky.</figcaption></figure>
     <ul>
       <li><strong>Tažením buňky</strong> nahoru a dolů nastavíš hloubku. V prázdné buňce tím vznikne nová modulace.</li>
       <li><strong>Dvojklikem</strong> modulaci smažeš.</li>
       <li><strong>Pravým tlačítkem</strong> na buňku otevřeš volby: <em>Enabled</em> (dočasně vypnout), <em>Bipolar</em>, <em>Controller</em> a jeho hloubka, <em>Function</em> a její hloubka, <em>Remove</em>.</li>
-      <li><strong>+ ADD DESTINATION</strong> přidá řádek s dalším cílem. Cílem může být jakýkoli spojitý knob hlasů, GRAVITY, FX i LEADu.</li>
-      <li><strong>Zdroje</strong> (sloupce): Velocity, Mod Wheel, Pressure (aftertouch), Pitch Bend, Constant, LFO 1, LFO 2, Random, Lead Env, Mod Env. Modulací může být až 24.</li>
+      <li><strong>+ ADD DESTINATION</strong> přidá řádek s dalším cílem. Nabídka je seřazená jako plugin: hlasy 1–4 (nahoře knoby jejich aktuálního typu), Gravity &amp; Master, Lead, FX a Mod. Úplně nahoře je <em>naposledy otočený knob</em>: otoč knobem, klikni na + ADD DESTINATION a je to. Knoby SPACE se jmenují podle zvoleného algoritmu, třeba „Space X (Pre-Delay)“.</li>
+      <li><strong>Zdroje</strong> (sloupce): LFO 1, LFO 2, Random, Mod Env, Lead Env, Velocity, Mod Wheel, Pressure (aftertouch), Pitch Bend, Constant. Modulací může být až 24.</li>
       <li><strong>Controller</strong> funguje jako VCA: modulace je jen tak silná, jak velký je druhý zdroj. Například LFO 1 → GRAVITY s controllerem Mod Wheel houpe jen tolik, kolik vytočíš kolečko.</li>
       <li><strong>Function</strong>: Scale, Offset, Low / High Clip, Exponential, Norm Exponential, Low / High Pass, Slew, Low / High Slew, Sample &amp; Hold, Bounce.</li>
     </ul>

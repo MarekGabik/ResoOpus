@@ -372,18 +372,22 @@ public:
         sr = fs;
         static const double lens[8] = { 0.0297, 0.0371, 0.0411, 0.0437, 0.0533, 0.0617, 0.0683, 0.0743 };
         for (int i = 0; i < 8; ++i) { lines[i].prepare ((int) (fs * 0.2)); base[i] = lens[i] * fs; }
-        pre.prepare ((int) (fs * 0.6));
+        pre.prepare ((int) (fs * 0.7));   // 0.5 s pre-delay + 30 % wobble
         reset();
     }
-    void reset() { for (auto& l : lines) l.reset(); for (auto& d : damp) d.reset(); pre.reset(); for (auto& s : state) s = 0.0f; lfo = 0.0; }
+    void reset() { for (auto& l : lines) l.reset(); for (auto& d : damp) d.reset(); pre.reset(); for (auto& s : state) s = 0.0f; lfo = 0.0; preLfo = 0.0; pdS = -1.0; }
 
     // size 0.3..2 scales the lines; decay seconds (>= 60 = freeze); predelay seconds; inject = extra signal into the loop
     void process (float inL, float inR, float& outL, float& outR, float size, float decay, float predelay, float preMod,
                   float damping, float inject = 0.0f)
     {
         lfo += 0.31 / sr; lfo -= std::floor (lfo);
+        preLfo += 0.115 / sr; preLfo -= std::floor (preLfo);   // own phase: a wrapped sin (lfo * k) would jump the delay time
         pre.push (0.5f * (inL + inR));
-        const double pd = std::max (1.0, (double) predelay * sr * (1.0 + 0.3 * preMod * std::sin (twoPi * lfo * 0.37)));
+        // the pre-delay glides to a new length (~0.15 s) like tape, so turning the knob does not click
+        const double target = std::max (1.0, (double) predelay * sr * (1.0 + 0.3 * preMod * std::sin (twoPi * preLfo)));
+        pdS = pdS < 0.0 ? target : pdS + (target - pdS) * (1.0 - std::exp (-1.0 / (0.15 * sr)));
+        const double pd = pdS;
         const float x = pre.read (pd) + inject;
         float y[8];
         for (int i = 0; i < 8; ++i)
@@ -408,7 +412,7 @@ public:
     }
 
 private:
-    double sr = 48000.0, lfo = 0.0, base[8] {};
+    double sr = 48000.0, lfo = 0.0, preLfo = 0.0, pdS = -1.0, base[8] {};
     DelayLine lines[8], pre;
     OnePole damp[8];
     float state[8] {};
@@ -447,6 +451,7 @@ public:
         for (auto& l : delay) l.reset();
         for (auto& d : damp) d.reset();
         fbL = fbR = 0.0f; ringPhase = 0.0; shPhase = 0.0; ringHz = 200.0; wob = 0.0; lastAlgo = -1;
+        inEnv = loopEnv = 0.0f; duck = 1.0f;
         xR.reset (0.0f); yR.reset (0.0f); zR.reset (0.0f); bR.reset (0.0f);
         primed = false;
     }
@@ -460,6 +465,7 @@ public:
         if (primed) { xR.set (x, n); yR.set (y, n); zR.set (z, n); bR.set (blend, n); }
         else { xR.reset (x); yR.reset (y); zR.reset (z); bR.reset (blend); primed = true; }
         const float dampC = OnePole::coefFor (9000.0 - 5000.0 * dust, sr);
+        const float envC = (float) (1.0 - std::exp (-1.0 / (0.3 * sr))), duckC = (float) (1.0 - std::exp (-1.0 / (0.05 * sr)));
         for (int k = 0; k < n; ++k)
         {
             const float X = xR.next(), Y = yR.next(), Z = zR.next(), B = bR.next();
@@ -477,6 +483,7 @@ public:
                 }
                 case Void:
                     fdn.process (dl, dr, wl, wr, 2.0f, Z > 0.97f ? 60.0f : 2.0f + 28.0f * Z * Z, 0.5f * X, Y, OnePole::coefFor (3500.0, sr));
+                    wl *= 0.88f; wr *= 0.88f;   // the long dark tail piles up: about 1 dB under the others
                     break;
                 case Runner:
                 {
@@ -512,10 +519,18 @@ public:
                     wob += (0.6 + 4.0 * Z) / sr; wob -= std::floor (wob);
                     const double t = (0.04 + 1.0 * Y * Y) * sr * (1.0 + 0.012 * Z * std::sin (twoPi * wob) + 0.004 * Z * rng.next());
                     const float r0 = delay[0].read (t), r1 = delay[1].read (t * 1.01);
-                    const float fb = 2.08f * X;
+                    // FEEDBACK stays under 1 up to 85 % (repeats that fade), above it the loop sings (up to 1.1).
+                    // The loop may be at most ~6 dB above what comes in (or -30 dBFS on its own): above that it takes
+                    // its own feedback back, so a quiet note no longer grows into a loud, never ending howl
+                    const float want = X < 0.85f ? 1.153f * X : 0.98f + 0.8f * (X - 0.85f);
+                    inEnv += envC * (std::max (std::abs (dl), std::abs (dr)) - inEnv);
+                    loopEnv += envC * (std::max (std::abs (r0), std::abs (r1)) - loopEnv);
+                    const float limit = std::max (2.0f * inEnv, 0.03f);
+                    duck += duckC * ((loopEnv > limit ? limit / loopEnv : 1.0f) - duck);
+                    const float fb = want * duck;
                     delay[0].push (dl + damp[0].lp (ceilingClip (fb * r1, 0.4f), dampC) + 0.002f * dust * rng.next());
                     delay[1].push (dr + damp[1].lp (ceilingClip (fb * r0, 0.4f), dampC));
-                    const float g = std::min (0.95f, fb);
+                    const float g = std::min (0.95f, want);
                     const float comp = std::sqrt (1.0f - g * g);
                     wl = r0 * comp; wr = r1 * comp;
                     break;
@@ -537,7 +552,7 @@ private:
     DelayLine delay[2];
     OnePole damp[2];
     Ramp xR, yR, zR, bR;
-    float fbL = 0.0f, fbR = 0.0f;
+    float fbL = 0.0f, fbR = 0.0f, inEnv = 0.0f, loopEnv = 0.0f, duck = 1.0f;
     int lastAlgo = -1;
     bool primed = false;
     Sleeper sleeper;

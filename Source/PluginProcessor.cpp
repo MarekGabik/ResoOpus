@@ -471,8 +471,8 @@ void ResoOpusProcessor::processChunk (AudioBuffer<float>& out, int start, int le
     runArp (len);
     {
         auto& L = leadSettings;
-        float anyPressure = pressure;
-        for (auto& tc : touch) anyPressure = std::max (anyPressure, tc.pressure);
+        float leadPressure = pressure;   // also keys still sounding after release
+        for (auto& tc : touch) leadPressure = std::max (leadPressure, tc.pressure);
         L.a4 = curG[GP::a4];
         L.wave = curG[GP::lead_wave];
         L.octave = curG[GP::lead_octave] - 2.0f;
@@ -481,7 +481,7 @@ void ResoOpusProcessor::processChunk (AudioBuffer<float>& out, int start, int le
         L.attack = curG[GP::lead_attack]; L.decay = curG[GP::lead_decay]; L.sustain = curG[GP::lead_sustain] / 100.0f; L.release = curG[GP::lead_release];
         L.glide = curG[GP::lead_glide];
         L.vibrato = curG[GP::lead_vib] / 100.0f; L.vibRate = curG[GP::lead_vib_rate]; L.vibDelay = curG[GP::lead_vib_delay];
-        L.touchVib = curG[GP::lead_touch_vib] / 100.0f; L.pressure = anyPressure;
+        L.touchVib = curG[GP::lead_touch_vib] / 100.0f; L.pressure = leadPressure;
         const float gain = curG[GP::lead_on] < 0.5f || curG[GP::lead_level] <= -59.9f ? 0.0f : Decibels::decibelsToGain (curG[GP::lead_level]);
         const float ang = (jlimit (-1.0f, 1.0f, curG[GP::lead_pan]) + 1.0f) * MathConstants<float>::pi * 0.25f;
         L.gainL = gain * std::cos (ang) * MathConstants<float>::sqrt2;

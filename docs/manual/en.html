@@ -280,7 +280,7 @@
         <tr><td>VOID</td><td>PRE-DELAY · WOBBLE · DECAY</td><td>A huge dark space. DECAY at the very top freezes what is sounding (FREEZE).</td></tr>
         <tr><td>RUNNER</td><td>FEEDBACK · TIME · PITCH</td><td>Repeats that rise or fall.</td></tr>
         <tr><td>SATURN</td><td>FREQUENCY · STEPS · ROOM</td><td>Metallic ring modulation. STEPS jumps to random notes.</td></tr>
-        <tr><td>COMET</td><td>FEEDBACK · TIME · WOBBLE</td><td>A dirty, saturated delay that sings at high FEEDBACK.</td></tr>
+        <tr><td>COMET</td><td>FEEDBACK · TIME · WOBBLE</td><td>A dirty, saturated delay. Up to 85 % FEEDBACK the repeats fade, above 85 % the loop starts to sing. It never grows more than ~6 dB above its input, so a quiet note cannot blow up.</td></tr>
       </tbody>
     </table></div>
     <p>Every loop in the FX has a ceiling and feedback compensation, and the stereo balance follows the input (measured within ±3 dB, L/R within 1 dB).</p>
@@ -299,13 +299,13 @@
       </tbody>
     </table></div>
     <h3>Modulation matrix</h3>
-    <figure class="shot"><img src="img/matrix.jpg" alt="Modulation matrix" width="2344" height="396" loading="lazy"><figcaption>Rows are destinations, columns are sources. A cell shows the depth in the source's colour.</figcaption></figure>
+    <figure class="shot"><img src="img/matrix.jpg" alt="Modulation matrix" width="2344" height="396" loading="lazy"><figcaption>Rows are destinations, columns are sources: first the ones on this page (LFO 1, LFO 2, RANDOM, MOD ENV), then LEAD ENV and the controllers. A cell shows the depth in the source's colour. Gravity, Filter A Cutoff and Filter A Resonance stand ready as empty rows.</figcaption></figure>
     <ul>
       <li><strong>Drag a cell</strong> up or down to set the depth. In an empty cell this creates a new modulation.</li>
       <li><strong>Double-click</strong> removes it.</li>
       <li><strong>Right-click</strong> a cell for options: <em>Enabled</em> (switch off for now), <em>Bipolar</em>, <em>Controller</em> and its amount, <em>Function</em> and its amount, <em>Remove</em>.</li>
-      <li><strong>+ ADD DESTINATION</strong> adds a row with another destination. Any continuous knob of the voices, GRAVITY, FX and LEAD can be one.</li>
-      <li><strong>Sources</strong> (columns): Velocity, Mod Wheel, Pressure (aftertouch), Pitch Bend, Constant, LFO 1, LFO 2, Random, Lead Env, Mod Env. Up to 24 modulations.</li>
+      <li><strong>+ ADD DESTINATION</strong> adds a row with another destination. The menu follows the plug-in: voices 1–4 (the knobs of their current type on top), Gravity &amp; Master, Lead, FX and Mod. At the very top is the <em>last touched knob</em>: turn a knob, click + ADD DESTINATION, done. The SPACE knobs are named after the chosen algorithm, e.g. "Space X (Pre-Delay)".</li>
+      <li><strong>Sources</strong> (columns): LFO 1, LFO 2, Random, Mod Env, Lead Env, Velocity, Mod Wheel, Pressure (aftertouch), Pitch Bend, Constant. Up to 24 modulations.</li>
       <li><strong>Controller</strong> works like a VCA: the modulation is only as strong as a second source (e.g. LFO 1 → GRAVITY with Mod Wheel as controller = swings only as far as the wheel is up).</li>
       <li><strong>Function</strong>: Scale, Offset, Low / High Clip, Exponential, Norm Exponential, Low / High Pass, Slew, Low / High Slew, Sample &amp; Hold, Bounce.</li>
     </ul>

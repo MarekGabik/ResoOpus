@@ -7,6 +7,31 @@ ModMatrixView::ModMatrixView (ResoOpusProcessor& p) : proc (p)
 {
     setTooltip ("Rows: what is modulated. Columns: the sources. Drag a cell up / down for the depth (Shift = fine), "
                 "double-click to remove, right-click for bipolar, controller and function");
+    // the most common destinations stand ready as empty rows, so it is clear right away what the matrix does
+    pending = { Mod::destCode ("gravity"), Mod::destCode ("flt_cutoff"), Mod::destCode ("flt_res") };
+    proc.addListener (this);
+}
+
+ModMatrixView::~ModMatrixView() { proc.removeListener (this); }
+
+// SPACE X / Y / Z are named after the chosen algorithm ("Space X (Pre-Delay)"), every other destination as usual
+String ModMatrixView::displayName (int code) const
+{
+    static const char* knobNames[5][3] = { { "Oct Up", "Oct Down", "Decay" }, { "Pre-Delay", "Wobble", "Decay" }, { "Feedback", "Time", "Pitch" },
+                                            { "Frequency", "Steps", "Room" }, { "Feedback", "Time", "Wobble" } };
+    const int algo = jlimit (0, 4, (int) proc.getParamReal ("space_algo"));
+    const char* xyz[3] = { "space_x", "space_y", "space_z" };
+    for (int k = 0; k < 3; ++k)
+        if (code == Mod::destCode (xyz[k])) return String ("Space ") + "XYZ"[k] + " (" + knobNames[algo][k] + ")";
+    return Mod::destName (code);
+}
+
+void ModMatrixView::audioProcessorParameterChangeGestureBegin (AudioProcessor*, int index)
+{
+    if (auto* pw = dynamic_cast<AudioProcessorParameterWithID*> (proc.getParameters()[index]))
+        if (! pw->paramID.startsWith ("mod"))   // the matrix's own slot parameters are not destinations
+            if (const int code = Mod::destCode (pw->paramID); code > 0 && Mod::allDestinations().contains (code))
+                lastTouched.store (code);
 }
 
 float ModMatrixView::colW() const { return ((float) getWidth() - (float) nameW() - 40.0f) / (float) numCols; }
@@ -132,7 +157,7 @@ void ModMatrixView::paint (Graphics& g)
     }
     g.setColour (Palette::label);
     g.setFont (Fonts::bold (10.5f));
-    g.drawText ("DESTINATION", Rectangle<float> (14.0f, 8.0f, (float) nameW(), (float) headerH() - 12.0f), Justification::centredLeft, false);
+    g.drawText ("MATRIX", Rectangle<float> (14.0f, 8.0f, (float) nameW(), (float) headerH() - 12.0f), Justification::centredLeft, false);
 
     // rows
     for (int row = scroll; row < (int) rows.size() && row < scroll + visibleRows(); ++row)
@@ -147,7 +172,7 @@ void ModMatrixView::paint (Graphics& g)
         }
         g.setColour (Palette::text);
         g.setFont (Fonts::regular (12.5f));
-        g.drawText (Mod::destName (rows[(size_t) row]), nr.withTrimmedLeft (6.0f).withTrimmedRight (22.0f), Justification::centredLeft, true);
+        g.drawText (displayName (rows[(size_t) row]), nr.withTrimmedLeft (6.0f).withTrimmedRight (22.0f), Justification::centredLeft, true);
         if (row == hoverRow && hoverCol == -1)
             Icons::draw (g, Icons::close(), Rectangle<float> (9.0f, 9.0f).withCentre ({ nr.getRight() - 8.0f, nr.getCentreY() }), Palette::textDim, 1.4f);
 
@@ -317,7 +342,7 @@ void ModMatrixView::showCellMenu (int row, int col)
     const auto* cell = cellAt (row, col);
     const int src = sourceOf (col);
     PopupMenu m;
-    m.addSectionHeader (Mod::sourceNames()[src] + String (CharPointer_UTF8 (" \xe2\x86\x92 ")) + Mod::destName (rows[(size_t) row]));
+    m.addSectionHeader (Mod::sourceNames()[src] + String (CharPointer_UTF8 (" \xe2\x86\x92 ")) + displayName (rows[(size_t) row]));
     if (cell == nullptr)
     {
         m.addItem (1, "Add (25 %)");
@@ -363,11 +388,102 @@ void ModMatrixView::showCellMenu (int row, int col)
     });
 }
 
+PopupMenu ModMatrixView::buildAddMenu()
+{
+    // grouped the way the plug-in is laid out: voices, GRAVITY and MASTER, LEAD, FX, MOD
+    PopupMenu dst;
+    const auto all = Mod::allDestinations();
+    Array<int> used;
+    auto has = [this] (int code) { return std::find (rows.begin(), rows.end(), code) != rows.end(); };
+    auto item = [&] (PopupMenu& m, const String& id, const String& label = {})
+    {
+        const int code = Mod::destCode (id);
+        if (code <= 0 || ! all.contains (code)) return;
+        auto* d = Params::findDef (id);
+        m.addItem (code, label.isNotEmpty() ? label : (d != nullptr ? String (d->name) : id), ! has (code));
+        used.add (code);
+    };
+    auto section = [&] (PopupMenu& m, const String& title, std::initializer_list<const char*> ids, const String& prefix = {})
+    {
+        m.addSectionHeader (title);
+        for (auto* i : ids) item (m, prefix + i);
+    };
+
+    if (const int last = lastTouched.load(); last > 0)
+    {
+        dst.addSectionHeader ("Last touched knob");
+        dst.addItem (last, displayName (last), ! has (last));
+        dst.addSeparator();
+    }
+
+    // voices: the common knobs, the knobs of the voice's type, the other types in a submenu
+    const auto& types = Params::findDef ("v1_type")->choices;
+    struct TypeKnobs { int type; std::initializer_list<const char*> ids; };
+    const TypeKnobs typeKnobs[] = { { VP::Choir, { "tide", "int1", "int2", "int3", "int4", "int5" } },
+                                    { VP::Siren, { "siren_fm", "siren_rate", "siren_am", "siren_div", "siren_noise", "siren_wave" } },
+                                    { VP::Pulsar, { "sharp", "sym", "bloom", "twin", "twin_mix", "sub", "vibrato" } },
+                                    { VP::Quasar, { "q_index", "q_ratio", "q_fine", "q_fb", "q_track" } },
+                                    { VP::Nebula, { "n_pos", "n_scan", "n_drift" } } };
+    for (int v = 0; v < Params::numVoices; ++v)
+    {
+        const String p = "v" + String (v + 1) + "_";
+        const int type = (int) proc.getParamReal (p + "type");
+        PopupMenu vm, other;
+        section (vm, "Voice", { "tune", "hold", "pan", "volume", "character", "attack", "release" }, p);
+        for (auto& t : typeKnobs)
+        {
+            if (t.type == type) section (vm, types[t.type].toUpperCase(), t.ids, p);
+            else section (other, types[t.type].toUpperCase(), t.ids, p);
+        }
+        vm.addSeparator();
+        vm.addSubMenu ("Other types", other);
+        dst.addSubMenu ("Voice " + String (v + 1) + String (CharPointer_UTF8 (" \xc2\xb7 ")) + types[jlimit (0, types.size() - 1, type)].toUpperCase(), vm);
+    }
+    dst.addSeparator();
+
+    PopupMenu master, lead, fx, mod, setup;
+    section (master, "GRAVITY", { "gravity" });
+    section (master, "MASTER", { "pitch", "dust", "grit", "master_vol" });
+    dst.addSubMenu ("Gravity & Master", master);
+
+    section (lead, "LEAD OSC", { "lead_wave", "lead_osc2", "lead_mix", "lead_sym", "lead_sub" });
+    section (lead, "LEAD FILTER", { "lead_flt_cutoff", "lead_flt_res", "lead_flt_env", "lead_flt_key" });
+    section (lead, "FILTER ENV", { "lead_fenv_attack", "lead_fenv_decay", "lead_fenv_sustain", "lead_fenv_release" });
+    section (lead, "AMP ENV", { "lead_attack", "lead_decay", "lead_sustain", "lead_release" });
+    section (lead, "LEAD VOICE", { "lead_glide", "lead_vel", "lead_vib", "lead_vib_rate", "lead_vib_delay", "lead_touch_vib", "lead_level", "lead_pan" });
+    dst.addSubMenu ("Lead", lead);
+
+    section (fx, "FILTER A", { "flt_cutoff", "flt_res", "flt_drive", "flt_spread" });
+    section (fx, "FILTER B", { "flt2_cutoff", "flt2_res", "flt2_drive" });
+    section (fx, "ECHO", { "echo_time1", "echo_time2", "echo_fb", "echo_mix", "echo_mod", "echo_voices" });
+    {
+        // SPACE X / Y / Z under the names of the chosen algorithm
+        const int algo = jlimit (0, 4, (int) proc.getParamReal ("space_algo"));
+        fx.addSectionHeader ("SPACE " + Params::findDef ("space_algo")->choices[algo].toUpperCase());
+        for (auto* id : { "space_x", "space_y", "space_z" }) item (fx, id, displayName (Mod::destCode (id)));
+        item (fx, "space_blend");
+    }
+    dst.addSubMenu ("FX", fx);
+
+    section (mod, "LFO 1", { "lfo1_rate", "lfo1_phase" });
+    section (mod, "LFO 2", { "lfo2_rate", "lfo2_phase" });
+    section (mod, "RANDOM", { "rnd_rate", "rnd_slew" });
+    section (mod, "MOD ENV", { "menv_attack", "menv_decay", "menv_sustain", "menv_release" });
+    dst.addSubMenu ("Mod", mod);
+
+    // anything not placed above (setup: plates, tuning, bend range, and future parameters)
+    for (int c : all)
+        if (! used.contains (c) && c / Mod::blockSize == Mod::globalBlock) setup.addItem (c, Mod::destName (c), ! has (c));
+    dst.addSeparator();
+    dst.addSubMenu ("Setup", setup);
+    dst.addSeparator();
+    dst.addItem (-1, "Tip: drag a source's pill onto any knob", false);
+    return dst;
+}
+
 void ModMatrixView::showAddMenu()
 {
-    PopupMenu dst, groups[Mod::globalBlock];
-    for (int c : Mod::allDestinations()) groups[c / Mod::blockSize - 1].addItem (c, Mod::destName (c), std::find (rows.begin(), rows.end(), c) == rows.end());
-    for (int b = 1; b <= Mod::globalBlock; ++b) dst.addSubMenu (Mod::blockName (b), groups[b - 1]);
+    auto dst = buildAddMenu();
     dst.showMenuAsync (PopupMenu::Options().withTargetScreenArea (localAreaToGlobal (addRect().toNearestInt())), [sp = SafePointer<ModMatrixView> (this)] (int d)
     {
         if (sp == nullptr || d <= 0) return;
