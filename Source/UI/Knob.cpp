@@ -95,19 +95,8 @@ String Knob::modText (const ModInfo& m) const
 
 void Knob::drawWaveIcon (Graphics& g, const String& name, Rectangle<float> r, Colour c)
 {
-    Path p;
-    const float x0 = r.getX(), x1 = r.getRight(), y0 = r.getY(), y1 = r.getBottom(), ym = r.getCentreY(), w = r.getWidth();
-    if (name == "~sine")
-    {
-        p.startNewSubPath (x0, ym);
-        for (int i = 1; i <= 16; ++i)
-            p.lineTo (x0 + w * i / 16.0f, ym - (y1 - y0) * 0.5f * std::sin (MathConstants<float>::twoPi * i / 16.0f));
-    }
-    else if (name == "~tri")    { p.startNewSubPath (x0, y1); p.lineTo (r.getCentreX(), y0); p.lineTo (x1, y1); }
-    else if (name == "~shark")  { p.startNewSubPath (x0, y1); p.quadraticTo (x0 + w * 0.45f, y0 + 1.0f, x0 + w * 0.62f, y0); p.lineTo (x1, y1); }
-    else if (name == "~saw" || name == "~rampup") { p.startNewSubPath (x0, y1); p.lineTo (x1, y0); p.lineTo (x1, y1); }
-    else if (name == "~rampdown") { p.startNewSubPath (x0, y1); p.lineTo (x0, y0); p.lineTo (x1, y1); }
-    else if (name == "~square") { p.startNewSubPath (x0, y1); p.lineTo (x0, y0); p.lineTo (r.getCentreX(), y0); p.lineTo (r.getCentreX(), y1); p.lineTo (x1, y1); p.lineTo (x1, y0); }
+    auto p = Icons::wave (name);
+    p.applyTransform (AffineTransform::scale (r.getWidth(), r.getHeight()).translated (r.getX(), r.getY()));
     g.setColour (c);
     g.strokePath (p, PathStrokeType (1.3f, PathStrokeType::curved, PathStrokeType::rounded));
 }
@@ -221,8 +210,11 @@ void Knob::paint (Graphics& g)
     {
         const auto lp = onCircle (c, R + 11.0f, startAngle);
         const auto hp = onCircle (c, R + 11.0f, startAngle + sweep);
-        g.drawText (style.lo, Rectangle<float> (lp.x - 40.0f, lp.y + 3.0f, 41.0f, 11.0f), Justification::centredRight, false);
-        g.drawText (style.hi, Rectangle<float> (hp.x - 1.0f, hp.y + 3.0f, 41.0f, 11.0f), Justification::centredLeft, false);
+        // "~name" draws a waveform pictogram in the knob colour instead of text
+        if (style.lo.startsWithChar ('~')) drawWaveIcon (g, style.lo, Rectangle<float> (13.0f, 8.0f).withCentre ({ lp.x - 7.0f, lp.y + 8.5f }), colour.withAlpha (0.85f));
+        else g.drawText (style.lo, Rectangle<float> (lp.x - 40.0f, lp.y + 3.0f, 41.0f, 11.0f), Justification::centredRight, false);
+        if (style.hi.startsWithChar ('~')) drawWaveIcon (g, style.hi, Rectangle<float> (13.0f, 8.0f).withCentre ({ hp.x + 7.0f, hp.y + 8.5f }), colour.withAlpha (0.85f));
+        else g.drawText (style.hi, Rectangle<float> (hp.x - 1.0f, hp.y + 3.0f, 41.0f, 11.0f), Justification::centredLeft, false);
     }
 
     // marks around (waveforms, types)

@@ -48,6 +48,8 @@ namespace Palette
     inline const juce::Colour choir       { 0xff38d6f0 };
     inline const juce::Colour siren       { 0xffff74b8 };
     inline const juce::Colour pulsar      { 0xffb98bff };
+    inline const juce::Colour quasar      { 0xffffb86b };
+    inline const juce::Colour nebula      { 0xff6ee7b7 };
     inline const juce::Colour lead        { 0xffa5e844 };
     inline const juce::Colour group       { 0xffc9cad1 };
     inline const juce::Colour gravity     { 0xff4aa8ff };
@@ -86,6 +88,9 @@ namespace Icons
     juce::Path menu();
     juce::Path dots();
     juce::Path user();
+    // Small waveform pictograms in a unit square (stroke them): sine, tri, shark, saw / rampup, rampdown, square,
+    // pulse, sh, noise, flat, chord (CHOIR), siren, morph (PULSAR), fm (QUASAR), table (NEBULA), lp, bp, hp
+    juce::Path wave (const juce::String& name);
 
     // Fills a unit-square icon path into the given area
     void fill (juce::Graphics&, const juce::Path& unitPath, juce::Rectangle<float> area, juce::Colour);

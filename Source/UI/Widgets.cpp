@@ -101,10 +101,19 @@ void LedRadio::choose (int i)
     else attachment->setValueAsCompleteGesture ((float) i);
 }
 
+void LedRadio::setIcons (StringArray iconNames, Array<Colour> colours)
+{
+    icons = std::move (iconNames);
+    iconColours = std::move (colours);
+    updateSize();
+    repaint();
+}
+
 void LedRadio::updateSize()
 {
     int w = 0;
     for (auto& s : names) w = std::max (w, GlyphArrangement::getStringWidthInt (Fonts::bold (10.5f), s));
+    if (! icons.isEmpty()) w += 22;
     setSize (std::max (GlyphArrangement::getStringWidthInt (Fonts::bold (10.5f), label), 30 + 10 + 12 + w) + 4,
              (label.isEmpty() ? 0 : 19) + std::max (30, names.size() * 15));
 }
@@ -137,8 +146,18 @@ void LedRadio::paint (Graphics& g)
         else
             g.setColour (Colour (0xff2d2e35));
         g.fillEllipse (dot);
+        int tx = 52;
+        if (i < icons.size())
+        {
+            auto p = Icons::wave (icons[i]);
+            p.applyTransform (AffineTransform::scale (15.0f, 9.0f).translated (52.0f, ly + 3.0f));
+            const auto c = i < iconColours.size() ? iconColours[i] : Palette::label;
+            g.setColour (sel ? c : c.withAlpha (0.45f));
+            g.strokePath (p, PathStrokeType (1.3f, PathStrokeType::curved, PathStrokeType::rounded));
+            tx = 74;
+        }
         g.setColour (sel ? Palette::text : Palette::textFaint.brighter (0.25f));
-        g.drawText (names[i], 52, (int) ly, getWidth() - 52, 15, Justification::centredLeft, false);
+        g.drawText (names[i], tx, (int) ly, getWidth() - tx, 15, Justification::centredLeft, false);
     }
 }
 

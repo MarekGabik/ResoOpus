@@ -132,7 +132,38 @@ void GravityView::refresh()
         phase += (0.12 + 0.5 * live * live) * dt;   // the orbit speeds up with GRAVITY
         jitter += dt;
     }
+    buildPairs();
     if (any || changed) repaint();
+}
+
+Rectangle<float> GravityView::pairBox (int pair) const
+{
+    const float w = 52.0f, h = 40.0f;
+    return { pair == 0 ? 6.0f : (float) getWidth() - w - 6.0f, 4.0f, w, h };
+}
+
+// a voice against its partner: a slowly turning ellipse in STILL, trembling in ORBIT, torn apart in TURBULENCE
+void GravityView::buildPairs()
+{
+    const int N = ResoOpusProcessor::scopeSize, mask = N - 1, len = 700;
+    const int end = proc.scopeWrite.load (std::memory_order_acquire);
+    for (int pr = 0; pr < 2; ++pr)
+    {
+        auto& path = pairs[pr];
+        path.clear();
+        const int a = pr * 2, b = a + 1;
+        if (proc.liveLevel[a].load() + proc.liveLevel[b].load() < 0.002f) continue;
+        const auto box = pairBox (pr).reduced (3.0f);
+        const float* xa = proc.scope[a];
+        const float* xb = proc.scope[b];
+        for (int i = 0; i < len; ++i)
+        {
+            const int k = (end - len + i) & mask;
+            const float x = box.getCentreX() + jlimit (-1.0f, 1.0f, xa[k] * 1.8f) * box.getWidth() * 0.5f;
+            const float y = box.getCentreY() - jlimit (-1.0f, 1.0f, xb[k] * 1.8f) * box.getHeight() * 0.5f;
+            if (i == 0) path.startNewSubPath (x, y); else path.lineTo (x, y);
+        }
+    }
 }
 
 void GravityView::paint (Graphics& g)
@@ -150,6 +181,25 @@ void GravityView::paint (Graphics& g)
     {
         g.setColour (Palette::curve.withAlpha (0.15f));
         g.fillEllipse (Rectangle<float> (R * 2.0f + 70.0f, R * 2.0f + 70.0f).withCentre (c));
+    }
+    // the two pairs as X / Y figures in the top corners
+    for (int pr = 0; pr < 2; ++pr)
+    {
+        const auto box = pairBox (pr);
+        g.setColour (Colour (0xff111216));
+        g.fillRoundedRectangle (box, 4.0f);
+        const auto col = Palette::voiceType (types[pr * 2] != VP::Off ? types[pr * 2] : types[pr * 2 + 1]);
+        if (! pairs[pr].isEmpty())
+        {
+            g.saveState();
+            g.reduceClipRegion (box.toNearestInt());
+            g.setColour (col.withAlpha (0.75f));
+            g.strokePath (pairs[pr], PathStrokeType (1.0f));
+            g.restoreState();
+        }
+        g.setColour (Palette::textFaint);
+        g.setFont (Fonts::bold (8.5f));
+        g.drawText (pr == 0 ? "1-2" : "3-4", box.reduced (3.0f, 1.0f), Justification::bottomRight, false);
     }
     // zone arcs (dim) + labels
     for (int z = 0; z < 4; ++z)
@@ -378,8 +428,10 @@ DronePage::DronePage (ResoOpusProcessor& p) : Page (p)
         put (knob (V + "tune", "TUNE", Palette::voiceType (voiceType (v)), range ("C0", "C8")), c1, 34);
         col->character[1] = knob (V + "tide", "TIDE", Palette::choir, range ("0", "MAX"));
         col->character[2] = knob (V + "siren_fm", "FM", Palette::siren, range ("0", "100"));
-        col->character[3] = knob (V + "sharp", "SHARP", Palette::pulsar, range ("SOFT", "SHARP"));
-        for (int t = 1; t < 4; ++t) put (col->character[t], c2, 34);
+        col->character[3] = knob (V + "sharp", "SHARP", Palette::pulsar, range ("~tri", "~square"));
+        col->character[4] = knob (V + "q_index", "INDEX", Palette::quasar, range ("~sine", "~fm"));
+        col->character[5] = knob (V + "n_pos", "POSITION", Palette::nebula, range ("0", "100"));
+        for (int t = 1; t < 6; ++t) put (col->character[t], c2, 34);
         put (knob (V + "hold", "HOLD", Palette::group, range ("0", "100")), c1, 146);
         put (knob (V + "pan", "PAN", Palette::group, range ("L", "R", true)), c2, 146);
         col->vol = new VolBar (proc, v);
@@ -387,11 +439,11 @@ DronePage::DronePage (ResoOpusProcessor& p) : Page (p)
         col->addAndMakeVisible (col->vol);
         col->vol->setBounds (12, gh - 44, sw - 24, 28);
         col->controls.add (col->vol);
-        col->trace = new LevelTrace();
-        owned.add (col->trace);
-        col->addAndMakeVisible (col->trace);
-        col->trace->setBounds (12, 252, sw - 24, 48);
-        col->controls.add (col->trace);
+        col->scope = new VoiceScope (proc, v);
+        owned.add (col->scope);
+        col->addAndMakeVisible (col->scope);
+        col->scope->setBounds (12, 250, sw - 24, 54);
+        col->controls.add (col->scope);
         columns[v] = col;
     }
 
@@ -403,19 +455,21 @@ DronePage::DronePage (ResoOpusProcessor& p) : Page (p)
     gpanel->addAndMakeVisible (gravity);
 
     // MASTER: transpose all, DUST, output volume; FILL in the header
-    const int mw = 300, dh = height - gh - gap;
+    const int mw = 254, dh = height - gh - gap;
     auto* master = new MasterPanel (*this);
     owned.add (master);
     master->setBounds (width - mw, gh + gap, mw, dh);
     addAndMakeVisible (master);
     const char* mIds[] = { "pitch", "dust", "master_vol" };
     const char* mNames[] = { "PITCH", "DUST", "VOLUME" };
-    const Knob::Style mSt[] = { range ("-24", "+24", true), range ("CLEAN", "LO-FI"), range ("-inf", "+12") };
+    const Knob::Style mSt[] = { range ("-24", "+24", true), range ("0", "LO-FI"), range ("-inf", "+12") };
     for (int i = 0; i < 3; ++i)
     {
-        auto* k = knob (mIds[i], mNames[i], Palette::master, mSt[i]);
+        auto st = mSt[i];
+        st.small = true;
+        auto* k = knob (mIds[i], mNames[i], Palette::master, st);
         master->addAndMakeVisible (k);
-        k->setTopLeftPosition (6 + i * 98, 44);
+        k->setTopLeftPosition (4 + i * 82, 48);
     }
 
     // detail of the selected voice
@@ -431,7 +485,9 @@ DronePage::DronePage (ResoOpusProcessor& p) : Page (p)
             d.byType[type].add (c);
         };
         const String V = Params::voiceID (v, "");
-        auto* type = new LedRadio (proc, V + "type", "TYPE", { "OFF", "CHOIR", "SIREN", "PULSAR" });
+        auto* type = new LedRadio (proc, V + "type", "TYPE", { "OFF", "CHOIR", "SIREN", "PULSAR", "QUASAR", "NEBULA" });
+        type->setIcons ({ "flat", "chord", "siren", "morph", "fm", "table" },
+                        { Palette::voiceType (0), Palette::choir, Palette::siren, Palette::pulsar, Palette::quasar, Palette::nebula });
         owned.add (type);
         detailPanel->addChildComponent (type);
         type->setTopLeftPosition (16, 36);
@@ -448,49 +504,64 @@ DronePage::DronePage (ResoOpusProcessor& p) : Page (p)
             [this, v] (int c) { proc.applyChord (v, c); });
         d.chord->setTooltip ("Fills the five oscillator intervals with a chord in one click; fine-tune them afterwards by ear");
         owned.add (d.chord);
-        add (d.chord, 134, 36, VP::Choir);
+        add (d.chord, 150, 36, VP::Choir);
         for (int i = 0; i < 5; ++i)
         {
             auto* k = knob (V + "int" + String (i + 1), "OSC " + String (i + 1), Palette::choir, smallStyle());
-            add (k, 250 + i * 76, 52, VP::Choir);
+            add (k, 262 + i * 74, 52, VP::Choir);
             auto* led = new LedDot (proc, V + "on" + String (i + 1));
             owned.add (led);
-            add (led, 250 + i * 76 + 12, 52, VP::Choir);
+            add (led, 262 + i * 74 + 12, 52, VP::Choir);
         }
         // SIREN
         const char* sirenIds[] = { "siren_rate", "siren_am", "siren_div", "siren_noise", "siren_wave" };
         const char* sirenNames[] = { "RATE", "AM", "DIVIDER", "NOISE", "WAVE" };
-        const char* sirenLo[] = { ".05", "0", "OFF", "0", "SQR" };
-        const char* sirenHi[] = { "300", "100", "1:16", "100", "TRI" };
+        const char* sirenLo[] = { ".05", "0", "OFF", "0", "~square" };
+        const char* sirenHi[] = { "300", "100", "1:16", "100", "~tri" };
         for (int i = 0; i < 5; ++i)
-            add (knob (V + sirenIds[i], sirenNames[i], Palette::siren, range (sirenLo[i], sirenHi[i])), 134 + i * 100, 44, VP::Siren);
+            add (knob (V + sirenIds[i], sirenNames[i], Palette::siren, range (sirenLo[i], sirenHi[i])), 150 + i * 96, 44, VP::Siren);
         // PULSAR
-        const char* pulsarIds[] = { "bloom", "twin", "twin_mix", "sub", "vibrato" };
-        const char* pulsarNames[] = { "BLOOM", "TWIN", "BLEND", "SUB", "VIBRATO" };
-        const char* pulsarLo[] = { "0", "-12", "0", "0", "0" };
-        const char* pulsarHi[] = { "100", "+24", "100", "100", "50c" };
-        for (int i = 0; i < 5; ++i)
-            add (knob (V + pulsarIds[i], pulsarNames[i], Palette::pulsar, range (pulsarLo[i], pulsarHi[i])), 134 + i * 100, 44, VP::Pulsar);
+        const char* pulsarIds[] = { "sym", "bloom", "twin", "twin_mix", "sub", "vibrato" };
+        const char* pulsarNames[] = { "SYMMETRY", "BLOOM", "TWIN", "BLEND", "SUB", "VIBRATO" };
+        const char* pulsarLo[] = { "~pulse", "0", "-12", "0", "0", "0" };
+        const char* pulsarHi[] = { "~pulsew", "100", "+24", "100", "100", "50c" };
+        for (int i = 0; i < 6; ++i)
+            add (knob (V + pulsarIds[i], pulsarNames[i], Palette::pulsar, range (pulsarLo[i], pulsarHi[i], i == 0, true)), 150 + i * 80, 52, VP::Pulsar);
+        // QUASAR
+        const char* qIds[] = { "q_ratio", "q_fine", "q_fb", "q_track" };
+        const char* qNames[] = { "RATIO", "FINE", "FEEDBACK", "TRACK" };
+        const char* qLo[] = { ".5", "-50c", "~sine", "0" };
+        const char* qHi[] = { "8", "+50c", "~noise", "100" };
+        for (int i = 0; i < 4; ++i)
+            add (knob (V + qIds[i], qNames[i], Palette::quasar, range (qLo[i], qHi[i], i == 1)), 150 + i * 96, 44, VP::Quasar);
+        // NEBULA
+        auto* table = new LedRadio (proc, V + "n_table", "TABLE", { "VOCAL", "ORGAN", "GLASS" });
+        owned.add (table);
+        add (table, 150, 36, VP::Nebula);
+        add (knob (V + "n_scan", "SCAN", Palette::nebula, range ("-", "+", true)), 262, 44, VP::Nebula);
+        add (knob (V + "n_drift", "DRIFT", Palette::nebula, range ("0", "100")), 358, 44, VP::Nebula);
 
-        // envelope: every type that sounds
+        // every type that sounds: CHARACTER (digital - clean - analog), ATTACK, RELEASE
         auto* div = new Component();
         owned.add (div);
         div->setSize (1, 110);
-        for (int t : { VP::Choir, VP::Siren, VP::Pulsar }) d.byType[t].add (div);
         detailPanel->addChildComponent (div);
-        div->setTopLeftPosition (646, 40);
+        div->setTopLeftPosition (642, 40);
         d.all.add (div);
-        for (auto* k : { knob (V + "attack", "ATTACK", Palette::group, range ("1ms", "30s")), knob (V + "release", "RELEASE", Palette::group, range ("1ms", "30s")) })
+        Component* common[] = { div, knob (V + "character", "CHARACTER", Palette::group, range ("DIGI", "ANLG", true, true)),
+                                knob (V + "attack", "ATTACK", Palette::group, range ("1ms", "30s", false, true)),
+                                knob (V + "release", "RELEASE", Palette::group, range ("1ms", "30s", false, true)) };
+        for (int i = 1; i < 4; ++i)
         {
-            detailPanel->addChildComponent (k);
-            d.all.add (k);
-            for (int t : { VP::Choir, VP::Siren, VP::Pulsar }) d.byType[t].add (k);
+            detailPanel->addChildComponent (common[i]);
+            d.all.add (common[i]);
+            common[i]->setTopLeftPosition (648 + (i - 1) * 82, 52);
         }
-        d.all[d.all.size() - 2]->setTopLeftPosition (656, 44);
-        d.all[d.all.size() - 1]->setTopLeftPosition (752, 44);
+        for (auto* c : common)
+            for (int t = VP::Choir; t <= VP::Nebula; ++t) d.byType[t].add (c);
     }
 
-    offNote = new Label ({}, "This voice is off. Pick CHOIR, SIREN or PULSAR to switch it on.");
+    offNote = new Label ({}, "This voice is off. Pick a type on the left to switch it on.");
     owned.add (offNote);
     offNote->setFont (Fonts::regular (12.5f));
     offNote->setColour (Label::textColourId, Palette::textDim);
@@ -546,12 +617,12 @@ DronePage::VolBar::VolBar (ResoOpusProcessor& p, int v) : proc (p)
     setMouseCursor (MouseCursor::LeftRightResizeCursor);
 }
 
-bool DronePage::VolBar::refresh (float level)
+bool DronePage::VolBar::refresh (float level, float hold)
 {
     const float v = vol->getValue(), pn = pan->convertFrom0to1 (pan->getValue());
-    if (std::abs (v - shownVol) > 0.002f || std::abs (pn - shownPan) > 0.004f || std::abs (level - shownLevel) > 0.02f)
+    if (std::abs (v - shownVol) > 0.002f || std::abs (pn - shownPan) > 0.004f || std::abs (level - shownLevel) > 0.02f || std::abs (hold - shownHold) > 0.002f)
     {
-        shownVol = v; shownPan = pn; shownLevel = level;
+        shownVol = v; shownPan = pn; shownLevel = level; shownHold = hold;
         repaint();
         return true;
     }
@@ -578,6 +649,12 @@ void DronePage::VolBar::paint (Graphics& g)
         g.setGradientFill (ColourGradient (Palette::green, 0.0f, 0.0f, Palette::curve, w, 0.0f, false));
         g.fillRoundedRectangle (0.0f, 24.0f, w * jlimit (0.0f, 1.0f, shownLevel * shownVol * 1.1f), 3.0f, 1.5f);
     }
+    if (shownHold > 0.001f)   // HOLD: where the level rests without a touch
+    {
+        const float hx = w * jlimit (0.0f, 1.0f, shownHold * shownVol * 1.1f);
+        g.setColour (Palette::label.withAlpha (0.8f));
+        g.fillRect (hx - 0.75f, 22.0f, 1.5f, 7.0f);
+    }
 }
 
 void DronePage::VolBar::mouseDown (const MouseEvent&) { vol->beginChangeGesture(); }
@@ -603,45 +680,126 @@ void DronePage::VolBar::mouseDoubleClick (const MouseEvent&)
     vol->endChangeGesture();
 }
 
-void DronePage::LevelTrace::push (float level, float h)
+DronePage::VoiceScope::VoiceScope (ResoOpusProcessor& p, int v) : proc (p), voice (v)
 {
-    // repaint only while something changes (no redraw for a silent, steady voice)
-    const float prev = history[(head + size - 1) % size];
-    const bool nowFlat = std::abs (level - prev) < 0.002f && std::abs (h - hold) < 0.002f;
-    history[head] = level;
-    head = (head + 1) % size;
-    hold = h;
-    if (! (nowFlat && flat)) repaint();
-    flat = nowFlat;
+    setTooltip ("The signal of this voice (two periods of its note, height = level). Click: spectrum / scope");
+    setMouseCursor (MouseCursor::PointingHandCursor);
 }
 
-void DronePage::LevelTrace::paint (Graphics& g)
+void DronePage::VoiceScope::mouseDown (const MouseEvent&)
+{
+    spectrumMode = ! spectrumMode;
+    for (auto& f : frames) f.clear();
+    silent = false;
+    repaint();
+}
+
+void DronePage::VoiceScope::update (float level)
+{
+    if (level < 0.0008f)
+    {
+        if (silent) return;   // nothing to redraw while the voice is silent
+        silent = true;
+        for (auto& f : frames) f.clear();
+        repaint();
+        return;
+    }
+    silent = false;
+    const int N = ResoOpusProcessor::scopeSize, mask = N - 1;
+    const int end = proc.scopeWrite.load (std::memory_order_acquire);
+    const float* buf = proc.scope[voice];
+    const float w = (float) getWidth(), h = (float) getHeight();
+    for (int i = 3; i > 0; --i) frames[i] = frames[i - 1];
+    Path& p = frames[0];
+    p.clear();
+    if (! spectrumMode)
+    {
+        // two periods of the root, starting on a rising zero crossing (the picture stands still)
+        const double sr = proc.getSampleRate() > 0.0 ? proc.getSampleRate() : 48000.0;
+        const double root = proc.liveRoot[voice].load();
+        const double a4 = proc.getParamReal ("a4");
+        const double hz = root > 0.0 ? a4 * std::exp2 ((root - 69.0) / 12.0) : 110.0;
+        const int period = jlimit (8, 1400, (int) std::lround (sr / hz));
+        const int span = 2 * period;
+        int start = end - span - period;
+        float best = 0.0f;
+        for (int i = end - span - period; i < end - span; ++i)
+        {
+            const float a = buf[(i - 1) & mask], b = buf[i & mask];
+            if (a < 0.0f && b >= 0.0f && b - a > best) { best = b - a; start = i; }
+        }
+        const float gain = 0.42f * h / 0.55f;
+        for (int x = 0; x <= (int) w; ++x)
+        {
+            const double pos = start + (double) x / w * span;
+            const int i0 = (int) std::floor (pos);
+            const float f = (float) (pos - i0);
+            const float v = buf[i0 & mask] + f * (buf[(i0 + 1) & mask] - buf[i0 & mask]);
+            const float y = jlimit (2.0f, h - 2.0f, h * 0.5f - v * gain);
+            if (x == 0) p.startNewSubPath (0.0f, y); else p.lineTo ((float) x, y);
+        }
+    }
+    else
+    {
+        // spectrum of the last 2048 samples, 30 Hz - 12 kHz on a log scale, 70 dB tall
+        const int M = 2048;
+        for (int i = 0; i < M; ++i)
+        {
+            const float win = 0.5f - 0.5f * std::cos (MathConstants<float>::twoPi * (float) i / (float) (M - 1));
+            fftData[(size_t) i] = buf[(end - M + i) & mask] * win;
+        }
+        std::fill (fftData.begin() + M, fftData.end(), 0.0f);
+        fft.performFrequencyOnlyForwardTransform (fftData.data());
+        const double sr = proc.getSampleRate() > 0.0 ? proc.getSampleRate() : 48000.0;
+        const double binHz = sr / M;
+        p.startNewSubPath (0.0f, h);
+        for (int x = 0; x <= (int) w; x += 2)
+        {
+            const double f = 30.0 * std::pow (400.0, (double) x / w);
+            const int b = jlimit (1, M / 2 - 1, (int) std::lround (f / binHz));
+            const float mag = std::max (fftData[(size_t) b], fftData[(size_t) b + 1]) / (float) (M / 4);
+            const float db = Decibels::gainToDecibels (mag, -90.0f);
+            p.lineTo ((float) x, jlimit (1.0f, h, h - (db + 70.0f) / 70.0f * h));
+        }
+        p.lineTo (w, h);
+        p.closeSubPath();
+    }
+    repaint();
+}
+
+void DronePage::VoiceScope::paint (Graphics& g)
 {
     const auto r = getLocalBounds().toFloat();
     g.setColour (Colour (0xff111216));
     g.fillRoundedRectangle (r, 4.0f);
-    auto y = [&r] (float v) { return r.getBottom() - 3.0f - jlimit (0.0f, 1.0f, v) * (r.getHeight() - 6.0f); };
-    Path line, fill;
-    for (int i = 0; i < size; ++i)
+    g.setColour (Colours::white.withAlpha (0.05f));
+    g.drawHorizontalLine (getHeight() / 2, 3.0f, r.getRight() - 3.0f);
+    g.saveState();
+    g.reduceClipRegion (getLocalBounds().reduced (1));
+    if (spectrumMode)
     {
-        const float x = r.getX() + r.getWidth() * (float) i / (float) (size - 1);
-        const float v = y (history[(head + i) % size]);
-        if (i == 0) { line.startNewSubPath (x, v); fill.startNewSubPath (x, r.getBottom()); fill.lineTo (x, v); }
-        else { line.lineTo (x, v); fill.lineTo (x, v); }
+        if (! frames[0].isEmpty())
+        {
+            g.setColour (colour.withAlpha (0.22f));
+            g.fillPath (frames[0]);
+            g.setColour (colour);
+            g.strokePath (frames[0], PathStrokeType (1.1f));
+        }
     }
-    fill.lineTo (r.getRight(), r.getBottom());
-    fill.closeSubPath();
-    g.setGradientFill (ColourGradient (colour.withAlpha (0.28f), 0.0f, r.getY(), colour.withAlpha (0.02f), 0.0f, r.getBottom(), false));
-    g.fillPath (fill);
-    g.setColour (colour);
-    g.strokePath (line, PathStrokeType (1.4f));
-    if (hold > 0.001f)
+    else
     {
-        const float hy = y (hold);
-        const float dashes[] = { 3.0f, 3.0f };
-        g.setColour (Palette::label.withAlpha (0.55f));
-        g.drawDashedLine (Line<float> (r.getX() + 2.0f, hy, r.getRight() - 2.0f, hy), dashes, 2, 1.0f);
+        const float alpha[4] = { 1.0f, 0.3f, 0.15f, 0.07f };
+        for (int i = 3; i >= 0; --i)
+            if (! frames[i].isEmpty())
+            {
+                g.setColour (colour.withAlpha (alpha[i]));
+                g.strokePath (frames[i], PathStrokeType (i == 0 ? 1.5f : 1.2f, PathStrokeType::curved, PathStrokeType::rounded));
+            }
     }
+    g.restoreState();
+    g.setColour (Palette::textFaint);
+    g.setFont (Fonts::bold (8.5f));
+    g.drawText (spectrumMode ? "SPECTRUM" : "SCOPE", r.reduced (5.0f, 3.0f), Justification::topRight, false);
 }
 
 void DronePage::refreshLive()
@@ -659,17 +817,22 @@ void DronePage::refreshLive()
             const auto col = Palette::voiceType (t);
             c->setTitleAndColour (Params::findDef ("v1_type")->choices[t].toUpperCase(), col);
             c->vol->colour = col;
-            for (int k = 1; k < 4; ++k) c->character[k]->setVisible (k == t || (t == VP::Off && k == VP::Choir));
+            for (int k = 1; k < 6; ++k) c->character[k]->setVisible (k == t || (t == VP::Off && k == VP::Choir));
             for (auto* ctl : c->controls) ctl->setAlpha (t == VP::Off ? 0.35f : 1.0f);
-            for (int k = 1; k < 4; ++k) c->character[k]->setAlpha (t == VP::Off ? 0.35f : 1.0f);
+            for (int k = 1; k < 6; ++k) c->character[k]->setAlpha (t == VP::Off ? 0.35f : 1.0f);
             c->repaint();
         }
         c->setLiveValue (t == VP::Off ? 0.0f : jlimit (0.0f, 1.0f, lv * 1.5f));
-        c->vol->refresh (lv);
-        c->trace->colour = Palette::voiceType (t);
-        c->trace->push (t == VP::Off ? 0.0f : lv, t == VP::Off ? 0.0f : proc.getParamReal (Params::voiceID (v, "hold")) / 100.0f);
+        const float hold = t == VP::Off ? 0.0f : proc.getParamReal (Params::voiceID (v, "hold")) / 100.0f;
+        c->vol->refresh (lv, hold);
+        c->scope->colour = Palette::voiceType (t);
+        c->scope->update (t == VP::Off ? 0.0f : lv);
     }
     gravity->refresh();
+    // DRONE off (LEAD only): the whole page is dimmed
+    const float pageAlpha = proc.getParamReal ("drone_on") > 0.5f ? 1.0f : 0.45f;
+    for (auto* ch : getChildren())
+        if (std::abs (ch->getAlpha() - pageAlpha) > 0.01f) ch->setAlpha (pageAlpha);
 
     // detail: only the selected voice; the type decides which controls show
     const int t = voiceType (selected);
@@ -692,25 +855,54 @@ void DronePage::refreshLive()
 }
 
 //==============================================================================
+namespace
+{
+const juce::StringArray& filterModeIcons() { static const juce::StringArray i { "lp", "bp", "hp" }; return i; }
+juce::Array<juce::Colour> same (juce::Colour c, int n) { juce::Array<juce::Colour> a; for (int i = 0; i < n; ++i) a.add (c); return a; }
+const char* slopeText (int model)
+{
+    static const char* slopes[] = { "GROWL 12 dB", "LADDER 24 dB", "DIODE 24 dB", "SCREAM 12 dB", "SILK 12 dB" };
+    return slopes[juce::jlimit (0, 4, model)];
+}
+}
+
 FxPage::FxPage (ResoOpusProcessor& p) : Page (p)
 {
     auto sm = [] (String lo, String hi, bool bi = false) { return range (lo, hi, bi, true); };
-    const int fxH = 236, gap = 10, g6 = 6;
+    const int rowH = 265, gap = 10, g6 = 6, y2 = rowH + gap;
 
-    // FX row: FILTER, ECHO, SPACE
-    filterPanel = panel ("FILTER", Palette::filter, { 0, 0, 340, fxH }, -1, "GROWL 12 dB");
+    // FILTER A
+    filterPanel = panel ("FILTER A", Palette::filter, { 0, 0, 360, rowH }, -1, "GROWL 12 dB");
     auto* model = new LedRadio (proc, "flt_model", "MODEL", { "GROWL", "LADDER", "DIODE", "SCREAM", "SILK" });
     model->setTooltip (Params::findDef ("flt_model")->tip);
     owned.add (model);
-    auto* mode = new LedRadio (proc, "flt_mode", "MODE", { "LOW PASS", "BAND PASS", "HIGH PASS" });
+    auto* mode = new LedRadio (proc, "flt_mode", "MODE", { "LOW", "BAND", "HIGH" });
+    mode->setIcons (filterModeIcons(), same (Palette::filter, 3));
     owned.add (mode);
-    filterPanel->setGrid ({ 1.0f, 1.15f, 1.0f }, {
+    filterPanel->setGrid ({ 1.15f, 1.0f, 1.0f }, {
         knob ("flt_cutoff", "CUTOFF", Palette::filter, sm ("20", "20k")),
         knob ("flt_res", "RESONANCE", Palette::filter, sm ("0", "10")),
         knob ("flt_drive", "DRIVE", Palette::filter, sm ("0", "10")),
         model, mode, knob ("flt_spread", "SPREAD", Palette::filter, sm ("0", "100")) });
 
-    auto* echoPanel = panel ("ECHO", Palette::mixer, { 340 + gap, 0, 430, fxH }, -1, "2 LINES");
+    // FILTER B with ROUTING
+    filterBPanel = panel ("FILTER B", Palette::filter, { 360 + g6, 0, 400, rowH }, -1, "SILK 12 dB");
+    auto* modelB = new LedRadio (proc, "flt2_model", "MODEL", { "GROWL", "LADDER", "DIODE", "SCREAM", "SILK" });
+    owned.add (modelB);
+    auto* modeB = new LedRadio (proc, "flt2_mode", "MODE", { "LOW", "BAND", "HIGH" });
+    modeB->setIcons (filterModeIcons(), same (Palette::filter, 3));
+    owned.add (modeB);
+    auto* route = new LedRadio (proc, "flt_route", "ROUTING", { "SERIAL", "PARALLEL", "SPLIT", "STEREO" });
+    owned.add (route);
+    auto* onB = static_cast<Component*> (owned.add (new LedButton (proc, "flt2_on", "ON")));
+    auto* cutB = knob ("flt2_cutoff", "CUTOFF", Palette::filter, sm ("20", "20k"));
+    auto* resB = knob ("flt2_res", "RESONANCE", Palette::filter, sm ("0", "10"));
+    auto* drvB = knob ("flt2_drive", "DRIVE", Palette::filter, sm ("0", "10"));
+    filterBPanel->setGrid ({ 1.15f, 1.0f, 1.1f, 0.75f }, { cutB, resB, drvB, onB, modelB, modeB, route, nullptr });
+    filterBControls = { cutB, resB, drvB, modelB, modeB, route };
+
+    // ECHO
+    auto* echoPanel = panel ("ECHO", Palette::mixer, { 766 + g6, 0, width - 772, rowH }, -1, "2 LINES");
     auto* src = new LedRadio (proc, "echo_self", "MOD SOURCE", { "SELF", "LFO" });
     owned.add (src);
     echoPanel->setGrid ({ 1.0f, 1.0f, 1.0f, 1.0f }, {
@@ -721,7 +913,8 @@ FxPage::FxPage (ResoOpusProcessor& p) : Page (p)
         knob ("echo_mod", "MOD", Palette::mixer, sm ("0", "100")), src,
         knob ("echo_voices", "TO VOICES", Palette::mixer, sm ("0", "100")), nullptr });
 
-    spacePanel = panel ("SPACE", Palette::fx2, { 780 + gap, 0, width - 790, fxH }, -1, "VOID");
+    // SPACE
+    spacePanel = panel ("SPACE", Palette::fx2, { 0, y2, 380, rowH }, -1, "VOID");
     auto* algo = new LedRadio (proc, "space_algo", "ALGORITHM", { "AURORA", "VOID", "RUNNER", "SATURN", "COMET" });
     algo->setTooltip (Params::findDef ("space_algo")->tip);
     owned.add (algo);
@@ -736,54 +929,52 @@ FxPage::FxPage (ResoOpusProcessor& p) : Page (p)
     spaceInfo->setSize (118, 96);
     spacePanel->setGrid ({ 1.25f, 1.0f, 1.0f }, { algo, xyz[0], xyz[1], spaceInfo, xyz[2], knob ("space_blend", "BLEND", Palette::fx2, sm ("DRY", "WET")) });
 
-    // LEAD row: OSC, ENVELOPE, VOICE, ARP (dimmed when the LEAD is off; switch it at the tab)
-    const int y = fxH + gap, h = height - y;
-    auto* osc = panel ("LEAD OSC", Palette::lead, { 0, y, 300, h });
-    osc->setGrid ({ 1.0f, 1.0f, 1.0f }, {
-        knob ("lead_wave", "WAVE", Palette::lead, sm ("SINE", "SQR")),
-        knob ("lead_osc2", "OSC 2", Palette::lead, sm ("-12", "+12", true)),
-        knob ("lead_mix", "OSC 2 LEVEL", Palette::lead, sm ("0", "100")),
-        knob ("lead_octave", "OCTAVE", Palette::lead, sm ("-2", "+2", true)),
-        knob ("lead_sub", "SUB", Palette::lead, sm ("0", "100")),
-        static_cast<Component*> (owned.add (new LedButton (proc, "lead_sync", "SYNC"))) });
-    auto* env = panel ("ENVELOPE", Palette::lead, { 300 + g6, y, 230, h });
-    env->setEnvelopeIcon (4);
-    env->setGrid ({ 1.0f, 1.0f }, {
-        knob ("lead_attack", "ATTACK", Palette::lead, sm ("1ms", "10s")), knob ("lead_decay", "DECAY", Palette::lead, sm ("1ms", "30s")),
-        knob ("lead_sustain", "SUSTAIN", Palette::lead, sm ("0", "100")), knob ("lead_release", "RELEASE", Palette::lead, sm ("1ms", "30s")) });
-    auto* voice = panel ("LEAD VOICE", Palette::lead, { 536 + g6, y, 380, h });
-    voice->setGrid ({ 1.0f, 1.0f, 1.0f, 1.0f }, {
-        knob ("lead_glide", "GLIDE", Palette::lead, sm ("0", "2s")),
-        knob ("lead_vib", "VIBRATO", Palette::lead, sm ("0", "1 st")),
-        knob ("lead_vib_rate", "VIB RATE", Palette::lead, sm (".5", "12")),
-        knob ("lead_vib_delay", "VIB DELAY", Palette::lead, sm ("0", "3s")),
-        knob ("lead_touch_vib", "TOUCH VIB", Palette::lead, sm ("0", "100")),
-        knob ("lead_level", "VOLUME", Palette::lead, sm ("-inf", "+6")),
-        knob ("lead_pan", "PAN", Palette::lead, sm ("L", "R", true)), nullptr });
-    auto* arp = panel ("ARP", Palette::lead, { 922 + g6, y, width - 928, h });
-    auto* arpMode = new LedRadio (proc, "arp_mode", "DIRECTION", { "UP", "DOWN", "PING-PONG", "RANDOM" });
-    owned.add (arpMode);
-    arp->setGrid ({ 1.0f, 1.0f }, {
-        static_cast<Component*> (owned.add (new LedButton (proc, "arp_on", "ARP"))),
-        static_cast<Component*> (owned.add (new LedButton (proc, "arp_latch", "LATCH"))),
-        arpMode, knob ("arp_rate", "RATE", Palette::lead, sm ("1/4", "1/32")),
-        nullptr, knob ("arp_octaves", "OCTAVES", Palette::lead, sm ("1", "4")) });
-    leadPanels = { osc, env, voice, arp };
+    // MOTION: LFO 1, LFO 2, RANDOM (drag the arrow in the header onto any knob)
+    const Colour lfoCol[] = { Mod::sourceColour (Mod::Lfo1), Mod::sourceColour (Mod::Lfo2), Mod::sourceColour (Mod::Random) };
+    for (int l = 0; l < 2; ++l)
+    {
+        const String P = "lfo" + String (l + 1) + "_";
+        auto* lp = panel ("LFO " + String (l + 1), lfoCol[l], { 386 + l * 258, y2, 252, rowH }, Mod::Lfo1 + l);
+        auto* shape = new LedRadio (proc, P + "shape", "SHAPE", { "SIN", "TRI", "UP", "DOWN", "SQR", "S&H" });
+        shape->setIcons ({ "sine", "tri", "rampup", "rampdown", "square", "sh" }, same (lfoCol[l], 6));
+        owned.add (shape);
+        rates[l] = knob (P + "rate", "RATE", lfoCol[l], sm (".01", "40"));
+        divisions[l] = knob (P + "div", "DIVISION", lfoCol[l], sm ("8b", "1/8"));
+        lp->setGrid ({ 1.4f, 1.0f, 1.0f }, {
+            shape, rates[l], divisions[l],
+            static_cast<Component*> (owned.add (new LedButton (proc, P + "sync", "SYNC"))),
+            knob (P + "phase", "PHASE", lfoCol[l], sm ("0", "360")),
+            static_cast<Component*> (owned.add (new LedButton (proc, P + "retrig", "RETRIG"))) });
+    }
+    auto* rp = panel ("RANDOM", lfoCol[2], { 902, y2, width - 902, rowH }, Mod::Random);
+    auto* rmode = new LedRadio (proc, "rnd_mode", "MODE", { "DRIFT", "STEPS", "NOISE" });
+    rmode->setIcons ({ "sine", "sh", "noise" }, same (lfoCol[2], 3));
+    owned.add (rmode);
+    rates[2] = knob ("rnd_rate", "RATE", lfoCol[2], sm (".01", "20"));
+    divisions[2] = knob ("rnd_div", "DIVISION", lfoCol[2], sm ("8b", "1/8"));
+    rp->setGrid ({ 1.3f, 1.0f, 1.0f }, {
+        rmode, rates[2], divisions[2],
+        static_cast<Component*> (owned.add (new LedButton (proc, "rnd_sync", "SYNC"))),
+        knob ("rnd_slew", "SLEW", lfoCol[2], sm ("0", "10")), nullptr });
     refreshLive();
 }
 
 void FxPage::refreshLive()
 {
     Page::refreshLive();
-    const bool leadOn = proc.getParamReal ("lead_on") > 0.5f;
-    for (auto* p : leadPanels)
-        if (std::abs (p->getAlpha() - (leadOn ? 1.0f : 0.45f)) > 0.01f) p->setAlpha (leadOn ? 1.0f : 0.45f);
     const int fm = roundToInt (proc.getParamReal ("flt_model"));
-    if (fm != shownModel)
+    if (fm != shownModel) { shownModel = fm; filterPanel->setRightText (slopeText (fm)); }
+    const int fmB = roundToInt (proc.getParamReal ("flt2_model"));
+    if (fmB != shownModelB) { shownModelB = fmB; filterBPanel->setRightText (slopeText (fmB)); }
+    const bool bOn = proc.getParamReal ("flt2_on") > 0.5f;
+    for (auto* c : filterBControls)
+        if (std::abs (c->getAlpha() - (bOn ? 1.0f : 0.4f)) > 0.01f) c->setAlpha (bOn ? 1.0f : 0.4f);
+    const char* syncIds[] = { "lfo1_sync", "lfo2_sync", "rnd_sync" };
+    for (int i = 0; i < 3; ++i)
     {
-        shownModel = fm;
-        static const char* slopes[] = { "GROWL 12 dB", "LADDER 24 dB", "DIODE 24 dB", "SCREAM 12 dB", "SILK 12 dB" };
-        filterPanel->setRightText (slopes[jlimit (0, 4, fm)]);
+        const bool sync = proc.getParamReal (syncIds[i]) > 0.5f;
+        if (std::abs (rates[i]->getAlpha() - (sync ? 0.35f : 1.0f)) > 0.01f) rates[i]->setAlpha (sync ? 0.35f : 1.0f);
+        if (std::abs (divisions[i]->getAlpha() - (sync ? 1.0f : 0.35f)) > 0.01f) divisions[i]->setAlpha (sync ? 1.0f : 0.35f);
     }
     const int a = roundToInt (proc.getParamReal ("space_algo"));
     if (a == shownAlgo) return;
@@ -799,4 +990,83 @@ void FxPage::refreshLive()
         "Metallic ring. STEPS jumps to random notes, ROOM adds a space.",
         "Dirty, saturated delay that sings at high FEEDBACK." };
     spaceInfo->setText (info[jlimit (0, 4, a)], dontSendNotification);
+}
+
+//==============================================================================
+LeadPage::LeadPage (ResoOpusProcessor& p) : Page (p)
+{
+    auto sm = [] (String lo, String hi, bool bi = false) { return range (lo, hi, bi, true); };
+    const int rowH = 265, gap = 10, g6 = 6, y2 = rowH + gap;
+    const auto c = Palette::lead;
+
+    auto* osc = panel ("LEAD OSC", c, { 0, 0, 330, rowH });
+    Knob::Style waveSt = sm ("", "");
+    waveSt.marks = { "~sine", "~tri", "~shark", "~saw", "~square" };
+    osc->setGrid ({ 1.0f, 1.0f, 1.0f, 1.0f }, {
+        knob ("lead_wave", "WAVE", c, waveSt),
+        knob ("lead_osc2", "OSC 2", c, sm ("-12", "+12", true)),
+        knob ("lead_mix", "OSC 2 LEVEL", c, sm ("0", "100")),
+        knob ("lead_sym", "SYMMETRY", c, sm ("~pulse", "~pulsew", true)),
+        knob ("lead_octave", "OCTAVE", c, sm ("-2", "+2", true)),
+        knob ("lead_sub", "SUB", c, sm ("0", "100")),
+        static_cast<Component*> (owned.add (new LedButton (proc, "lead_sync", "SYNC"))), nullptr });
+
+    filterPanel = panel ("LEAD FILTER", c, { 330 + g6, 0, 390, rowH }, -1, "LADDER 24 dB");
+    auto* fmodel = new LedRadio (proc, "lead_flt_model", "MODEL", { "GROWL", "LADDER", "DIODE", "SCREAM", "SILK" });
+    owned.add (fmodel);
+    auto* fmode = new LedRadio (proc, "lead_flt_mode", "MODE", { "LOW", "BAND", "HIGH" });
+    fmode->setIcons (filterModeIcons(), same (c, 3));
+    owned.add (fmode);
+    filterPanel->setGrid ({ 1.15f, 1.15f, 1.0f, 1.0f }, {
+        knob ("lead_flt_cutoff", "CUTOFF", c, sm ("20", "20k")),
+        knob ("lead_flt_res", "RESONANCE", c, sm ("0", "10")),
+        knob ("lead_flt_env", "ENV", c, sm ("-", "+", true)),
+        knob ("lead_flt_key", "KEY", c, sm ("0", "100")),
+        fmodel, fmode, nullptr, nullptr });
+
+    auto* fenv = panel ("FILTER ENV", c, { 726 + g6, 0, 212, rowH }, Mod::LeadEnv);
+    fenv->setGrid ({ 1.0f, 1.0f }, {
+        knob ("lead_fenv_attack", "ATTACK", c, sm ("1ms", "10s")), knob ("lead_fenv_decay", "DECAY", c, sm ("1ms", "30s")),
+        knob ("lead_fenv_sustain", "SUSTAIN", c, sm ("0", "100")), knob ("lead_fenv_release", "RELEASE", c, sm ("1ms", "30s")) });
+
+    auto* env = panel ("AMP ENV", c, { 944 + g6, 0, width - 950, rowH });
+    env->setEnvelopeIcon (4);
+    env->setGrid ({ 1.0f, 1.0f }, {
+        knob ("lead_attack", "ATTACK", c, sm ("1ms", "10s")), knob ("lead_decay", "DECAY", c, sm ("1ms", "30s")),
+        knob ("lead_sustain", "SUSTAIN", c, sm ("0", "100")), knob ("lead_release", "RELEASE", c, sm ("1ms", "30s")) });
+
+    auto* voice = panel ("LEAD VOICE", c, { 0, y2, 760, rowH });
+    auto* voices = new LedRadio (proc, "lead_voices", "VOICES", { "MONO", "LEGATO", "POLY 4", "POLY 8" });
+    owned.add (voices);
+    voice->setGrid ({ 1.1f, 1.0f, 1.0f, 1.0f, 1.0f }, {
+        voices,
+        knob ("lead_glide", "GLIDE", c, sm ("0", "2s")),
+        knob ("lead_vel", "VELOCITY", c, sm ("0", "100")),
+        knob ("lead_vib", "VIBRATO", c, sm ("0", "1 st")),
+        knob ("lead_vib_rate", "VIB RATE", c, sm (".5", "12")),
+        knob ("lead_vib_delay", "VIB DELAY", c, sm ("0", "3s")),
+        knob ("lead_touch_vib", "TOUCH VIB", c, sm ("0", "100")),
+        knob ("lead_level", "VOLUME", c, sm ("-inf", "+6")),
+        knob ("lead_pan", "PAN", c, sm ("L", "R", true)), nullptr });
+
+    auto* arp = panel ("ARP", c, { 760 + g6, y2, width - 766, rowH });
+    auto* arpMode = new LedRadio (proc, "arp_mode", "DIRECTION", { "UP", "DOWN", "PING-PONG", "RANDOM" });
+    owned.add (arpMode);
+    arp->setGrid ({ 1.0f, 1.0f, 1.0f }, {
+        static_cast<Component*> (owned.add (new LedButton (proc, "arp_on", "ARP"))),
+        static_cast<Component*> (owned.add (new LedButton (proc, "arp_latch", "LATCH"))),
+        knob ("arp_rate", "RATE", c, sm ("1/4", "1/32")),
+        arpMode, nullptr, knob ("arp_octaves", "OCTAVES", c, sm ("1", "4")) });
+    leadPanels = { osc, filterPanel, fenv, env, voice, arp };
+    refreshLive();
+}
+
+void LeadPage::refreshLive()
+{
+    Page::refreshLive();
+    const bool leadOn = proc.getParamReal ("lead_on") > 0.5f;
+    for (auto* p : leadPanels)
+        if (std::abs (p->getAlpha() - (leadOn ? 1.0f : 0.45f)) > 0.01f) p->setAlpha (leadOn ? 1.0f : 0.45f);
+    const int fm = roundToInt (proc.getParamReal ("lead_flt_model"));
+    if (fm != shownModel) { shownModel = fm; filterPanel->setRightText (slopeText (fm)); }
 }

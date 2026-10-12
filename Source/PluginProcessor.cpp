@@ -655,6 +655,9 @@ void ResoOpusProcessor::renderVoices (float* L, float* R, float* leadL, float* l
     bool on[Params::numVoices];
     bool any = false;
     for (int v = 0; v < Params::numVoices; ++v) { on[v] = voices[v].begin (settings[v], count); any = any || on[v]; }
+    const bool scoping = editorOpen.load (std::memory_order_relaxed);
+    const int osMask = (1 << osIndex) - 1;
+    int scopePos = scopeWrite.load (std::memory_order_relaxed);
     bool leadOnNow[maxLead];
     bool anyLead = false;
     for (int i = 0; i < maxLead; ++i)
@@ -668,6 +671,15 @@ void ResoOpusProcessor::renderVoices (float* L, float* R, float* leadL, float* l
         for (auto& m : voiceMod) m = 0.0f;
         lastMono = 0.0f;
         for (int k = 0; k < count; ++k) { devRamp.next(); ringRamp.next(); fbRamp.next(); dustRamp.next(); }
+        if (scoping)   // silence for the scopes
+        {
+            for (int k = 0; k < (count >> osIndex); ++k)
+            {
+                for (int v = 0; v < Params::numVoices; ++v) scope[v][scopePos] = 0.0f;
+                scopePos = (scopePos + 1) & (scopeSize - 1);
+            }
+            scopeWrite.store (scopePos, std::memory_order_release);
+        }
         return;
     }
     for (int k = 0; k < count; ++k)
@@ -685,11 +697,17 @@ void ResoOpusProcessor::renderVoices (float* L, float* R, float* leadL, float* l
             now[v] = voices[v].tick (fmHz, L[k], R[k]);
         }
         for (int v = 0; v < Params::numVoices; ++v) voiceMod[v] = now[v];
+        if (scoping && (k & osMask) == 0)
+        {
+            for (int v = 0; v < Params::numVoices; ++v) scope[v][scopePos] = now[v];
+            scopePos = (scopePos + 1) & (scopeSize - 1);
+        }
         if (anyLead)
             for (int i = 0; i < maxLead; ++i)
                 if (leadOnNow[i]) leads[i].tick (leadL[k], leadR[k]);
         lastMono = jlimit (-1.5f, 1.5f, (L[k] + R[k] + leadL[k] + leadR[k]) * 1.2f);
     }
+    if (scoping) scopeWrite.store (scopePos, std::memory_order_release);
 }
 
 //==============================================================================

@@ -27,6 +27,8 @@ public:
     // Action version (not bound to a parameter): get = lit entry (-1 = none), set = apply entry
     LedRadio (const juce::String& label, juce::StringArray names, std::function<int()> get, std::function<void (int)> set);
     void refresh();   // action version: re-reads the lit entry
+    // a waveform pictogram (Icons::wave names) in front of every entry, each in its own colour
+    void setIcons (juce::StringArray iconNames, juce::Array<juce::Colour> colours);
     void paint (juce::Graphics&) override;
     void mouseDown (const juce::MouseEvent&) override;
 
@@ -34,7 +36,8 @@ private:
     juce::RangedAudioParameter* param = nullptr;
     std::unique_ptr<juce::ParameterAttachment> attachment;
     juce::String label;
-    juce::StringArray names;
+    juce::StringArray names, icons;
+    juce::Array<juce::Colour> iconColours;
     int index = 0;
     int numChoices = 1;
     std::function<int()> getIndex;

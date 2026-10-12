@@ -35,7 +35,15 @@ Font Fonts::mono (float size)
 //==============================================================================
 Colour Palette::voiceType (int t)
 {
-    return t == 1 ? choir : (t == 2 ? siren : (t == 3 ? pulsar : Colour (0xff6c6d76)));
+    switch (t)
+    {
+        case 1: return choir;
+        case 2: return siren;
+        case 3: return pulsar;
+        case 4: return quasar;
+        case 5: return nebula;
+        default: return Colour (0xff6c6d76);
+    }
 }
 
 namespace Icons
@@ -174,6 +182,53 @@ Path user()
     Path p;
     p.addEllipse (0.3f, 0.06f, 0.4f, 0.4f);
     p.addCentredArc (0.5f, 0.98f, 0.4f, 0.42f, 0.0f, -MathConstants<float>::halfPi, MathConstants<float>::halfPi, true);
+    return p;
+}
+
+Path wave (const String& nm)
+{
+    const String name = nm.trimCharactersAtStart ("~");
+    Path p;
+    auto fn = [&p] (std::function<float (float)> f, int steps = 32)
+    {
+        for (int i = 0; i <= steps; ++i)
+        {
+            const float x = (float) i / (float) steps;
+            const float y = 0.5f - 0.42f * f (x);
+            if (i == 0) p.startNewSubPath (x, y); else p.lineTo (x, y);
+        }
+    };
+    const float pi2 = MathConstants<float>::twoPi;
+    if (name == "sine") fn ([pi2] (float x) { return std::sin (pi2 * x); });
+    else if (name == "tri") { p.startNewSubPath (0.0f, 0.5f); p.lineTo (0.25f, 0.08f); p.lineTo (0.75f, 0.92f); p.lineTo (1.0f, 0.5f); }
+    else if (name == "shark") { p.startNewSubPath (0.0f, 0.92f); p.quadraticTo (0.45f, 0.1f, 0.62f, 0.08f); p.lineTo (1.0f, 0.92f); }
+    else if (name == "saw" || name == "rampup") { p.startNewSubPath (0.0f, 0.92f); p.lineTo (0.5f, 0.08f); p.lineTo (0.5f, 0.92f); p.lineTo (1.0f, 0.08f); }
+    else if (name == "rampdown") { p.startNewSubPath (0.0f, 0.08f); p.lineTo (0.5f, 0.92f); p.lineTo (0.5f, 0.08f); p.lineTo (1.0f, 0.92f); }
+    else if (name == "square") { p.startNewSubPath (0.0f, 0.92f); p.lineTo (0.0f, 0.08f); p.lineTo (0.5f, 0.08f); p.lineTo (0.5f, 0.92f); p.lineTo (1.0f, 0.92f); p.lineTo (1.0f, 0.08f); }
+    else if (name == "pulse") { p.startNewSubPath (0.0f, 0.92f); p.lineTo (0.0f, 0.08f); p.lineTo (0.22f, 0.08f); p.lineTo (0.22f, 0.92f); p.lineTo (0.5f, 0.92f);
+                                p.lineTo (0.5f, 0.08f); p.lineTo (0.72f, 0.08f); p.lineTo (0.72f, 0.92f); p.lineTo (1.0f, 0.92f); }
+    else if (name == "pulsew") { p.startNewSubPath (0.0f, 0.92f); p.lineTo (0.0f, 0.08f); p.lineTo (0.4f, 0.08f); p.lineTo (0.4f, 0.92f); p.lineTo (0.5f, 0.92f);
+                                 p.lineTo (0.5f, 0.08f); p.lineTo (0.9f, 0.08f); p.lineTo (0.9f, 0.92f); p.lineTo (1.0f, 0.92f); }
+    else if (name == "sh") { p.startNewSubPath (0.0f, 0.6f); p.lineTo (0.25f, 0.6f); p.lineTo (0.25f, 0.15f); p.lineTo (0.5f, 0.15f); p.lineTo (0.5f, 0.85f);
+                             p.lineTo (0.75f, 0.85f); p.lineTo (0.75f, 0.35f); p.lineTo (1.0f, 0.35f); }
+    else if (name == "noise") { const float v[] = { 0.5f, 0.2f, 0.7f, 0.35f, 0.9f, 0.15f, 0.6f, 0.45f, 0.8f, 0.3f, 0.55f };
+                                for (int i = 0; i < 11; ++i) { if (i == 0) p.startNewSubPath (0.0f, v[0]); else p.lineTo ((float) i / 10.0f, v[i]); } }
+    else if (name == "flat") { p.startNewSubPath (0.0f, 0.5f); p.lineTo (1.0f, 0.5f); }
+    else if (name == "chord") { p.startNewSubPath (0.0f, 0.92f); p.lineTo (0.5f, 0.25f); p.lineTo (0.5f, 0.92f); p.lineTo (1.0f, 0.25f);
+                                p.startNewSubPath (0.0f, 0.7f); p.lineTo (0.33f, 0.08f); p.lineTo (0.33f, 0.7f); p.lineTo (0.66f, 0.08f); p.lineTo (0.66f, 0.7f); p.lineTo (1.0f, 0.08f); }
+    else if (name == "siren") { p.startNewSubPath (0.0f, 0.92f); p.lineTo (0.0f, 0.08f); p.lineTo (0.3f, 0.08f); p.lineTo (0.3f, 0.92f); p.lineTo (0.5f, 0.92f);
+                                p.lineTo (0.5f, 0.08f); p.lineTo (0.62f, 0.08f); p.lineTo (0.62f, 0.92f); p.lineTo (0.74f, 0.92f); p.lineTo (0.74f, 0.08f);
+                                p.lineTo (0.82f, 0.08f); p.lineTo (0.82f, 0.92f); p.lineTo (0.9f, 0.92f); p.lineTo (0.9f, 0.08f); p.lineTo (1.0f, 0.08f); }
+    else if (name == "morph") { p.startNewSubPath (0.0f, 0.92f); p.lineTo (0.25f, 0.08f); p.lineTo (0.5f, 0.92f); p.lineTo (0.5f, 0.08f); p.lineTo (0.75f, 0.08f);
+                                p.lineTo (0.75f, 0.92f); p.lineTo (1.0f, 0.92f); }
+    else if (name == "fm") fn ([pi2] (float x) { return std::sin (pi2 * x + 2.2f * std::sin (3.0f * pi2 * x)); }, 64);
+    else if (name == "table") { for (int k = 0; k < 3; ++k) { const float o = 0.16f * (float) k;
+                                    for (int i = 0; i <= 16; ++i) { const float x = (float) i / 16.0f;
+                                        const float y = 0.62f - o - 0.2f * std::sin (pi2 * x + (float) k);
+                                        if (i == 0) p.startNewSubPath (x * 0.8f + o * 0.6f, y); else p.lineTo (x * 0.8f + o * 0.6f, y); } } }
+    else if (name == "lp") { p.startNewSubPath (0.0f, 0.3f); p.lineTo (0.5f, 0.3f); p.quadraticTo (0.68f, 0.3f, 1.0f, 0.95f); }
+    else if (name == "hp") { p.startNewSubPath (0.0f, 0.95f); p.quadraticTo (0.32f, 0.3f, 0.5f, 0.3f); p.lineTo (1.0f, 0.3f); }
+    else if (name == "bp") { p.startNewSubPath (0.0f, 0.95f); p.quadraticTo (0.35f, 0.2f, 0.5f, 0.2f); p.quadraticTo (0.65f, 0.2f, 1.0f, 0.95f); }
     return p;
 }
 

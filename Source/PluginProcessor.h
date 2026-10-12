@@ -77,6 +77,10 @@ public:
     // UI -> audio
     std::atomic<float> uiPitchBend { 0.0f }, uiModWheel { 0.0f };
     std::atomic<bool> editorOpen { false };
+    // signal of every voice at the base rate for the scopes (written only while the editor is open)
+    static constexpr int scopeSize = 4096;
+    float scope[Params::numVoices][scopeSize] {};
+    std::atomic<int> scopeWrite { 0 };
 
     // audio -> UI (live values)
     std::atomic<float> liveDest[Mod::maxDestCode + 1];   // modulated normalised value per destination code (-1 = not modulated)

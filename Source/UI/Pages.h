@@ -2,6 +2,7 @@
 
 #include "Widgets.h"
 #include "Params/Parameters.h"
+#include <juce_dsp/juce_dsp.h>
 
 class ResoOpusProcessor;
 
@@ -88,6 +89,9 @@ private:
     int types[Params::numVoices] {};
     double phase = 0.0, lastTime = 0.0, jitter = 0.0;
     bool dropHover = false;
+    juce::Path pairs[2];          // voice against its partner (X / Y): 1-2 top left, 3-4 top right
+    juce::Rectangle<float> pairBox (int pair) const;
+    void buildPairs();
 };
 
 // FX: FILTER, ECHO and SPACE. The labels of SPACE X / Y / Z follow the chosen algorithm.
@@ -101,9 +105,25 @@ private:
     Knob* xyz[3] {};
     ModulePanel* spacePanel = nullptr;
     ModulePanel* filterPanel = nullptr;
+    ModulePanel* filterBPanel = nullptr;
     juce::Label* spaceInfo = nullptr;
+    juce::Array<juce::Component*> filterBControls;
+    Knob* rates[3] {};      // LFO 1, LFO 2, RANDOM: RATE (free) and DIVISION (tempo), one of them is dimmed
+    Knob* divisions[3] {};
+    int shownAlgo = -1, shownModel = -1, shownModelB = -1;
+};
+
+// LEAD: oscillators, filter per note with its envelope, amp envelope, voices / glide / vibrato, ARP
+class LeadPage : public Page
+{
+public:
+    explicit LeadPage (ResoOpusProcessor&);
+    void refreshLive() override;
+
+private:
     juce::Array<ModulePanel*> leadPanels;
-    int shownAlgo = -1, shownModel = -1;
+    ModulePanel* filterPanel = nullptr;
+    int shownModel = -1;
 };
 
 class DronePage : public Page
@@ -125,26 +145,29 @@ private:
         void mouseDrag (const juce::MouseEvent&) override;
         void mouseUp (const juce::MouseEvent&) override;
         void mouseDoubleClick (const juce::MouseEvent&) override;
-        bool refresh (float level);
+        bool refresh (float level, float hold);
         ResoOpusProcessor& proc;
         juce::RangedAudioParameter* vol = nullptr;
         juce::RangedAudioParameter* pan = nullptr;
-        float shownVol = -1.0f, shownPan = -2.0f, shownLevel = -1.0f;
+        float shownVol = -1.0f, shownPan = -2.0f, shownLevel = -1.0f, shownHold = -1.0f;
         juce::Colour colour;
     };
 
-    // Level of a voice over the last ~8 s (what ATTACK, RELEASE and HOLD do), HOLD as a dashed line
-    struct LevelTrace : public juce::Component, public juce::SettableTooltipClient
+    // Live signal of a voice: two periods of its root (a steady picture), a faint afterglow, height = level.
+    // Click switches to the spectrum (harmonics, chord, growl).
+    struct VoiceScope : public juce::Component, public juce::SettableTooltipClient
     {
-        LevelTrace() { setTooltip ("Level of this voice over the last 8 seconds: the rise is ATTACK, the fall is RELEASE, the dashed line is HOLD"); }
-        void push (float level, float hold);
+        VoiceScope (ResoOpusProcessor& p, int v);
+        void update (float level);
         void paint (juce::Graphics&) override;
-        static constexpr int size = 240;
-        float history[size] {};
-        int head = 0;
-        float hold = 0.0f;
-        bool flat = false;
+        void mouseDown (const juce::MouseEvent&) override;
+        ResoOpusProcessor& proc;
+        int voice;
+        bool spectrumMode = false, silent = false;
+        juce::Path frames[4];      // newest first
         juce::Colour colour;
+        juce::dsp::FFT fft { 11 };
+        std::vector<float> fftData = std::vector<float> (4096);
     };
 
     // One voice strip: light plate header ("CHOIR  1"), TUNE + character knob, HOLD + PAN, volume bar. Click to select.
@@ -155,17 +178,17 @@ private:
         void paintOverChildren (juce::Graphics&) override;
         DronePage& owner;
         int voice;
-        Knob* character[4] {};   // per type: -, TIDE, FM, SHARP
+        Knob* character[6] {};   // per type: -, TIDE, FM, SHARP, INDEX, POSITION
         juce::Array<juce::Component*> controls;
         VolBar* vol = nullptr;
-        LevelTrace* trace = nullptr;
+        VoiceScope* scope = nullptr;
         int type = -1;
         bool selected = false;
     };
 
     struct Detail
     {
-        juce::Array<juce::Component*> all, byType[4];   // byType[0] = common to every type that sounds
+        juce::Array<juce::Component*> all, byType[6];   // per type; all = every control of this voice
         LedRadio* chord = nullptr;
     };
 

@@ -33,11 +33,12 @@ public:
     static const juce::StringArray& tabNames();
     juce::Rectangle<float> area (int item) const;
 
-    enum Item { None = -1, Tab0 = 0, Undo = 10, Redo, AB, Copy, Prev, Name, Next, Mod, Help, Tips, LeadPower };
+    enum Item { None = -1, Tab0 = 0, Undo = 10, Redo, AB, Copy, Prev, Name, Next, Mod, Help, Tips, LeadPower, DronePower };
 
     juce::Rectangle<float> leadPowerArea() const { return area (LeadPower); }
+    juce::Rectangle<float> dronePowerArea() const { return area (DronePower); }
 private:
-    bool leadOn = false;
+    bool leadOn = false, droneOn = true;
     void changeListenerCallback (juce::ChangeBroadcaster*) override { repaint(); }
     int itemAt (juce::Point<float>) const;
     void showHelpMenu();

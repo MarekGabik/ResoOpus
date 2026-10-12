@@ -6,7 +6,7 @@ using namespace juce;
 
 const StringArray& TopBar::tabNames()
 {
-    static const StringArray t { "DRONE", String (CharPointer_UTF8 ("LEAD \xc2\xb7 FX")) };
+    static const StringArray t { "DRONE", "LEAD", "FX" };
     return t;
 }
 
@@ -23,7 +23,7 @@ TopBar::~TopBar()
 Rectangle<float> TopBar::area (int item) const
 {
     const float h = (float) height;
-    auto tabW = [] (int i) { return (float) GlyphArrangement::getStringWidthInt (Fonts::bold (11.0f), tabNames()[i]) + 22.0f + (i == 1 ? 22.0f : 0.0f); };
+    auto tabW = [] (int i) { return (float) GlyphArrangement::getStringWidthInt (Fonts::bold (11.0f), tabNames()[i]) + 22.0f + (i <= 1 ? 22.0f : 0.0f); };
     const int numTabs = tabNames().size();
     if (item >= Tab0 && item < Tab0 + numTabs)
     {
@@ -32,6 +32,7 @@ Rectangle<float> TopBar::area (int item) const
         return { x, 0.0f, tabW (item), h };
     }
     if (item == LeadPower) { const auto t = area (Tab0 + 1); return { t.getX() + 6.0f, 8.0f, 20.0f, 20.0f }; }
+    if (item == DronePower) { const auto t = area (Tab0); return { t.getX() + 6.0f, 8.0f, 20.0f, 20.0f }; }
     // preset browser in the middle, edit tools (undo, redo, A/B, Copy) on the right next to Mod and Help
     const float cx = getWidth() * 0.5f;
     const float w = (float) getWidth();
@@ -54,6 +55,7 @@ Rectangle<float> TopBar::area (int item) const
 int TopBar::itemAt (Point<float> p) const
 {
     if (area (LeadPower).contains (p)) return LeadPower;
+    if (area (DronePower).contains (p)) return DronePower;
     for (int i = 0; i < tabNames().size(); ++i) if (area (i).contains (p)) return i;
     for (int i = Undo; i <= Tips; ++i) if (area (i).contains (p)) return i;
     return None;
@@ -62,9 +64,9 @@ int TopBar::itemAt (Point<float> p) const
 void TopBar::refresh()
 {
     const auto n = proc.getPresetName();
-    const bool lo = proc.getParamReal ("lead_on") > 0.5f;
+    const bool lo = proc.getParamReal ("lead_on") > 0.5f, dr = proc.getParamReal ("drone_on") > 0.5f;
     const bool mod = proc.presets->isModified();
-    if (n != shownName || lo != leadOn || mod != shownModified) { shownName = n; leadOn = lo; shownModified = mod; repaint(); }
+    if (n != shownName || lo != leadOn || dr != droneOn || mod != shownModified) { shownName = n; leadOn = lo; droneOn = dr; shownModified = mod; repaint(); }
 }
 
 void TopBar::paint (Graphics& g)
@@ -85,12 +87,14 @@ void TopBar::paint (Graphics& g)
     {
         auto r = area (i);
         const bool on = i == page;
-        if (i == 1)
+        if (i <= 1)
         {
-            // LEAD power: gold = playing, dim = off
-            const auto pr = area (LeadPower);
-            if (leadOn) { g.setColour (Palette::curve.withAlpha (0.18f)); g.fillEllipse (pr.reduced (1.0f)); }
-            Icons::draw (g, Icons::power(), pr.reduced (4.0f), leadOn ? Palette::curve : (hover == LeadPower ? Palette::textDim : Palette::textFaint), 1.7f);
+            // DRONE / LEAD power: gold = playing, dim = off (DRONE off + LEAD on = LEAD only)
+            const int item = i == 0 ? DronePower : LeadPower;
+            const bool onNow = i == 0 ? droneOn : leadOn;
+            const auto pr = area (item);
+            if (onNow) { g.setColour (Palette::curve.withAlpha (0.18f)); g.fillEllipse (pr.reduced (1.0f)); }
+            Icons::draw (g, Icons::power(), pr.reduced (4.0f), onNow ? Palette::curve : (hover == item ? Palette::textDim : Palette::textFaint), 1.7f);
             r = r.withTrimmedLeft (22.0f);
         }
         g.setColour (on ? Palette::text : (hover == i ? Palette::textDim : Palette::textFaint));
@@ -170,7 +174,8 @@ String TopBar::getTooltipFor (Point<float> p) const
 {
     switch (itemAt (p))
     {
-        case LeadPower: return leadOn ? "LEAD is on: keys outside the plates play it - click to switch it off" : "LEAD is off - click to switch it on";
+        case LeadPower: return leadOn ? "LEAD is on: keys outside the plates play it (with the DRONE off: every key) - click to switch it off" : "LEAD is off - click to switch it on";
+        case DronePower: return droneOn ? "DRONE is on - click to switch it off (with the LEAD on: LEAD only, every key plays the LEAD)" : "DRONE is off - click to switch it on";
         case Undo: return "Undo (Cmd/Ctrl+Z)";
         case Redo: return "Redo (Shift+Cmd/Ctrl+Z)";
         case AB:   return "Compare two settings: click to switch between A and B";
@@ -188,6 +193,7 @@ void TopBar::mouseDown (const MouseEvent& e)
     const int it = itemAt (e.position);
     auto* h = proc.history.get();
     if (it == LeadPower) { proc.setParamReal ("lead_on", leadOn ? 0.0f : 1.0f); refresh(); return; }
+    if (it == DronePower) { proc.setParamReal ("drone_on", droneOn ? 0.0f : 1.0f); refresh(); return; }
     if (it >= 0 && it < tabNames().size()) { if (onTab) onTab (it); return; }
     switch (it)
     {

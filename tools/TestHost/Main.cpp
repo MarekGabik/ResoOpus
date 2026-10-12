@@ -1568,11 +1568,16 @@ static void testEditor()
         check (p->getParamReal ("lead_on") > 0.5f, "the power icon at the LEAD tab switches the LEAD on");
     }
     editor->showPage (1);
+    for (int i = 0; i < 3; ++i) { render (*p, 0.05); pumpMessages (40); }
+    saveShot (*ed, "lead", 2.0f);
+    check (editor->getPage() == 1 && editor->getPageComponent (1)->findKnob ("lead_flt_cutoff") != nullptr, "LEAD page (second tab) with the filter per note");
+    editor->showPage (2);
     setParam (*p, "space_algo", 2.0f);
+    setParam (*p, "flt2_on", 1.0f);
     for (int i = 0; i < 3; ++i) { render (*p, 0.05); pumpMessages (40); }
     saveShot (*ed, "fx", 2.0f);
-    check (editor->getPage() == 1 && editor->getTopBar().tabNames().size() == 2, "FX page opens from the second tab");
-    if (auto* kx = editor->getPageComponent (1)->findKnob ("space_x"))
+    check (editor->getPage() == 2 && editor->getTopBar().tabNames().size() == 3, "FX page opens from the third tab");
+    if (auto* kx = editor->getPageComponent (2)->findKnob ("space_x"))
         check (true, "SPACE X knob found");
     editor->showPage (0);
 
@@ -1754,7 +1759,7 @@ int main (int argc, char* argv[])
         p->uiModWheel = 0.0f;
 
         preset ("Squelch Bass");
-        editor->showPage (1);
+        editor->showPage (2);
         live (1.5, { { 0.2, MidiMessage::noteOn (1, 43, 1.0f) }, { 1.2, MidiMessage::noteOff (1, 43) } });
         save ("filter", areaOf ("FILTER"));
         preset ("Pulse Engine");

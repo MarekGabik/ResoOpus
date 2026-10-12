@@ -54,6 +54,7 @@ ResoOpusEditor::ResoOpusEditor (ResoOpusProcessor& p)
     content.addChildComponent (browser);
 
     pages.add (new DronePage (p));
+    pages.add (new LeadPage (p));
     pages.add (new FxPage (p));
     for (auto* pg : pages)
     {
