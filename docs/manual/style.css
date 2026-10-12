@@ -5,7 +5,7 @@
   --band: #0e7f93; --band-soft: #d6eef2;   /* CHOIR cyan */
   --cut: #c43d63; --cut-soft: #f7dde5;     /* SIREN pink */
   --violet: #6a4bc4; --violet-soft: #e7e0f8; /* PULSAR */
-  --orbit: #1d6fc0; --orbit-soft: #dbe9f8; --lead: #4f8a12;
+  --orbit: #1d6fc0; --orbit-soft: #dbe9f8; --lead: #4f8a12; --quasar: #b8650f; --quasar-soft: #f8e6d0; --nebula: #12876a; --nebula-soft: #d5f3e8;
   --shot-edge: #1d1e22;
   --font-display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
   --font-body: "Source Sans 3", "Segoe UI", system-ui, -apple-system, sans-serif;
@@ -16,14 +16,14 @@
   :root:not([data-theme="light"]) {
     --bg: #111215; --surface: #18191d; --surface-2: #212228; --fg: #e6e6ea; --fg-dim: #9a9ba4;
     --line: #2d2e35; --accent: #f4c95d; --accent-soft: #3a3020; --band: #38d6f0; --band-soft: #15323a;
-    --cut: #ff7d9b; --cut-soft: #3e2230; --violet: #b98bff; --violet-soft: #2c2440; --orbit: #4aa8ff; --orbit-soft: #18283a; --lead: #a5e844;
+    --cut: #ff7d9b; --cut-soft: #3e2230; --violet: #b98bff; --violet-soft: #2c2440; --orbit: #4aa8ff; --orbit-soft: #18283a; --lead: #a5e844; --quasar: #ffb86b; --quasar-soft: #3a2a18; --nebula: #6ee7b7; --nebula-soft: #153a30;
     --shot-edge: #2d2e35; color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --bg: #111215; --surface: #18191d; --surface-2: #212228; --fg: #e6e6ea; --fg-dim: #9a9ba4;
   --line: #2d2e35; --accent: #f4c95d; --accent-soft: #3a3020; --band: #38d6f0; --band-soft: #15323a;
-  --cut: #ff7d9b; --cut-soft: #3e2230; --violet: #b98bff; --violet-soft: #2c2440; --orbit: #4aa8ff; --orbit-soft: #18283a; --lead: #a5e844;
+  --cut: #ff7d9b; --cut-soft: #3e2230; --violet: #b98bff; --violet-soft: #2c2440; --orbit: #4aa8ff; --orbit-soft: #18283a; --lead: #a5e844; --quasar: #ffb86b; --quasar-soft: #3a2a18; --nebula: #6ee7b7; --nebula-soft: #153a30;
   --shot-edge: #2d2e35; color-scheme: dark;
 }
 * { box-sizing: border-box; }
@@ -131,4 +131,8 @@ html { scroll-behavior: smooth; }
 .wave .axis { stroke: var(--line); stroke-width: 1; vector-effect: non-scaling-stroke; }
 .wave path.l { fill: none; stroke: var(--wc); stroke-width: 1.6; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
 .wave path.f { fill: var(--wc); fill-opacity: .35; stroke: var(--wc); stroke-width: 1; vector-effect: non-scaling-stroke; }
-.choir { --wc: var(--band); } .siren { --wc: var(--cut); } .pulsar { --wc: var(--violet); } .lead { --wc: var(--lead); }
+.choir { --wc: var(--band); } .siren { --wc: var(--cut); } .pulsar { --wc: var(--violet); } .lead { --wc: var(--lead); } .quasar { --wc: var(--quasar); } .nebula { --wc: var(--nebula); }
+
+.chip.quasar { background: var(--quasar-soft); }
+.chip.nebula { background: var(--nebula-soft); }
+.chip.lead { background: var(--surface-2); }

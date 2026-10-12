@@ -1758,16 +1758,34 @@ int main (int argc, char* argv[])
         save ("drone-orbit", full);
         p->uiModWheel = 0.0f;
 
-        preset ("Squelch Bass");
+        preset ("Quasar Bells");
+        drone->selectVoice (2);
+        live (1.5, { { 0.1, MidiMessage::noteOn (1, 64, 0.9f) } });
+        save ("detail-quasar", areaOf ("VOICE 3"));
+        live (0.1, { { 0.0, MidiMessage::noteOff (1, 64) } });
+        preset ("Nebula Voices");
+        drone->selectVoice (0);
+        live (2.0);
+        save ("detail-nebula", areaOf ("VOICE 1"));
+        save ("drone-nebula", full);
+
+        preset ("Poly Strings");
+        editor->showPage (1);
+        live (2.5, { { 0.1, MidiMessage::noteOn (1, 67, 0.8f) }, { 0.1, MidiMessage::noteOn (1, 71, 0.8f) }, { 0.1, MidiMessage::noteOn (1, 74, 0.8f) } });
+        save ("lead", full);
+        save ("lead-filter", areaOf ("LEAD FILTER").getUnion (areaOf ("FILTER ENV")));
+        save ("lead-voice", areaOf ("LEAD VOICE"));
+        live (0.2, { { 0.0, MidiMessage::noteOff (1, 67) }, { 0.0, MidiMessage::noteOff (1, 71) }, { 0.0, MidiMessage::noteOff (1, 74) } });
+
+        preset ("Stereo Filters");
         editor->showPage (2);
-        live (1.5, { { 0.2, MidiMessage::noteOn (1, 43, 1.0f) }, { 1.2, MidiMessage::noteOff (1, 43) } });
-        save ("filter", areaOf ("FILTER"));
-        preset ("Pulse Engine");
-        live (2.0, { { 0.1, MidiMessage::noteOn (1, 67, 0.8f) }, { 0.1, MidiMessage::noteOn (1, 71, 0.8f) } });
+        live (2.0);
         save ("fx", full);
+        save ("filters", areaOf ("FILTER A").getUnion (areaOf ("FILTER B")));
         save ("echo", areaOf ("ECHO"));
         save ("space", areaOf ("SPACE"));
-        save ("lead-row", areaOf ("LEAD OSC").getUnion (areaOf ("ARP")));
+        save ("motion", areaOf ("LFO 1").getUnion (areaOf ("RANDOM")));
+        editor->showPage (0);
 
         preset ("Gravity Well");
         editor->showPage (0);

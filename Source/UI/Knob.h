@@ -27,6 +27,7 @@ public:
     Knob (ResoOpusProcessor&, const juce::String& paramID, const juce::String& label, juce::Colour, Style);
     ~Knob() override;
 
+    void setKnobColour (juce::Colour c) { if (c != colour) { colour = c; repaint(); } }
     static int preferredWidth (const Style& s)  { return s.width > 0 ? s.width : (s.small ? 80 : 96); }
     static int preferredHeight (const Style& s) { return (s.small ? 84 : 98) + (s.marks.isEmpty() ? 0 : 12); }
 

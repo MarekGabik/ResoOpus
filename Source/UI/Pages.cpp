@@ -425,7 +425,8 @@ DronePage::DronePage (ResoOpusProcessor& p) : Page (p)
         const String V = Params::voiceID (v, "");
         auto put = [col] (Component* c, int cx, int y) { col->addAndMakeVisible (c); c->setTopLeftPosition (cx - c->getWidth() / 2, y); col->controls.add (c); };
         const int c1 = sw / 4 + 2, c2 = sw * 3 / 4 - 2;
-        put (knob (V + "tune", "TUNE", Palette::voiceType (voiceType (v)), range ("C0", "C8")), c1, 34);
+        col->tune = knob (V + "tune", "TUNE", Palette::voiceType (voiceType (v)), range ("C0", "C8"));
+        put (col->tune, c1, 34);
         col->character[1] = knob (V + "tide", "TIDE", Palette::choir, range ("0", "MAX"));
         col->character[2] = knob (V + "siren_fm", "FM", Palette::siren, range ("0", "100"));
         col->character[3] = knob (V + "sharp", "SHARP", Palette::pulsar, range ("~tri", "~square"));
@@ -817,6 +818,7 @@ void DronePage::refreshLive()
             const auto col = Palette::voiceType (t);
             c->setTitleAndColour (Params::findDef ("v1_type")->choices[t].toUpperCase(), col);
             c->vol->colour = col;
+            c->tune->setKnobColour (col);
             for (int k = 1; k < 6; ++k) c->character[k]->setVisible (k == t || (t == VP::Off && k == VP::Choir));
             for (auto* ctl : c->controls) ctl->setAlpha (t == VP::Off ? 0.35f : 1.0f);
             for (int k = 1; k < 6; ++k) c->character[k]->setAlpha (t == VP::Off ? 0.35f : 1.0f);

@@ -179,6 +179,7 @@ private:
         DronePage& owner;
         int voice;
         Knob* character[6] {};   // per type: -, TIDE, FM, SHARP, INDEX, POSITION
+        Knob* tune = nullptr;
         juce::Array<juce::Component*> controls;
         VolBar* vol = nullptr;
         VoiceScope* scope = nullptr;

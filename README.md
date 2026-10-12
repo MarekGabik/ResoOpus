@@ -11,7 +11,19 @@ od čistého ladění k chaosu. Formáty VST3 (Mac + Windows), AU (Mac), Standal
 Podrobnosti: [docs/SPECIFIKACE.md](docs/SPECIFIKACE.md) (architektura, roadmapa s branami), [docs/KONCEPT.md](docs/KONCEPT.md),
 vzhled [design/resoopus-mockup.html](design/resoopus-mockup.html).
 
-## Stav: fáze 5 (verze 0.1.0)
+## Stav: verze 0.2.0 (k otestování)
+
+Novinky 0.2:
+- záložky **DRONE / LEAD / FX** s vypínači DRONE a LEAD: jen drone, jen lead, nebo obojí
+- **LEAD** Mono / Legato / **Poly 4 / Poly 8**, filtr s obálkou pro každou notu (5 modelů, LP/BP/HP, KEY, VELOCITY)
+- **FILTER A + B** s ROUTINGEM Serial / Parallel / Split (drone A, lead B) / Stereo
+- **MOTION**: LFO 1, LFO 2 (6 tvarů, tempo, fáze, restart notou), RANDOM (Drift / Steps / Noise), LEAD ENV; zdroje se přetahují z hlaviček panelů na knoby
+- nové typy hlasu **QUASAR** (2operátorové FM bez aliasingu) a **NEBULA** (wavetable Vocal / Organ / Glass)
+- **CHARACTER** u každého hlasu (Digital - Clean - Analog), **SYMMETRY** (šířka pulzu) u PULSAR a LEAD
+- živý **osciloskop / spektrum** každého hlasu, X/Y figury párů v GRAVITY, ikony průběhů v barvách typů
+- 54 presetů (12 nových), příručka v0.2
+
+Z verze 0.1:
 
 Hotovo a otestováno:
 - **4 hlasy** ve dvou párech (1·2 a 3·4 kolem GRAVITY). TYPE každého hlasu: **OFF / CHOIR / SIREN / PULSAR**
@@ -53,7 +65,9 @@ Naměřeno (`ResoOpusTests`, Apple M1, 48 kHz):
 | Efekty: stabilita v extrémech / ECHO 100 % + TO VOICES + GRAVITY 90 % 30 s / VOID FREEZE | bez NaN, ≤ −0,3 dBFS / stabilní / drží ±0,5 dB |
 | CPU: výchozí patch se SPACE / nečinnost | 2,7 % / 0,65 % jádra |
 | FILTER: 5 modelů, LP na 3 kHz / HP na 110 Hz / BP při max. rezonanci | −31 až −64 dB / −53 až −109 dB / +0,6 až +9,8 dB proti rezonanci 0 |
-| Audit parametrů | 175 ze 175 mění zvuk |
+| QUASAR 1976 Hz INDEX 100 / NEBULA 1976 Hz | aliasing −76 / −88 dB |
+| CPU: + LEAD Poly 8 s filtry (2×) | 6,2 % jádra |
+| Audit parametrů | 257 ze 257 mění zvuk |
 | UBSan (nedefinované chování) | 0 chyb |
 
 ## Build (macOS)
