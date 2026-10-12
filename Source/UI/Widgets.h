@@ -80,6 +80,9 @@ public:
     void setGrid (std::vector<float> columnWeights, std::vector<juce::Component*> items);
     void setSpan (juce::Component* item, int columns);   // a wide item centred over several grid columns
     void setRightText (const juce::String& t) { rightText = t; repaint(); }
+    // one short line at the bottom of the panel (what the chosen mode does); the grid makes room for it
+    void setFooter (const juce::String& t) { const bool had = footer.isNotEmpty(); footer = t; if (had != footer.isNotEmpty()) resized(); repaint(); }
+    static constexpr int footerHeight = 20;
     // makes the right header text a select button (pill with an arrow); called with the panel as menu target
     std::function<void (juce::Component&)> onRightClick;
     void mouseDown (const juce::MouseEvent&) override;
@@ -95,7 +98,7 @@ public:
     void resized() override;
 
 private:
-    juce::String title, rightText;
+    juce::String title, rightText, footer;
     juce::Colour colour;
     int source;
     int envIcon = 0;

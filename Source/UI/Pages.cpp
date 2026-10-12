@@ -975,13 +975,7 @@ FxPage::FxPage (ResoOpusProcessor& p) : Page (p)
     xyz[0] = knob ("space_x", "X", Palette::fx2, sm ("0", "100"));
     xyz[1] = knob ("space_y", "Y", Palette::fx2, sm ("0", "100"));
     xyz[2] = knob ("space_z", "Z", Palette::fx2, sm ("0", "100"));
-    spaceInfo = new Label();
-    owned.add (spaceInfo);
-    spaceInfo->setFont (Fonts::regular (10.5f));
-    spaceInfo->setColour (Label::textColourId, Palette::textDim);
-    spaceInfo->setJustificationType (Justification::topLeft);
-    spaceInfo->setSize (118, 96);
-    spacePanel->setGrid ({ 1.25f, 1.0f, 1.0f }, { algo, xyz[0], xyz[1], spaceInfo, xyz[2], knob ("space_blend", "BLEND", Palette::fx2, sm ("DRY", "WET")) });
+    spacePanel->setGrid ({ 1.25f, 1.0f, 1.0f }, { algo, xyz[0], xyz[1], nullptr, xyz[2], knob ("space_blend", "BLEND", Palette::fx2, sm ("DRY", "WET")) });
 
     refreshLive();
 }
@@ -1013,6 +1007,12 @@ void FxPage::refreshLive()
         const int m = jlimit (0, 4, em);
         for (int i = 0; i < 3; ++i) echoKnobs[i]->setLabel (names[m][i]);
         echoPanel->setRightText (Params::findDef ("echo_mode")->choices[m].toUpperCase());
+        static const char* info[5] = { "Two lines, left and right, feeding each other.",
+                                        "A tape loop with two heads: darker, wobbling repeats.",
+                                        "The repeats bounce from left to right.",
+                                        "A broken digital delay: fewer bits, grainy and dark.",
+                                        "Chorused repeats, wide and clean." };
+        echoPanel->setFooter (info[m]);
         echoSrc->setAlpha (m == 0 || m == 2 ? 1.0f : 0.35f);   // SELF / LFO only steer DUAL and PING-PONG
     }
     {
@@ -1034,6 +1034,12 @@ void FxPage::refreshLive()
             static const char* xNames[5] = { "WIDTH", "FEEDBACK", "SPREAD", "STEREO", "SPEED" };
             motX->setLabel (xNames[mm]);
             motionPanel->setRightText (on ? Params::findDef ("mot_mode")->choices[mm].toUpperCase() : String ("OFF"));
+            static const char* info[5] = { "The sound circles around your head.",
+                                           "Sweeping notches, left and right apart.",
+                                           "The triple chorus of old string machines.",
+                                           "The level pulses; STEREO lets the sides alternate.",
+                                           "A rotating speaker; SPEED slow or fast, with inertia." };
+            motionPanel->setFooter (on ? String (info[mm]) : String ("Switch it ON for movement in space."));
         }
     }
     const int a = roundToInt (proc.getParamReal ("space_algo"));
@@ -1043,13 +1049,12 @@ void FxPage::refreshLive()
                                         { "FEEDBACK", "TIME", "PITCH" }, { "FREQUENCY", "STEPS", "ROOM" }, { "FEEDBACK", "TIME", "WOW" } };
     for (int i = 0; i < 3; ++i) xyz[i]->setLabel (labels[jlimit (0, 4, a)][i]);
     spacePanel->setRightText (Params::findDef ("space_algo")->choices[jlimit (0, 4, a)].toUpperCase());
-    static const char* info[5] = {
-        "Airy shimmer: soft octaves above (OCT UP) or below (OCT DOWN) that keep drifting as the tail fades.",
-        "Huge dark space. DECAY at the very top freezes what is sounding.",
-        "A staircase in space: every repeat steps by PITCH (-12 -7 -5 0 +5 +7 +12) and melts into a room.",
-        "Bells and bowls: the ring rings three bowl tones. STEPS jumps by pentatonic notes, ROOM adds a space.",
-        "Tape echo: repeats saturate, darken and thin out. WOW = wow and flutter. Above 85 % it sings." };
-    spaceInfo->setText (info[jlimit (0, 4, a)], dontSendNotification);
+    static const char* info[5] = { "Airy shimmer: soft octaves drift up or down.",
+                                   "A huge dark space; DECAY at the very top freezes.",
+                                   "A staircase: every repeat steps by PITCH.",
+                                   "Bells and bowls; STEPS jumps by pentatonic notes.",
+                                   "Tape echo: saturated, darker repeats; WOW wobbles." };
+    spacePanel->setFooter (info[jlimit (0, 4, a)]);
 }
 
 //==============================================================================

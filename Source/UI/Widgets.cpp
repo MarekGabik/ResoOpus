@@ -329,6 +329,14 @@ void ModulePanel::paint (Graphics& g)
         g.strokePath (p, PathStrokeType (1.6f, PathStrokeType::curved, PathStrokeType::rounded));
     }
 
+    if (footer.isNotEmpty())
+    {
+        g.setColour (Palette::textDim);
+        g.setFont (Fonts::regular (10.5f));
+        g.drawText (footer, Rectangle<float> (14.0f, (float) getHeight() - (float) footerHeight - 8.0f, (float) getWidth() - 28.0f, (float) footerHeight),
+                    Justification::centredLeft, true);
+    }
+
     g.setColour (Palette::moduleEdge);
     g.drawRoundedRectangle (r.reduced (0.5f), 8.0f, 1.0f);
 }
@@ -355,7 +363,7 @@ void ModulePanel::resized()
     if (handle) handle->setBounds (getWidth() - 62, 3, 56, 19);
     if (items.empty() || weights.empty()) return;
 
-    auto body = getLocalBounds().withTrimmedTop (headerHeight + 2).reduced (6, 6);
+    auto body = getLocalBounds().withTrimmedTop (headerHeight + 2).withTrimmedBottom (footer.isNotEmpty() ? footerHeight : 0).reduced (6, 6);
     const int cols = (int) weights.size();
     const int rows = ((int) items.size() + cols - 1) / cols;
     float total = 0.0f;

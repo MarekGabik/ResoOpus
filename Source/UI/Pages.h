@@ -119,7 +119,6 @@ private:
     LedRadio* echoSrc = nullptr;
     Knob* echoKnobs[3] {};
     FilterRoutingView* filterView = nullptr;
-    juce::Label* spaceInfo = nullptr;
     juce::Array<juce::Component*> filterBControls;
     int shownAlgo = -1, shownModel = -1, shownModelB = -1, shownRoute = -2, shownEcho = -1, shownMotion = -1;
 };
