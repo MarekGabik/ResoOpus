@@ -44,6 +44,7 @@ ResoOpusProcessor::ResoOpusProcessor()
     for (auto& v : liveDest) v.store (-1.0f);
     for (auto& v : liveSource) v.store (0.0f);
     for (int v = 0; v < Params::numVoices; ++v) { liveLevel[v].store (0.0f); liveGate[v].store (false); liveRoot[v].store (-1.0f); }
+    liveRoot[Params::numVoices].store (-1.0f);
 
     uiState.setProperty ("presetName", "Init", nullptr);
     history = std::make_unique<StateHistory> (*this);
@@ -727,7 +728,7 @@ void ResoOpusProcessor::renderVoices (float* L, float* R, float* leadL, float* l
         {
             for (int k = 0; k < (count >> osIndex); ++k)
             {
-                for (int v = 0; v < Params::numVoices; ++v) scope[v][scopePos] = 0.0f;
+                for (int v = 0; v <= Params::numVoices; ++v) scope[v][scopePos] = 0.0f;
                 scopePos = (scopePos + 1) & (scopeSize - 1);
             }
             scopeWrite.store (scopePos, std::memory_order_release);
@@ -751,17 +752,19 @@ void ResoOpusProcessor::renderVoices (float* L, float* R, float* leadL, float* l
             now[v] = voices[v].tick (fmHz, L[k], R[k]);
         }
         for (int v = 0; v < Params::numVoices; ++v) voiceMod[v] = now[v];
-        if (scoping && (k & osMask) == 0)
-        {
-            for (int v = 0; v < Params::numVoices; ++v) scope[v][scopePos] = now[v];
-            scopePos = (scopePos + 1) & (scopeSize - 1);
-        }
         if (anyLead)
             for (int i = 0; i < maxLead; ++i)
                 if (leadOnNow[i]) leads[i].tick (leadL[k], leadR[k]);
+        if (scoping && (k & osMask) == 0)
+        {
+            for (int v = 0; v < Params::numVoices; ++v) scope[v][scopePos] = now[v];
+            scope[Params::numVoices][scopePos] = 0.5f * (leadL[k] + leadR[k]);
+            scopePos = (scopePos + 1) & (scopeSize - 1);
+        }
         lastMono = jlimit (-1.5f, 1.5f, (L[k] + R[k] + leadL[k] + leadR[k]) * 1.2f);
     }
     if (scoping) scopeWrite.store (scopePos, std::memory_order_release);
+    leadActivity.store (anyLead ? 1.0f : 0.0f, std::memory_order_relaxed);
 }
 
 //==============================================================================
@@ -819,6 +822,7 @@ bool ResoOpusProcessor::anyLeadActive() const
 
 void ResoOpusProcessor::leadPlay (int note, float vel, bool legato)
 {
+    liveRoot[Params::numVoices].store ((float) note + 12.0f * leadSettings.octave, std::memory_order_relaxed);   // the LEAD scope follows it
     const int mode = leadMode();
     if (mode < 2)
     {
@@ -871,10 +875,11 @@ void ResoOpusProcessor::runArp (int len)
     {
         if (arpWasOn) { leadStopAll(); }
         arpWasOn = false;
+        arpShownIdx.store (-1, std::memory_order_relaxed);
         return;
     }
     arpWasOn = true;
-    if (arpNum == 0) { if (arpGate) { leadStop (arpNote); arpGate = false; } return; }
+    if (arpNum == 0) { if (arpGate) { leadStop (arpNote); arpGate = false; } arpShownNum.store (0, std::memory_order_relaxed); arpShownIdx.store (-1, std::memory_order_relaxed); return; }
     static const double beats[] = { 1.0, 0.5, 1.0 / 3.0, 0.25, 1.0 / 6.0, 0.125 };
     const double stepLen = sr * 60.0 / hostBpm * beats[jlimit (0, 5, (int) curG[GP::arp_rate])];
     const int octaves = 1 + (int) curG[GP::arp_octaves];
@@ -888,6 +893,10 @@ void ResoOpusProcessor::runArp (int len)
         else if (mode == 2) { const int span = std::max (1, 2 * total - 2); const int pp = arpStep % span; idx = pp < total ? pp : span - pp; }
         else idx = (int) (arpRng.next01() * (float) total) % total;
         const int note = arpNotes[idx % arpNum] + 12 * (idx / arpNum);
+        for (int i = 0; i < std::min (arpNum, 16); ++i) arpShownNotes[i].store (arpNotes[i], std::memory_order_relaxed);
+        arpShownNum.store (arpNum, std::memory_order_relaxed);
+        arpShownTotal.store (total, std::memory_order_relaxed);
+        arpShownIdx.store (idx, std::memory_order_relaxed);
         if (arpGate) leadStop (arpNote);
         leadPlay (note, leadNum > 0 ? leadVel[leadNum - 1] : 0.8f, false);
         arpNote = note;

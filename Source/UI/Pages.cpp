@@ -102,33 +102,7 @@ void LedDot::paint (Graphics& g)
 
 void LedDot::mouseDown (const MouseEvent&) { attachment->setValueAsCompleteGesture (on ? 0.0f : 1.0f); }
 
-MiniToggle::MiniToggle (ResoOpusProcessor& p, const String& id, const String& t) : text (t)
-{
-    param = p.param (id);
-    jassert (param != nullptr);
-    attachment = std::make_unique<ParameterAttachment> (*param, [this] (float v) { on = v > 0.5f; repaint(); });
-    attachment->sendInitialUpdate();
-    if (auto* d = Params::findDef (id)) setTooltip (d->tip);
-    setSize (GlyphArrangement::getStringWidthInt (Fonts::bold (9.0f), text) + 14, 16);
-    setMouseCursor (MouseCursor::PointingHandCursor);
-}
 
-void MiniToggle::paint (Graphics& g)
-{
-    const auto r = getLocalBounds().toFloat().reduced (0.5f);
-    g.setColour (on ? Palette::curve : Colour (0xff1c1d22));
-    g.fillRoundedRectangle (r, r.getHeight() * 0.5f);
-    g.setColour (on ? Palette::curve.brighter (0.2f) : Colour (0xff3a3b42));
-    g.drawRoundedRectangle (r, r.getHeight() * 0.5f, 1.0f);
-    g.setColour (on ? Palette::plateText : Palette::textDim);
-    g.setFont (Fonts::bold (9.0f));
-    g.drawText (text, r, Justification::centred, false);
-}
-
-void MiniToggle::mouseDown (const MouseEvent& e)
-{
-    if (! e.mods.isPopupMenu()) attachment->setValueAsCompleteGesture (on ? 0.0f : 1.0f);
-}
 
 //==============================================================================
 GravityView::GravityView (ResoOpusProcessor& p) : proc (p)
@@ -725,13 +699,13 @@ void DronePage::VolBar::mouseDoubleClick (const MouseEvent&)
     vol->endChangeGesture();
 }
 
-DronePage::VoiceScope::VoiceScope (ResoOpusProcessor& p, int v) : proc (p), voice (v)
+VoiceScope::VoiceScope (ResoOpusProcessor& p, int v) : proc (p), voice (v)
 {
     setTooltip ("The signal of this voice (two periods of its note, height = level). Click: spectrum / scope");
     setMouseCursor (MouseCursor::PointingHandCursor);
 }
 
-void DronePage::VoiceScope::mouseDown (const MouseEvent&)
+void VoiceScope::mouseDown (const MouseEvent&)
 {
     spectrumMode = ! spectrumMode;
     for (auto& f : frames) f.clear();
@@ -739,7 +713,7 @@ void DronePage::VoiceScope::mouseDown (const MouseEvent&)
     repaint();
 }
 
-void DronePage::VoiceScope::update (float level)
+void VoiceScope::update (float level)
 {
     if (level < 0.0008f)
     {
@@ -812,7 +786,7 @@ void DronePage::VoiceScope::update (float level)
     repaint();
 }
 
-void DronePage::VoiceScope::paint (Graphics& g)
+void VoiceScope::paint (Graphics& g)
 {
     const auto r = getLocalBounds().toFloat();
     g.setColour (Colour (0xff111216));
@@ -1003,7 +977,10 @@ FxPage::FxPage (ResoOpusProcessor& p) : Page (p)
     {
         for (int i = 0; i < 2; ++i)
             echoDivs[i]->setTopLeftPosition (echoKnobs[i]->getBounds().getCentreX() - echoDivs[i]->getWidth() / 2, echoKnobs[i]->getY());
-        echoSync->setCentrePosition ((echoKnobs[0]->getBounds().getCentreX() + echoKnobs[1]->getBounds().getCentreX()) / 2, echoKnobs[0]->getY() + 48);
+        // between the two dials, the button level with their centres
+        const auto c0 = echoKnobs[0]->getPosition().toFloat() + echoKnobs[0]->centre(), c1 = echoKnobs[1]->getPosition().toFloat() + echoKnobs[1]->centre();
+        const auto b = echoSync->buttonArea();
+        echoSync->setTopLeftPosition (roundToInt ((c0.x + c1.x) * 0.5f - echoSync->getWidth() * 0.5f), roundToInt (c0.y - b.getCentreY()));
     };
     echoPanel->onLayout();
 
@@ -1106,14 +1083,14 @@ void FxPage::refreshLive()
     if (a == shownAlgo) return;
     shownAlgo = a;
     static const char* labels[5][3] = { { "OCT UP", "OCT DOWN", "DECAY" }, { "PRE-DELAY", "WOBBLE", "DECAY" },
-                                        { "FEEDBACK", "TIME", "PITCH" }, { "FREQUENCY", "STEPS", "ROOM" }, { "FEEDBACK", "TIME", "WOW" } };
+                                        { "FEEDBACK", "TIME", "PITCH" }, { "FREQUENCY", "STEPS", "ROOM" }, { "DENSITY", "LENGTH", "SCATTER" } };
     for (int i = 0; i < 3; ++i) xyz[i]->setLabel (labels[jlimit (0, 4, a)][i]);
     spacePanel->setRightText (Params::findDef ("space_algo")->choices[jlimit (0, 4, a)].toUpperCase());
     static const char* info[5] = { "Airy shimmer: soft octaves drift up or down.",
                                    "A huge dark space; DECAY at the very top freezes.",
                                    "A staircase: every repeat steps by PITCH.",
                                    "Bells and bowls; STEPS jumps by pentatonic notes.",
-                                   "Tape echo: saturated, darker repeats; WOW wobbles." };
+                                   "A comet's tail of grains, scattered in pitch and space." };
     spacePanel->setFooter (info[jlimit (0, 4, a)]);
 }
 
@@ -1233,6 +1210,20 @@ LeadPage::LeadPage (ResoOpusProcessor& p) : Page (p)
         knob ("lead_touch_vib", "TOUCH VIB", c, sm ("0", "100")),
         knob ("lead_level", "VOLUME", c, sm ("-inf", "+6")),
         knob ("lead_pan", "PAN", c, sm ("L", "R", true)), nullptr });
+    // the LEAD's own signal (two periods of the last note; click: spectrum)
+    leadScope = new VoiceScope (proc, Params::numVoices);
+    owned.add (leadScope);
+    leadScope->colour = c;
+    leadScope->setTooltip ("The signal of the LEAD (two periods of the last note played). Click: spectrum / scope");
+    leadScope->setSize (128, 74);
+    voice->addAndMakeVisible (leadScope);
+    voice->onLayout = [this, voice]
+    {
+        // in the free cell bottom right, its top level with the titles of that row
+        const int cellW = (voice->getWidth() - 12) * 10 / 51;
+        leadScope->setTopLeftPosition (voice->getWidth() - 6 - cellW / 2 - leadScope->getWidth() / 2, voice->rowTop (1) + 2);
+    };
+    voice->onLayout();
 
     auto* arp = panel ("ARP", c, { 760 + g6, y2, width - 766, rowH });
     auto* arpMode = new LedRadio (proc, "arp_mode", "DIRECTION", { "UP", "DOWN", "PING-PONG", "RANDOM" });
@@ -1242,13 +1233,79 @@ LeadPage::LeadPage (ResoOpusProcessor& p) : Page (p)
         static_cast<Component*> (owned.add (new LedButton (proc, "arp_latch", "LATCH"))),
         knob ("arp_rate", "RATE", c, sm ("1/4", "1/32")),
         arpMode, nullptr, knob ("arp_octaves", "OCTAVES", c, sm ("1", "4")) });
+    arpView = new ArpView (proc);
+    owned.add (arpView);
+    arp->addAndMakeVisible (arpView);
+    arp->onLayout = [this, arp]
+    {
+        arpView->setTopLeftPosition (arp->getWidth() / 2 - arpView->getWidth() / 2, arp->rowTop (1) + 2);
+    };
+    arp->onLayout();
     leadPanels = { osc, filterPanel, fenv, env, voice, arp };
     refreshLive();
+}
+
+//==============================================================================
+ArpView::ArpView (ResoOpusProcessor& p) : proc (p)
+{
+    setSize (124, 78);
+    setTooltip ("The ARP pattern: the held keys (and their octaves) in playing order, the step now playing lit");
+}
+
+void ArpView::update()
+{
+    const bool on = proc.getParamReal ("arp_on") > 0.5f && proc.getParamReal ("lead_on") > 0.5f;
+    const int num = proc.arpShownNum.load (std::memory_order_relaxed), total = proc.arpShownTotal.load (std::memory_order_relaxed);
+    const int idx = proc.arpShownIdx.load (std::memory_order_relaxed);
+    if (on != shownOn || num != shownNum || total != shownTotal || idx != shownIdx)
+    {
+        shownOn = on; shownNum = num; shownTotal = total; shownIdx = idx;
+        repaint();
+    }
+}
+
+void ArpView::paint (Graphics& g)
+{
+    const auto r = getLocalBounds().toFloat();
+    g.setColour (Colour (0xff111216));
+    g.fillRoundedRectangle (r, 4.0f);
+    g.setColour (Palette::textFaint);
+    g.setFont (Fonts::bold (8.5f));
+    g.drawText ("STEPS", r.reduced (5.0f, 3.0f), Justification::topRight, false);
+    const auto col = Palette::lead;
+    if (! shownOn || shownNum <= 0)
+    {
+        g.setColour (Palette::textFaint);
+        g.setFont (Fonts::regular (10.0f));
+        g.drawFittedText (shownOn ? "Hold keys outside the plates" : "ARP is off", getLocalBounds().reduced (8, 14), Justification::centred, 2);
+        return;
+    }
+    // up to 16 cells in two rows of 8; longer patterns show their first 16 steps
+    const int cells = std::min (16, shownTotal);
+    const int perRow = std::min (8, cells), rows = (cells + 7) / 8;
+    const float cw = (r.getWidth() - 10.0f) / (float) perRow, ch = 26.0f;
+    const float top = 16.0f + (rows == 1 ? 14.0f : 0.0f);
+    g.setFont (Fonts::mono (8.5f).boldened());
+    for (int i = 0; i < cells; ++i)
+    {
+        const auto cell = Rectangle<float> (5.0f + (float) (i % 8) * cw, top + (float) (i / 8) * (ch + 4.0f), cw - 2.0f, ch);
+        const bool now = i == shownIdx;
+        const int note = proc.arpShownNotes[i % shownNum].load (std::memory_order_relaxed) + 12 * (i / shownNum);
+        g.setColour (now ? col : col.withAlpha (0.12f));
+        g.fillRoundedRectangle (cell, 3.0f);
+        g.setColour (now ? Palette::plateText : Palette::textDim);
+        g.drawText (Params::noteName ((double) note).removeCharacters (" "), cell, Justification::centred, false);
+    }
 }
 
 void LeadPage::refreshLive()
 {
     Page::refreshLive();
+    if (isVisible())
+    {
+        leadScope->update (proc.leadActivity.load (std::memory_order_relaxed) > 0.5f ? 1.0f : 0.0f);
+        arpView->update();
+    }
     const bool leadOn = proc.getParamReal ("lead_on") > 0.5f;
     for (auto* p : leadPanels)
         if (std::abs (p->getAlpha() - (leadOn ? 1.0f : 0.45f)) > 0.01f) p->setAlpha (leadOn ? 1.0f : 0.45f);

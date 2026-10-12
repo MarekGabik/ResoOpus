@@ -642,18 +642,16 @@ static void testNewOscillators()
         check (wobble < -70.0 && jump < -60.0, "SPACE VOID with WOBBLE: worst click " + String (wobble, 1) + " dB, PRE-DELAY 74 -> 20 % at once " + String (jump, 1) + " dB");
     }
     {
-        // COMET: one quiet note at FEEDBACK 100 % must not grow into a loud, endless howl (it used to reach -23 dBFS)
+        // COMET: a short pluck leaves a glittering tail of grains (LENGTH 80 %) that fades, never grows
         auto p = makeProc (sr);
-        for (int v = 0; v < Params::numVoices; ++v) setParam (*p, Params::voiceID (v, "hold"), 0.0f);
-        setParam (*p, "space_algo", 4.0f); setParam (*p, "space_x", 100.0f); setParam (*p, "space_y", 5.0f);
-        setParam (*p, "space_z", 30.0f); setParam (*p, "space_blend", 50.0f);
-        const auto out = render (*p, 10.0, note (60, 0.2, 0.5, 0.4f));
-        const double noteDb = rmsDb (out, (int) (0.2 * sr), (int) (0.5 * sr));
-        double loudest = -200.0;
-        for (int sec = 1; sec < 10; ++sec) loudest = std::max (loudest, rmsDb (out, sec * (int) sr, (sec + 1) * (int) sr));
-        const double early = rmsDb (out, 3 * (int) sr, 4 * (int) sr), late = rmsDb (out, 9 * (int) sr, 10 * (int) sr);
-        check (loudest < -38.0 && late < early + 1.5, "COMET at FEEDBACK 100 % after one quiet note (" + String (noteDb, 1) + " dB): the loop sings at "
-               + String (loudest, 1) + " dBFS at most and does not grow (" + String (early, 1) + " -> " + String (late, 1) + ")");
+        soloVoice1 (*p, 57.0f);
+        setParam (*p, "v1_hold", 0.0f); setParam (*p, "v1_attack", 0.002f); setParam (*p, "v1_release", 0.03f); setParam (*p, "echo_mix", 0.0f);
+        setParam (*p, "space_algo", 4.0f); setParam (*p, "space_x", 60.0f); setParam (*p, "space_y", 80.0f);
+        setParam (*p, "space_z", 40.0f); setParam (*p, "space_blend", 100.0f);
+        const auto out = render (*p, 8.0, note (60, 0.0, 0.3));
+        const double tail = rmsDb (out, (int) (1.0 * sr), (int) (1.5 * sr)), late = rmsDb (out, (int) (7.0 * sr), (int) (8.0 * sr));
+        check (tail > -45.0 && late < tail - 20.0 && peakDb (out) < 0.0, "COMET: a 0.3 s pluck leaves a grain tail (" + String (tail, 1) + " dB a second later) that fades ("
+               + String (late, 1) + " dB after 7 s)");
     }
     auto quasar = [&] (float midi, float ratio, float index)
     {
@@ -1277,14 +1275,32 @@ static void testEffects()
         check (std::abs (cents (f, 220.0 * std::exp2 (5.0 / 12.0))) < 30.0, "RUNNER Z at the 4th step: repeats a fourth up (" + String (f, 1) + " Hz, 293.7 expected)");
     }
     {
-        // COMET: wow & flutter move the tape smoothly, no jitter hiss on a pure sine
-        auto p = makeProc (sr);
-        soloVoice1 (*p, 57.0f, VP::Quasar);
-        setParam (*p, "v1_q_index", 0.0f); setParam (*p, "echo_mix", 0.0f);
-        setParam (*p, "space_algo", 4.0f); setParam (*p, "space_blend", 100.0f);
-        setParam (*p, "space_x", 50.0f); setParam (*p, "space_y", 30.0f); setParam (*p, "space_z", 100.0f);
-        const double highs = clickDb (render (*p, 6.0), 2.0, sr);
-        check (highs < -60.0, "COMET wow & flutter 100 % on a 220 Hz sine: nothing above 3 kHz (" + String (highs, 1) + " dB)");
+        // COMET: SCATTER throws grains an octave up (and down) and across the stereo field; at 0 they stay on the note
+        auto cloud = [&] (float z)
+        {
+            auto p = makeProc (sr);
+            soloVoice1 (*p, 57.0f, VP::Quasar);
+            setParam (*p, "v1_q_index", 0.0f); setParam (*p, "v1_pan", 0.0f); setParam (*p, "echo_mix", 0.0f);
+            setParam (*p, "space_algo", 4.0f); setParam (*p, "space_blend", 100.0f);
+            setParam (*p, "space_x", 70.0f); setParam (*p, "space_y", 30.0f); setParam (*p, "space_z", z);
+            return render (*p, 6.0);
+        };
+        auto octave = [sr] (const AudioBuffer<float>& o)
+        {
+            const auto db = spectrum (o, (int) (2.0 * sr), 15);
+            const double binHz = sr / 32768.0;
+            auto band = [&] (double f) { double e = 0.0; for (long k = std::lround (f * 0.97 / binHz); k <= std::lround (f * 1.03 / binHz); ++k) e += std::pow (10.0, db[(size_t) k] / 10.0); return 10.0 * std::log10 (e + 1e-30); };
+            return band (440.0) - band (220.0);
+        };
+        const auto still = cloud (0.0f), wide = cloud (100.0f);
+        double side = 0.0, all = 0.0;
+        for (int i = (int) (2.0 * sr); i < wide.getNumSamples(); ++i)
+        {
+            const double l = wide.getSample (0, i), r = wide.getSample (1, i);
+            side += (l - r) * (l - r); all += (l + r) * (l + r);
+        }
+        check (octave (still) < -40.0 && octave (wide) > -15.0 && side > 0.05 * all,
+               "COMET SCATTER: octave grains " + String (roundToInt (octave (still))) + " -> " + String (roundToInt (octave (wide))) + " dB, spread across the stereo field");
     }
     {
         // AURORA: the octave is there, the glassy pile-up of ever higher octaves is not
@@ -1346,7 +1362,7 @@ static void testEffectLevels()
         { "RUNNER 100 %, feedback max", { { "space_algo", 2.0f }, { "space_blend", 100.0f }, { "space_x", 100.0f } } },
         { "SATURN 100 %", { { "space_algo", 3.0f }, { "space_blend", 100.0f } } },
         { "COMET 100 %", { { "space_algo", 4.0f }, { "space_blend", 100.0f } } },
-        { "COMET 100 %, feedback max", { { "space_algo", 4.0f }, { "space_blend", 100.0f }, { "space_x", 100.0f } } },
+        { "COMET 100 %, density max", { { "space_algo", 4.0f }, { "space_blend", 100.0f }, { "space_x", 100.0f } } },
     };
     for (auto& c : cases)
     {
@@ -1464,6 +1480,36 @@ static void testMotion()
         }
         check (diff < 1.0e-6 && ok && worst < 0.0, "MOTION: MIX 0 leaves the sound untouched; every mode at full RATE, DEPTH and X: finite, peak " + String (worst, 1) + " dBFS");
     }
+}
+
+// Random patches: every global and voice parameter set at random (fixed seed), a few notes; the output must stay
+// finite and under 0 dBFS. Catches combinations no hand-written test thinks of
+static void testRandomPatches()
+{
+    std::cout << "Random patches" << std::endl;
+    Random rnd (0x5eed);
+    int bad = 0;
+    double worst = -200.0;
+    String worstInfo;
+    for (int n = 0; n < 40; ++n)
+    {
+        auto p = makeProc (48000.0);
+        for (auto* prm : p->getParameters())
+            if (auto* pw = dynamic_cast<AudioProcessorParameterWithID*> (prm))
+            {
+                const auto& id = pw->paramID;
+                if (id.startsWith ("mod") || id == "oversampling" || id == "master_vol" || id == "a4" || id == "pb_range" || id == "plates_base") continue;
+                pw->setValueNotifyingHost (rnd.nextFloat());
+            }
+        setParam (*p, "master_vol", 0.0f);
+        const auto out = render (*p, 3.0, { { 0.2, MidiMessage::noteOn (1, 60, 0.8f) }, { 0.3, MidiMessage::noteOn (1, 72, 0.7f) },
+                                            { 0.4, MidiMessage::noteOn (1, 76, 0.6f) }, { 2.0, MidiMessage::noteOff (1, 60) }, { 2.0, MidiMessage::noteOff (1, 72) },
+                                            { 2.0, MidiMessage::noteOff (1, 76) } });
+        const double pk = peakDb (out);
+        if (! allFinite (out) || pk >= 0.0) ++bad;
+        if (pk > worst) { worst = pk; worstInfo = "patch " + String (n); }
+    }
+    check (bad == 0, "40 random patches (every parameter at random, a few notes): all finite and below 0 dBFS, loudest " + String (worst, 1) + " dBFS (" + worstInfo + ")");
 }
 
 static void testLead()
@@ -1881,10 +1927,11 @@ static void testPresets()
     }
 }
 
-static double cpuPercent (int os, bool allChoir, double seconds = 6.0, int type = -1, bool polyLead = false)
+static double cpuPercent (int os, bool allChoir, double seconds = 6.0, int type = -1, bool polyLead = false, std::vector<std::pair<const char*, float>> extra = {})
 {
     auto p = makeProc (48000.0, 256);
     setParam (*p, "oversampling", (float) os);
+    for (auto& kv : extra) setParam (*p, kv.first, kv.second);
     for (int v = 0; v < Params::numVoices; ++v)
     {
         if (type >= 0) { setParam (*p, Params::voiceID (v, "type"), (float) type); setParam (*p, Params::voiceID (v, "character"), 60.0f); }
@@ -1924,6 +1971,16 @@ static void testCpu()
     const double quasar = cpuPercent (1, false, 6.0, VP::Quasar), nebula = cpuPercent (1, false, 6.0, VP::Nebula), poly = cpuPercent (1, false, 6.0, -1, true);
     check (quasar < timing (6.0) && nebula < timing (6.0), "4 QUASAR / 4 NEBULA voices with CHARACTER, 2x: " + String (quasar, 2) + " / " + String (nebula, 2) + " % of one core");
     check (poly < timing (8.0), "default patch + LEAD Poly 8 with eight notes and filters, 2x: " + String (poly, 2) + " % of one core");
+    // everything at once: 4 choirs x 5 saws with pull, LEAD Poly 8 (COMB filters), FILTER A + B, MOTION, ECHO TAPE, SPACE
+    const std::vector<std::pair<const char*, float>> all { { "flt2_on", 1.0f }, { "flt_model", 2.0f }, { "flt_cutoff", 1500.0f }, { "flt2_model", 6.0f },
+        { "lead_flt_model", 5.0f }, { "mot_on", 1.0f }, { "mot_mode", 1.0f }, { "echo_mode", 1.0f }, { "echo_mix", 30.0f }, { "space_blend", 40.0f },
+        { "gravity", 60.0f }, { "dust", 50.0f } };
+    auto withSpace = [&] (int algo) { auto e = all; e.push_back ({ "space_algo", (float) algo }); return e; };
+    const double heavyAurora = cpuPercent (1, true, 6.0, -1, true, withSpace (0)), heavyComet = cpuPercent (1, true, 6.0, -1, true, withSpace (4));
+    const double heavy4 = cpuPercent (2, true, 6.0, -1, true, withSpace (0));
+    check (heavyAurora < timing (20.0) && heavyComet < timing (20.0) && heavy4 < timing (35.0),
+           "everything on (4 choirs, LEAD Poly 8, both filters, MOTION, TAPE echo, SPACE): AURORA " + String (heavyAurora, 2) + " %, COMET "
+           + String (heavyComet, 2) + " %, 4x " + String (heavy4, 2) + " % of one core");
 
     auto p = makeProc (48000.0, 256);
     for (int v = 0; v < Params::numVoices; ++v) setParam (*p, Params::voiceID (v, "hold"), 0.0f);
@@ -2223,7 +2280,7 @@ int main (int argc, char* argv[])
             for (int i = 0; i < steps; ++i)
             {
                 std::vector<Ev> now;
-                while (ei < ev.size() && ev[ei].time <= (i + 1) * 0.05) { now.push_back ({ ev[ei].time - i * 0.05, ev[ei].msg }); ++ei; }
+                while (ei < ev.size() && ev[ei].time < (i + 1) * 0.05 - 1.0e-9) { now.push_back ({ ev[ei].time - i * 0.05, ev[ei].msg }); ++ei; }
                 render (*p, 0.05, now);
                 pumpMessages (35);
             }
@@ -2294,6 +2351,14 @@ int main (int argc, char* argv[])
         save ("lead", full);
         save ("lead-filter", areaOf ("LEAD FILTER").getUnion (areaOf ("FILTER ENV")));
         save ("lead-voice", areaOf ("LEAD VOICE"));
+        live (0.2, { { 0.0, MidiMessage::noteOff (1, 67) }, { 0.0, MidiMessage::noteOff (1, 71) }, { 0.0, MidiMessage::noteOff (1, 74) } });
+        preset ("Ping-Pong Arp");
+        live (0.5);   // the preset switches silently first
+        live (2.0, { { 0.1, MidiMessage::noteOn (1, 67, 0.8f) }, { 0.1, MidiMessage::noteOn (1, 71, 0.8f) }, { 0.1, MidiMessage::noteOn (1, 74, 0.8f) } });
+        save ("lead-arp", full);
+        save ("lead-steps", areaOf ("LEAD VOICE").getUnion (areaOf ("ARP")));
+        live (0.2, { { 0.0, MidiMessage::noteOff (1, 67) }, { 0.0, MidiMessage::noteOff (1, 71) }, { 0.0, MidiMessage::noteOff (1, 74) } });
+        setParam (*p, "arp_on", 0.0f);
         live (0.2, { { 0.0, MidiMessage::noteOff (1, 67) }, { 0.0, MidiMessage::noteOff (1, 71) }, { 0.0, MidiMessage::noteOff (1, 74) } });
 
         preset ("Stereo Filters");
@@ -2907,6 +2972,7 @@ int main (int argc, char* argv[])
     testEffects();
     testEffectLevels();
     testMotion();
+    testRandomPatches();
     testLead();
     testPlates();
     testTouchAboveHold();

@@ -58,21 +58,6 @@ private:
     bool on = false;
 };
 
-// Small labelled pill that switches a bool parameter (ECHO SYNC between the two TIME knobs): gold when on
-class MiniToggle : public juce::Component, public juce::SettableTooltipClient
-{
-public:
-    MiniToggle (ResoOpusProcessor&, const juce::String& paramID, const juce::String& text);
-    void paint (juce::Graphics&) override;
-    void mouseDown (const juce::MouseEvent&) override;
-
-private:
-    juce::RangedAudioParameter* param = nullptr;
-    std::unique_ptr<juce::ParameterAttachment> attachment;
-    juce::String text;
-    bool on = false;
-};
-
 // GRAVITY: the big centre knob. Zones STILL / ORBIT / TURBULENCE / COLLAPSE around it, value arc in the zone colour,
 // modulation ring (live value), the four voices as dots on an orbit that pull together as GRAVITY rises.
 // Drag vertically (Shift = fine), wheel, double-click = type, Cmd/Ctrl-click = default, right-click = PATH and modulation,
@@ -154,6 +139,37 @@ private:
 };
 
 // LEAD: oscillators, filter per note with its envelope, amp envelope, voices / glide / vibrato, ARP
+// Live signal of a voice: two periods of its root (a steady picture), a faint afterglow, height = level.
+// Click switches to the spectrum (harmonics, chord, growl).
+struct VoiceScope : public juce::Component, public juce::SettableTooltipClient   // voice = 0..3, or 4 for the LEAD
+{
+    VoiceScope (ResoOpusProcessor& p, int v);
+    void update (float level);
+    void paint (juce::Graphics&) override;
+    void mouseDown (const juce::MouseEvent&) override;
+    ResoOpusProcessor& proc;
+    int voice;
+    bool spectrumMode = false, silent = false;
+    juce::Path frames[4];      // newest first
+    juce::Colour colour;
+    juce::dsp::FFT fft { 11 };
+    std::vector<float> fftData = std::vector<float> (4096);
+};
+
+// ARP steps: the notes of the pattern (with its octaves) as a row of cells, the one now playing lit
+class ArpView : public juce::Component, public juce::SettableTooltipClient
+{
+public:
+    explicit ArpView (ResoOpusProcessor&);
+    void update();   // editor timer
+    void paint (juce::Graphics&) override;
+
+private:
+    ResoOpusProcessor& proc;
+    int shownIdx = -2, shownNum = -1, shownTotal = -1;
+    bool shownOn = false;
+};
+
 class LeadPage : public Page
 {
 public:
@@ -163,6 +179,8 @@ public:
 private:
     juce::Array<ModulePanel*> leadPanels;
     ModulePanel* filterPanel = nullptr;
+    VoiceScope* leadScope = nullptr;
+    ArpView* arpView = nullptr;
     int shownModel = -1;
 };
 
@@ -193,22 +211,6 @@ private:
         juce::Colour colour;
     };
 
-    // Live signal of a voice: two periods of its root (a steady picture), a faint afterglow, height = level.
-    // Click switches to the spectrum (harmonics, chord, growl).
-    struct VoiceScope : public juce::Component, public juce::SettableTooltipClient
-    {
-        VoiceScope (ResoOpusProcessor& p, int v);
-        void update (float level);
-        void paint (juce::Graphics&) override;
-        void mouseDown (const juce::MouseEvent&) override;
-        ResoOpusProcessor& proc;
-        int voice;
-        bool spectrumMode = false, silent = false;
-        juce::Path frames[4];      // newest first
-        juce::Colour colour;
-        juce::dsp::FFT fft { 11 };
-        std::vector<float> fftData = std::vector<float> (4096);
-    };
 
     // One voice strip: light plate header ("CHOIR  1"), TUNE + character knob, HOLD + PAN, volume bar. Click to select.
     struct Column : public ModulePanel

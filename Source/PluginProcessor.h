@@ -81,7 +81,7 @@ public:
     std::atomic<bool> editorOpen { false };
     // signal of every voice at the base rate for the scopes (written only while the editor is open)
     static constexpr int scopeSize = 4096;
-    float scope[Params::numVoices][scopeSize] {};
+    float scope[Params::numVoices + 1][scopeSize] {};    // the four voices and (index 4) the LEAD
     std::atomic<int> scopeWrite { 0 };
 
     // audio -> UI (live values)
@@ -89,7 +89,11 @@ public:
     std::atomic<float> liveSource[Mod::numSources];
     std::atomic<float> liveLevel[Params::numVoices];     // envelope level of every voice 0..1
     std::atomic<bool> liveGate[Params::numVoices];       // voice touched (plate or key held)
-    std::atomic<float> liveRoot[Params::numVoices];      // sounding root (MIDI note), for the keyboard in KEYS mode
+    std::atomic<float> liveRoot[Params::numVoices + 1];  // sounding root (MIDI note); index 4 = the last LEAD note
+    std::atomic<float> leadActivity { 0.0f };            // 1 while a LEAD voice sounds (its scope)
+    // ARP for the editor: the notes of the pattern (up to 16), how many, the step now playing (incl. octaves, -1 = none)
+    std::atomic<int> arpShownNotes[16] {};
+    std::atomic<int> arpShownNum { 0 }, arpShownTotal { 0 }, arpShownIdx { -1 };
     std::atomic<float> meterPeak { -100.0f };
     std::atomic<float> liveGravity { 0.0f };             // GRAVITY after modulation, 0..1
     std::atomic<float> liveFilter[2][3] {};              // FILTER A / B after modulation: cutoff Hz, resonance 0..1, drive 0..1

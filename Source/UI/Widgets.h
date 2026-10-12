@@ -5,6 +5,20 @@
 
 class ResoOpusProcessor;
 
+// the glass button of the switches; flash 0..1 lights it for a moment after a click
+void drawGlassButton (juce::Graphics&, juce::Rectangle<float>, bool on, float flash = 0.0f);
+
+// a short glow after a click (switches, buttons): ~0.2 s, repaints its owner while it fades
+struct ClickFlash : private juce::Timer
+{
+    explicit ClickFlash (juce::Component& c) : owner (c) {}
+    void trigger();
+    float level = 0.0f;
+private:
+    void timerCallback() override;
+    juce::Component& owner;
+};
+
 // Square "glass" push button with a gold light (Moog-style toggle), attached to a bool parameter
 class LedButton : public juce::Component, public juce::SettableTooltipClient
 {
@@ -16,6 +30,7 @@ public:
 
 private:
     bool left = false;
+    ClickFlash flash { *this };
     juce::RangedAudioParameter* param = nullptr;
     std::unique_ptr<juce::ParameterAttachment> attachment;
     juce::String label;
@@ -45,12 +60,30 @@ private:
     int index = 0;
     int numChoices = 1;
     int columns = 1;
+    ClickFlash flash { *this };
     int rowsPerColumn() const { return (names.size() + columns - 1) / columns; }
     float columnWidth() const;
     std::function<int()> getIndex;
     std::function<void (int)> setIndex;
     void choose (int i);
     void updateSize();
+};
+
+// Small switch for a bool parameter: its name above a small glass button that lights when on (ECHO SYNC)
+class MiniToggle : public juce::Component, public juce::SettableTooltipClient
+{
+public:
+    MiniToggle (ResoOpusProcessor&, const juce::String& paramID, const juce::String& text);
+    void paint (juce::Graphics&) override;
+    void mouseDown (const juce::MouseEvent&) override;
+    juce::Rectangle<float> buttonArea() const { return { (getWidth() - 22.0f) * 0.5f, 15.0f, 22.0f, 17.0f }; }
+
+private:
+    juce::RangedAudioParameter* param = nullptr;
+    std::unique_ptr<juce::ParameterAttachment> attachment;
+    juce::String text;
+    bool on = false;
+    ClickFlash flash { *this };
 };
 
 // Small handle in a module header: drag it onto a knob to create a modulation
@@ -82,6 +115,7 @@ public:
     void setGrid (std::vector<float> columnWeights, std::vector<juce::Component*> items);
     void setSpan (juce::Component* item, int columns);   // a wide item centred over several grid columns
     std::function<void()> onLayout;                     // after every grid layout: place extra children relative to it
+    int rowTop (int row) const;                          // where the items of a grid row start (their titles)
     void setRightText (const juce::String& t) { rightText = t; repaint(); }
     // one short line at the bottom of the panel (what the chosen mode does); the grid makes room for it
     void setFooter (const juce::String& t) { const bool had = footer.isNotEmpty(); footer = t; if (had != footer.isNotEmpty()) resized(); repaint(); }

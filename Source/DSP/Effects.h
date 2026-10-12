@@ -886,8 +886,8 @@ private:
 //                                                       intervals (-12 -7 -5 0 +5 +7 +12) and melt into a small room
 //  SATURN  X ring frequency, Y stepping rate, Z room  - bells and bowls: ring modulation by two harmonic sines rings
 //                                                       three bowl modes; STEPS jumps by pentatonic notes
-//  COMET   X feedback, Y time, Z wow & flutter        - tape echo: saturation and a darkening, thinning loop, smooth wow,
-//                                                       flutter and drift, hiss from DUST
+//  COMET   X density, Y length, Z scatter              - a comet's tail of grains: short pieces of the last two seconds,
+//                                                       detuned, sometimes an octave away, scattered in the stereo field
 class Space
 {
 public:
@@ -924,8 +924,10 @@ public:
         for (auto& c : bowl) for (auto& r : c) r.reset();
         inHp.reset(); shimLp.reset(); shimLp2.reset(); shimHp.reset();
         fbL = fbR = 0.0f; ringPhase = ringPhase2 = 0.0; shPhase = 0.0; ringHz = ringTarget = 200.0; bowlHz = -1.0;
-        wob = flutter = 0.0; driftS = driftTarget = 0.0f; driftCount = 0; lastAlgo = -1;
+        lastAlgo = -1;
         inEnv = loopEnv = 0.0f; duck = 1.0f;
+        for (auto& gr : grains) gr.left = 0;
+        grainClock = 0.0;
         xR.reset (0.0f); yR.reset (0.0f); zR.reset (0.0f); bR.reset (0.0f);
         primed = false;
     }
@@ -1067,28 +1069,49 @@ public:
                 }
                 default:   // Comet
                 {
-                    // tape: wow (0.4-1.2 Hz), flutter (7 Hz) and a slow random drift move the tape speed smoothly;
-                    // each pass saturates, loses highs (DUST darker) and lows (90 Hz) like a worn loop
-                    wob += (0.4 + 0.8 * Z) / sr; wob -= std::floor (wob);
-                    flutter += 7.0 / sr; flutter -= std::floor (flutter);
-                    if (--driftCount <= 0) { driftTarget = rng.next(); driftCount = (int) (0.3 * sr); }
-                    driftS += (float) (1.0 - std::exp (-1.0 / (0.15 * sr))) * (driftTarget - driftS);
-                    const double speed = 1.0 + Z * (0.009 * std::sin (twoPi * wob) + 0.0012 * std::sin (twoPi * flutter) + 0.004 * driftS);
-                    const double t = (0.04 + 1.0 * Y * Y) * sr * speed;
-                    const float r0 = delay[0].read (t), r1 = delay[1].read (t * 1.01);
-                    const float want = X < 0.85f ? 1.153f * X : 0.98f + 0.8f * (X - 0.85f);
-                    const float fb = want * loopGuard (r0, r1);
-                    auto tape = [&] (int c, float v)
+                    // a comet's tail of grains: the input goes into a 2.2 s memory; short grains (40-200 ms, Hann)
+                    // are read from random places up to LENGTH back, a little detuned, sometimes an octave up or
+                    // down (SCATTER), and spread in the stereo field. Part of the cloud flows back into the memory,
+                    // so the tail keeps glittering after the sound has gone
+                    const float mid = 0.5f * (dl + dr);
+                    const double rate = 2.0 * std::pow (30.0, (double) X);            // grains per second, 2 .. 60
+                    const double reach = (0.08 + 2.0 * Y * Y) * sr;                    // how far back, 80 ms .. 2.08 s
+                    grainClock += rate / sr;
+                    if (grainClock >= 1.0)
                     {
-                        v = damp[c].lp (v, dampC);
-                        v -= low[c].lp (v, OnePole::coefFor (90.0, sr));
-                        return ceilingClip (1.4f * fb * v, 0.5f) / 1.4f * 1.0f;
-                    };
-                    delay[0].push (dl + tape (0, r1) + 0.002f * dust * rng.next());
-                    delay[1].push (dr + tape (1, r0));
-                    const float g = std::min (0.95f, want);
-                    const float comp = std::sqrt (1.0f - g * g);
-                    wl = r0 * comp; wr = r1 * comp;
+                        grainClock -= 1.0;
+                        for (auto& gr : grains)
+                            if (gr.left <= 0)
+                            {
+                                const double dur = sr * (0.04 + 0.16 * (1.0 - X) * (0.5 + 0.5 * rng.next01()));
+                                double semis = Z * 0.35 * rng.next();                      // up to +-35 cents
+                                const float pick = rng.next01();
+                                if (pick < 0.3f * Z) semis += 12.0; else if (pick < 0.4f * Z) semis -= 12.0;
+                                gr.ratio = std::exp2 (semis / 12.0);
+                                gr.len = (int) dur; gr.left = gr.len;
+                                // start far enough back that a rising grain never overtakes the write head
+                                gr.delay = 4.0 + std::max (0.0, (gr.ratio - 1.0) * dur) + rng.next01() * reach;
+                                const float pan = Z * 0.9f * rng.next();
+                                gr.gl = std::sqrt (0.5f * (1.0f - pan)); gr.gr = std::sqrt (0.5f * (1.0f + pan));
+                                break;
+                            }
+                    }
+                    float cl = 0.0f, cr = 0.0f;
+                    for (auto& gr : grains)
+                    {
+                        if (gr.left <= 0) continue;
+                        const float ph = 1.0f - (float) gr.left / (float) gr.len;
+                        const float w = 0.5f - 0.5f * std::cos ((float) twoPi * ph);
+                        const float v = delay[0].read (std::min (gr.delay, 2.1 * sr)) * w;
+                        cl += v * gr.gl; cr += v * gr.gr;
+                        gr.delay -= gr.ratio - 1.0;   // reading faster (up) or slower (down) than the tape moves
+                        --gr.left;
+                    }
+                    // about as loud as the input, however many grains overlap
+                    const float norm = 1.0f / (float) std::sqrt (std::max (1.0, rate * (0.04 + 0.08 * (1.0 - X))));
+                    cl = damp[0].lp (cl * norm, dampC); cr = damp[1].lp (cr * norm, dampC);
+                    delay[0].push (mid + ceilingClip (0.45f * Y * (cl + cr), 0.5f));
+                    wl = 1.6f * cl; wr = 1.6f * cr;
                     break;
                 }
             }
@@ -1102,7 +1125,7 @@ public:
     }
 
 private:
-    double sr = 48000.0, ringPhase = 0.0, ringPhase2 = 0.0, shPhase = 0.0, ringHz = 200.0, ringTarget = 200.0, bowlHz = -1.0, wob = 0.0, flutter = 0.0;
+    double sr = 48000.0, ringPhase = 0.0, ringPhase2 = 0.0, shPhase = 0.0, ringHz = 200.0, ringTarget = 200.0, bowlHz = -1.0;
     Fdn fdn;
     PitchShifter shiftUp[2], shiftDown[2], runShift[2];
     DelayLine delay[2];
@@ -1111,8 +1134,11 @@ private:
     Resonator bowl[2][3];
     float bowlGain[3] { 1.0f, 1.0f, 1.0f };
     Ramp xR, yR, zR, bR;
-    float fbL = 0.0f, fbR = 0.0f, inEnv = 0.0f, loopEnv = 0.0f, duck = 1.0f, driftS = 0.0f, driftTarget = 0.0f;
-    int lastAlgo = -1, driftCount = 0;
+    float fbL = 0.0f, fbR = 0.0f, inEnv = 0.0f, loopEnv = 0.0f, duck = 1.0f;
+    struct Grain { double delay = 0.0, ratio = 1.0; int len = 1, left = 0; float gl = 0.7f, gr = 0.7f; };
+    Grain grains[32];
+    double grainClock = 0.0;
+    int lastAlgo = -1;
     bool primed = false;
     Sleeper sleeper;
     AutoBalance balance;

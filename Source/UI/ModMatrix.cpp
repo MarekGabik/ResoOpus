@@ -18,7 +18,7 @@ ModMatrixView::~ModMatrixView() { proc.removeListener (this); }
 String ModMatrixView::displayName (int code) const
 {
     static const char* knobNames[5][3] = { { "Oct Up", "Oct Down", "Decay" }, { "Pre-Delay", "Wobble", "Decay" }, { "Feedback", "Time", "Pitch" },
-                                            { "Frequency", "Steps", "Room" }, { "Feedback", "Time", "Wow" } };
+                                            { "Frequency", "Steps", "Room" }, { "Density", "Length", "Scatter" } };
     const int algo = jlimit (0, 4, (int) proc.getParamReal ("space_algo"));
     const char* xyz[3] = { "space_x", "space_y", "space_z" };
     for (int k = 0; k < 3; ++k)

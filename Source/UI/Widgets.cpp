@@ -3,10 +3,18 @@
 
 using namespace juce;
 
-namespace
+void drawGlassButton (Graphics& g, Rectangle<float> r, bool on, float flash)
 {
-void drawGlassButton (Graphics& g, Rectangle<float> r, bool on)
-{
+    if (! on && flash > 0.0f)
+    {
+        // a click lights the button for a moment: the lit look fades over the dark one
+        drawGlassButton (g, r, false, 0.0f);
+        g.saveState();
+        g.setOpacity (jlimit (0.0f, 1.0f, flash));
+        drawGlassButton (g, r, true, 0.0f);
+        g.restoreState();
+        return;
+    }
     g.setColour (Colours::black.withAlpha (0.55f));
     g.fillRoundedRectangle (r.translated (0.0f, 2.0f), 5.0f);
     if (on)
@@ -30,6 +38,39 @@ void drawGlassButton (Graphics& g, Rectangle<float> r, bool on)
     g.setColour (Colours::white.withAlpha (on ? 0.5f : 0.08f));
     g.drawLine (r.getX() + 5.0f, r.getY() + 1.5f, r.getRight() - 5.0f, r.getY() + 1.5f, 1.0f);
 }
+
+void ClickFlash::trigger() { level = 1.0f; startTimerHz (60); owner.repaint(); }
+void ClickFlash::timerCallback()
+{
+    level -= 0.08f;
+    if (level <= 0.0f) { level = 0.0f; stopTimer(); }
+    owner.repaint();
+}
+
+MiniToggle::MiniToggle (ResoOpusProcessor& p, const String& id, const String& t) : text (t)
+{
+    param = p.param (id);
+    jassert (param != nullptr);
+    attachment = std::make_unique<ParameterAttachment> (*param, [this] (float v) { on = v > 0.5f; repaint(); });
+    attachment->sendInitialUpdate();
+    if (auto* d = Params::findDef (id)) setTooltip (d->tip);
+    setSize (std::max (26, GlyphArrangement::getStringWidthInt (Fonts::bold (9.0f), text) + 4), 34);
+    setMouseCursor (MouseCursor::PointingHandCursor);
+}
+
+void MiniToggle::paint (Graphics& g)
+{
+    g.setColour (Palette::label);
+    g.setFont (Fonts::bold (9.0f));
+    g.drawText (text, 0, 0, getWidth(), 11, Justification::centred, false);
+    drawGlassButton (g, buttonArea(), on, flash.level);
+}
+
+void MiniToggle::mouseDown (const MouseEvent& e)
+{
+    if (e.mods.isPopupMenu()) return;
+    attachment->setValueAsCompleteGesture (on ? 0.0f : 1.0f);
+    flash.trigger();
 }
 
 //==============================================================================
@@ -53,13 +94,14 @@ void LedButton::paint (Graphics& g)
         g.drawText (label, 0, 0, getWidth(), 13, left ? Justification::centredLeft : Justification::centred, false);
         y = 19.0f;
     }
-    drawGlassButton (g, left ? Rectangle<float> (1.0f, y, 30.0f, 28.0f) : Rectangle<float> (30.0f, 28.0f).withCentre ({ getWidth() * 0.5f, y + 14.0f }), on);
+    drawGlassButton (g, left ? Rectangle<float> (1.0f, y, 30.0f, 28.0f) : Rectangle<float> (30.0f, 28.0f).withCentre ({ getWidth() * 0.5f, y + 14.0f }), on, flash.level);
 }
 
 void LedButton::mouseDown (const MouseEvent& e)
 {
     if (e.mods.isPopupMenu()) return;
     attachment->setValueAsCompleteGesture (on ? 0.0f : 1.0f);
+    flash.trigger();
 }
 
 //==============================================================================
@@ -141,7 +183,7 @@ void LedRadio::paint (Graphics& g)
         y = 19.0f;
     }
     // the button sits right under the title, level with the first entry
-    drawGlassButton (g, Rectangle<float> (1.0f, y, 30.0f, 28.0f), false);
+    drawGlassButton (g, Rectangle<float> (1.0f, y, 30.0f, 28.0f), false, flash.level);
 
     g.setFont (Fonts::bold (10.5f));
     const int rows = rowsPerColumn();
@@ -184,10 +226,13 @@ void LedRadio::mouseDown (const MouseEvent& e)
     {
         const int row = (int) ((e.position.y - y0) / 15.0f), col = (int) ((e.position.x - 36.0f) / columnWidth());
         const int i = col * rowsPerColumn() + row;
-        if (row >= 0 && row < rowsPerColumn() && i >= 0 && i < numChoices) choose (i);
+        if (row >= 0 && row < rowsPerColumn() && i >= 0 && i < numChoices) { choose (i); flash.trigger(); }
     }
     else
+    {
         choose ((index + 1 + numChoices) % numChoices);
+        flash.trigger();
+    }
 }
 
 //==============================================================================
@@ -357,6 +402,14 @@ Rectangle<float> ModulePanel::rightButtonArea() const
 void ModulePanel::mouseDown (const MouseEvent& e)
 {
     if (onRightClick && rightText.isNotEmpty() && rightButtonArea().contains (e.position)) onRightClick (*this);
+}
+
+int ModulePanel::rowTop (int row) const
+{
+    const auto body = getLocalBounds().withTrimmedTop (headerHeight + 2).withTrimmedBottom (footer.isNotEmpty() ? footerHeight : 0).reduced (6, 6);
+    const int cols = std::max (1, (int) weights.size());
+    const int rows = std::max (1, ((int) items.size() + cols - 1) / cols);
+    return roundToInt (body.getY() + body.getHeight() * ((float) row + 0.5f) / (float) rows - 50.0f);
 }
 
 void ModulePanel::setSpan (Component* item, int columns)

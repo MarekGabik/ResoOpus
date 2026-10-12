@@ -177,7 +177,7 @@ const std::vector<FactoryPreset>& factoryPresets()
             { "space_blend", 50.0f }, { "v1_volume", -6.0f }, { "v2_volume", -6.0f }, { "v3_volume", -7.0f }, { "v4_volume", -8.0f } }, {} },
 
         { "Last Transmission", "Cinematic",
-          "A broken signal: a chopped siren beacon over a low drone, through a dirty COMET delay. Slow the RATE of voice 4 for long pauses.",
+          "A broken signal: a chopped siren beacon over a low drone, scattered by COMET into a tail of grains. Slow the RATE of voice 4 for long pauses.",
           { { "v1_tune", 33.0f }, { "v1_hold", 60.0f }, { "v2_type", 0.0f }, { "v3_type", 0.0f },
             { "v4_tune", 81.0f }, { "v4_hold", 25.0f }, { "v4_siren_am", 100.0f }, { "v4_siren_fm", 0.0f }, { "v4_siren_rate", 3.0f },
             { "v4_siren_wave", 0.0f }, { "v4_siren_noise", 20.0f }, { "v4_volume", -12.0f },
@@ -455,7 +455,7 @@ const std::vector<FactoryPreset>& factoryPresets()
             { "space_algo", 1.0f }, { "space_z", 65.0f }, { "space_blend", 35.0f } }, {} },
 
         { "Broken Transmission", "Textures",
-          "A chopped siren over a low choir through the LO-FI echo: the repeats lose bits and sample rate and crumble, COMET adds a worn tape. DEGRADE sets how broken.",
+          "A chopped siren over a low choir through the LO-FI echo: the repeats lose bits and sample rate and crumble, COMET scatters them into grains. DEGRADE sets how broken.",
           { { "v1_hold", 50.0f }, { "v2_hold", 0.0f }, { "v3_type", 0.0f },
             { "v4_hold", 35.0f }, { "v4_siren_am", 80.0f }, { "v4_siren_rate", 6.0f }, { "v4_siren_noise", 25.0f },
             { "echo_mode", 3.0f }, { "echo_time1", 0.29f }, { "echo_time2", 0.41f }, { "echo_fb", 70.0f }, { "echo_mod", 75.0f }, { "echo_mix", 40.0f },

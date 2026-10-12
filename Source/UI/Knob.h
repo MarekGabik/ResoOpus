@@ -14,6 +14,7 @@ class Knob : public juce::Component,
              public juce::DragAndDropTarget
 {
 public:
+    juce::Point<float> centre() const;   // the dial centre (local), e.g. to line up a button with it
     struct Style
     {
         bool bipolar = false;      // value arc grows from the centre
@@ -64,7 +65,6 @@ private:
         bool operator== (const ModInfo& o) const { return slot == o.slot && src == o.src && std::abs (amt - o.amt) < 1.0e-6f && on == o.on && bipolar == o.bipolar; }
     };
 
-    juce::Point<float> centre() const;
     float radius() const { return style.small ? 16.0f : 21.0f; }
     bool hitsRing (juce::Point<float>) const;
     int ringAt (juce::Point<float>) const;   // which modulation ring (0, 1) is under the mouse, -1 = none

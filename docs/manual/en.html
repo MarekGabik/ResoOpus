@@ -236,6 +236,7 @@
       </tbody>
     </table></div>
     <figure class="shot"><img src="img/lead-filter.jpg" alt="LEAD FILTER and FILTER ENV" width="1232" height="546" loading="lazy"><figcaption>LEAD FILTER and FILTER ENV: every note has its own filter and envelope, in polyphony too.</figcaption></figure>
+    <figure class="shot"><img src="img/lead-steps.jpg" alt="LEAD VOICE and ARP" width="2344" height="546" loading="lazy"><figcaption>The Ping-Pong Arp preset: bottom right in LEAD VOICE is the <strong>SCOPE</strong> of the lead (click = spectrum), in ARP the <strong>STEPS</strong>: the notes of the pattern with their octaves in playing order, the step now playing lit.</figcaption></figure>
     <p>In Mono and Legato the last pressed note plays; release it and the LEAD returns to the previously held note. In Poly a new note takes a free voice, else the quietest releasing one, else the oldest. The sustain pedal holds notes until you let go of it.</p>
 
     <h2 id="fx"><span class="num">08</span>FX page</h2>
@@ -306,7 +307,7 @@
         <tr><td>VOID</td><td>PRE-DELAY · WOBBLE · DECAY</td><td>A huge dark space. DECAY at the very top freezes what is sounding (FREEZE).</td></tr>
         <tr><td>RUNNER</td><td>FEEDBACK · TIME · PITCH</td><td>A staircase in space: the repeats bounce left and right, each one shifted by an interval. PITCH clicks into steps of −12, −7, −5, 0, +5, +7, +12 semitones and glides between them. The repeats melt into a small room.</td></tr>
         <tr><td>SATURN</td><td>FREQUENCY · STEPS · ROOM</td><td>Bells and bowls: a ring modulator (two sines an octave apart) sets three singing-bowl tones ringing. STEPS jumps by pentatonic notes with a soft glide, ROOM adds a space.</td></tr>
-        <tr><td>COMET</td><td>FEEDBACK · TIME · WOW</td><td>Tape echo: every repeat saturates, darkens and loses its lows. WOW is the wow and flutter of the tape speed, DUST adds tape hiss. Up to 85 % FEEDBACK the repeats fade, above 85 % the loop sings, but never more than ~6 dB above its input.</td></tr>
+        <tr><td>COMET</td><td>DENSITY · LENGTH · SCATTER</td><td>A comet's tail of grains: the sound breaks into short grains (40–200 ms) from the last two seconds. DENSITY = how many grains a second, LENGTH = how far back they reach and how long the tail lasts, SCATTER = detuning, octave grains up and down and the spread across the stereo field.</td></tr>
       </tbody>
     </table></div>
     <p>Every loop in the FX has a ceiling and feedback compensation, and the stereo balance follows the input (measured within ±3 dB, L/R within 1 dB).</p>
@@ -458,8 +459,8 @@
     </section>
     <div class="recipe">
       <div class="recipe-head"><h4>Ship and beacon</h4><span class="where">preset Last Transmission · Morse Beacon · Shortwave</span></div>
-      <div class="settings"><span class="chip choir">Voice 1 CHOIR <b>A0–C1, HOLD 60</b></span><span class="chip pulsar">Voice 3 PULSAR <b>TWIN +0.05 st, BLEND 50, SUB 40</b></span><span class="chip siren">Voice 4 SIREN <b>AM 100, RATE 3 Hz, NOISE 20</b></span><span class="chip">SPACE <b>COMET, FEEDBACK 55</b></span><span class="chip">DUST <b>55 %</b></span></div>
-      <div class="recipe-body"><p>A PULSAR with TWIN a few cents off unison gives the slow throb of engines. The AM-chopped siren is the beacon; slow RATE for longer pauses. COMET smears and dirties the signal. To "tune the radio", switch FILTER to SCREAM Band Pass and sweep CUTOFF (preset Shortwave).</p></div>
+      <div class="settings"><span class="chip choir">Voice 1 CHOIR <b>A0–C1, HOLD 60</b></span><span class="chip pulsar">Voice 3 PULSAR <b>TWIN +0.05 st, BLEND 50, SUB 40</b></span><span class="chip siren">Voice 4 SIREN <b>AM 100, RATE 3 Hz, NOISE 20</b></span><span class="chip">SPACE <b>COMET, DENSITY 55</b></span><span class="chip">DUST <b>55 %</b></span></div>
+      <div class="recipe-body"><p>A PULSAR with TWIN a few cents off unison gives the slow throb of engines. The AM-chopped siren is the beacon; slow RATE for longer pauses. COMET scatters it into grains. To "tune the radio", switch FILTER to SCREAM Band Pass and sweep CUTOFF (preset Shortwave).</p></div>
     </div>
 
     <section class="genre-head" id="meditation">
@@ -509,7 +510,7 @@
         <tr><td>Dune Sunrise</td><td>Minor choirs and a warm pulsar with a slow echo. Heat haze over sand, DUST = shimmer.</td></tr>
         <tr><td>Requiem Air</td><td>Sad, breathy minor choirs, only when played, long release. Hold chords on the plates.</td></tr>
         <tr><td>Frozen Hall</td><td>VOID at the edge of FREEZE: whatever you play hangs in the air. DECAY down = thaw.</td></tr>
-        <tr><td>Last Transmission</td><td>A broken signal: a chopped siren over a low drone through COMET.</td></tr>
+        <tr><td>Last Transmission</td><td>A broken signal: a chopped siren over a low drone, scattered by COMET into a tail of grains.</td></tr>
         <tr><td>Quasar Bells</td><td>Two QUASARs at an inharmonic RATIO: glassy bells that darken as they fade (TRACK). INDEX = brightness.</td></tr>
         <tr><td>Nebula Voices</td><td>NEBULA with the VOCAL table: hums and vowels that open as you play (SCAN) and wander (DRIFT).</td></tr>
         <tr><td>Poly Strings</td><td>LEAD in Poly 8 as a slow string pad over a quiet drone. Play chords outside the plates.</td></tr>
@@ -527,7 +528,7 @@
         <tr><td>Glass Nebula</td><td>NEBULA GLASS tables stepped by RANDOM and an LFO: digital chimes that never repeat.</td></tr>
         <tr><td>Stereo Filters</td><td>ROUTING Stereo: band-pass FILTER A on the left, B on the right, each swung by a different LFO. Wide and alive.</td></tr>
         <tr><td>Hollow Tubes</td><td>COMB in HIGH mode tuned to the drone (CUTOFF 147 Hz): only the odd harmonics ring, hollow like a tube or a clarinet. ECHO MOD widens it into a slow chorus.</td></tr>
-        <tr><td>Broken Transmission</td><td>A chopped siren over a low choir through ECHO LO-FI: the repeats lose bits and sample rate and crumble, COMET adds a worn tape. DEGRADE = how broken.</td></tr>
+        <tr><td>Broken Transmission</td><td>A chopped siren over a low choir through ECHO LO-FI: the repeats lose bits and sample rate and crumble, COMET scatters them into grains. DEGRADE = how broken.</td></tr>
         <tr><td>Singing Bowls</td><td>Soft pulsars ring three bowl tones through SATURN, STEPS lets them wander by pentatonic notes. Plates strike the bowls, ROOM (Z) for a bigger space.</td></tr>
         <tr><td>Rising Stairs</td><td>Play the plates: every RUNNER repeat climbs a fifth and melts into a room, a staircase into the sky. PITCH clicks into other intervals from −12 to +12.</td></tr>
         <tr><td>Phase Drift</td><td>MOTION PHASER sweeps slowly through two bright choirs: the notches drift like clouds, left and right a quarter apart. FEEDBACK (X) sharpens them.</td></tr>
