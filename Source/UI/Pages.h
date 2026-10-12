@@ -109,10 +109,13 @@ private:
     ModulePanel* filterPanel = nullptr;
     ModulePanel* filterBPanel = nullptr;
     ModulePanel* routingPanel = nullptr;
+    ModulePanel* echoPanel = nullptr;
+    LedRadio* echoSrc = nullptr;
+    Knob* echoKnobs[3] {};
     FilterRoutingView* filterView = nullptr;
     juce::Label* spaceInfo = nullptr;
     juce::Array<juce::Component*> filterBControls;
-    int shownAlgo = -1, shownModel = -1, shownModelB = -1, shownRoute = -2;
+    int shownAlgo = -1, shownModel = -1, shownModelB = -1, shownRoute = -2, shownEcho = -1;
 };
 
 // MOD: the motion sources (LFO 1, LFO 2, RANDOM, MOD ENV) on top, the modulation matrix below

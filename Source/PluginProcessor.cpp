@@ -645,6 +645,7 @@ void ResoOpusProcessor::processChunk (AudioBuffer<float>& out, int start, int le
         es.time1 = curG[GP::echo_time1]; es.time2 = curG[GP::echo_time2];
         es.feedback = curG[GP::echo_fb] / 100.0f; es.mix = curG[GP::echo_mix] / 100.0f;
         es.mod = curG[GP::echo_mod] / 100.0f; es.self = (int) curG[GP::echo_self] == 0; es.dust = dust;
+        es.mode = (int) curG[GP::echo_mode];
         echo.process (outL, outR, len, es, fxRng, echoPrev);   // the echo is remembered for the voices (one chunk late)
         echoPrevLen = len;
         space.process (outL, outR, len, (int) curG[GP::space_algo], curG[GP::space_x] / 100.0f, curG[GP::space_y] / 100.0f,

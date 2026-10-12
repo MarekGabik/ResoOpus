@@ -228,7 +228,7 @@
       <thead><tr><th>Panel</th><th>Ovladače</th></tr></thead>
       <tbody>
         <tr><td>LEAD OSC</td><td><strong>WAVE</strong> plynule sinus → trojúhelník → žraločí ploutev → pila → obdélník (ikony kolem knobu). <strong>OSC 2</strong> interval ±12 půltónů, <strong>OSC 2 LEVEL</strong>, <strong>SYMMETRY</strong> (šířka pulzu), <strong>OCTAVE</strong> ±2, <strong>SUB</strong> sinus o oktávu níž, <strong>SYNC</strong> = tvrdá synchronizace OSC 2.</td></tr>
-        <tr><td>LEAD FILTER</td><td>Filtr <strong>pro každou notu zvlášť</strong>: <strong>CUTOFF</strong>, <strong>RESONANCE</strong>, <strong>ENV</strong> (kolik obálka posune cutoff, ±6 oktáv), <strong>KEY</strong> (cutoff sleduje notu), <strong>MODEL</strong> (stejných pět jako FILTER) a <strong>MODE</strong> (low pass, band pass, high pass). Na 20 kHz a bez obálky je vyřazený (bypass) a zvuk nijak nebarví.</td></tr>
+        <tr><td>LEAD FILTER</td><td>Filtr <strong>pro každou notu zvlášť</strong>: <strong>CUTOFF</strong>, <strong>RESONANCE</strong>, <strong>ENV</strong> (kolik obálka posune cutoff, ±6 oktáv), <strong>KEY</strong> (cutoff sleduje notu), <strong>MODEL</strong> (stejných sedm jako FILTER; COMB s KEY 100 % a CUTOFF 262 Hz = C3 hraje naladěnou drnkací strunu) a <strong>MODE</strong> (low pass, band pass, high pass). Na 20 kHz a bez obálky je vyřazený (bypass) a zvuk nijak nebarví.</td></tr>
         <tr><td>FILTER ENV</td><td>ADSR obálka filtru. Barevná pilulka v hlavičce je zdroj <strong>LEAD ENV</strong>: přetáhni ji na knob a obálka leadu bude modulovat cokoli (třeba GRAVITY).</td></tr>
         <tr><td>AMP ENV</td><td>ADSR hlasitosti: ATTACK 1 ms–10 s, DECAY a RELEASE 1 ms–30 s, SUSTAIN.</td></tr>
         <tr><td>LEAD VOICE</td><td><strong>VOICES</strong>: <em>Mono</em> (každá nota znovu spustí obálky), <em>Legato</em> (překrývané noty jen klouzají), <em>Poly 4</em> a <em>Poly 8</em> (akordy a melodie nad dronem). <strong>GLIDE</strong>, <strong>VELOCITY</strong> (jak moc síla úhozu mění hlasitost a obálku filtru), <strong>VIBRATO</strong>, <strong>VIB RATE</strong>, <strong>VIB DELAY</strong>, <strong>TOUCH VIB</strong>, <strong>VOLUME</strong>, <strong>PAN</strong>.</td></tr>
@@ -261,15 +261,26 @@
         <tr><td>DIODE</td><td class="num">24 dB</td><td>Diodový ladder: gumová rezonance, která se s hlasitostí stlačuje a bere basy. Diody ořezávají nesouměrně (sudé i liché harmonické). Sám se nerozezní, rezonance spíš kouše, než zvoní.</td></tr>
         <tr><td>SCREAM</td><td class="num">12 dB</td><td>Sallen-Key s diodami v rezonanci: agresivní, s drivem kouše ještě víc. Od rezonance ~9,3 křičí a rozezní se ostrým, skoro obdélníkovým tónem. DRIVE ořezává nejtvrději.</td></tr>
         <tr><td>SILK</td><td class="num">12 dB</td><td>Čistý digitální filtr: lineární, rezonance nezávisí na hlasitosti a nepřidává harmonické. Velmi úzký, ale sám se nerozezní. DRIVE jen tlačí do měkkého stropu.</td></tr>
+        <tr><td>COMB</td><td class="num">ladí</td><td>Hřebenový filtr: CUTOFF je jeho výška, RESONANCE zpětná vazba. MODE LOW = tlumená struna (teplá), BAND = zní všechny harmonické (kov), HIGH = jen liché harmonické o oktávu níž (dutá trubka, klarinet). U LEADu s KEY 100 % a CUTOFF 262 Hz hraje naladěnou drnkací strunu.</td></tr>
+        <tr><td>VOWEL</td><td class="num">formanty</td><td>Tři formanty jako hlasivky a ústa: CUTOFF projíždí samohlásky U–O–A–E–I (od tmavé po jasnou), RESONANCE zostřuje, MODE je velikost hrdla: LOW muž, BAND žena, HIGH dítě.</td></tr>
       </tbody>
     </table></div>
-    <p>Při plné rezonanci si Band Pass udrží hlasitost, úzké pásmo tedy nezmizí, ale zpívá. Stejných pět modelů má i filtr LEADu.</p>
+    <p>Při plné rezonanci si Band Pass udrží hlasitost, úzké pásmo tedy nezmizí, ale zpívá. Stejných sedm modelů má i filtr LEADu.</p>
     <h3>ECHO</h3>
     <figure class="shot"><img src="img/echo.jpg" alt="ECHO" width="1172" height="546" loading="lazy"></figure>
+    <p>Pět režimů (<strong>MODE</strong>) se stejnými knoby. Popisky knobů se mění podle toho, co v daném režimu dělají.</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>MODE</th><th>TIME 1 · TIME 2 · MOD</th><th>Zvuk</th></tr></thead>
+      <tbody>
+        <tr><td>DUAL</td><td>TIME 1 · TIME 2 · MOD</td><td>Dvě linky, levá a pravá, se křížovou zpětnou vazbou. MOD SOURCE <em>Self</em> = výstup echa moduluje jeho vlastní čas, <em>LFO</em> = pomalý sinus.</td></tr>
+        <tr><td>TAPE</td><td>HEAD 1 · HEAD 2 · WOW</td><td>Pásková ozvěna: jedna pásková smyčka a dvě přehrávací hlavy. Nahrávání saturuje a stlačuje, každé přehrání ubírá výšky i basy (120 Hz–2,8 kHz), takže opakování tmavnou. WOW je kolísání rychlosti pásku (wow, flutter, pomalý drift), DUST přidá šum pásku. Při změně času výška klouže jako při změně rychlosti pásku.</td></tr>
+        <tr><td>PING-PONG</td><td>TIME L · TIME R · MOD</td><td>Vstup jde jen do levé linky, levá pak napájí pravou a pravá levou: opakování se střídají vlevo a vpravo.</td></tr>
+        <tr><td>LO-FI</td><td>TIME 1 · TIME 2 · DEGRADE</td><td>Špatný digitální delay: opakování ztrácejí vzorkovací kmitočet (16 kHz až ~3 kHz) a bity (12 až 4), jsou tmavá, zrnitá a trochu šumí. DEGRADE určuje, jak moc.</td></tr>
+        <tr><td>MOD</td><td>TIME 1 · TIME 2 · DEPTH</td><td>Opakování s chorusem: každá linka se houpe až o 8 ms, levá a pravá o čtvrt periody posunuté. Čisté a široké.</td></tr>
+      </tbody>
+    </table></div>
     <ul>
-      <li>Dvě linky (<strong>TIME 1</strong> vlevo, <strong>TIME 2</strong> vpravo, 5 ms–2 s) s křížovou zpětnou vazbou. Změna času klouže jako u pásky.</li>
-      <li><strong>FEEDBACK</strong>: nad ~55 % začne echo samo zpívat. Smyčka je omezená, takže hlasitost neuteče.</li>
-      <li><strong>MIX</strong>, <strong>MOD</strong> a <strong>MOD SOURCE</strong>: <em>Self</em> = výstup echa moduluje jeho vlastní čas, <em>LFO</em> = pomalý sinus.</li>
+      <li><strong>FEEDBACK</strong>: nad ~55 % začne echo samo zpívat. Smyčka je omezená, takže hlasitost neuteče. Šum pásku a LO-FI se ztiší spolu s ozvěnou, takže echo v tichu úplně utichne.</li>
       <li><strong>TO VOICES</strong>: ozvěna se vrací do hlasů jako FM. Viz GRAVITY.</li>
     </ul>
     <h3>SPACE</h3>
@@ -528,7 +539,7 @@
         <tr><td>QUASAR 1976 Hz, RATIO 3, INDEX 100 / NEBULA 1976 Hz (všechny tabulky)</td><td class="num">−76 / −88 dB</td></tr>
         <tr><td>GRAVITY: rozdíl hlasitosti STILL → COLLAPSE</td><td class="num">2,2 dB</td></tr>
         <tr><td>Stabilita 60 s ve všech zónách GRAVITY, 44,1–192 kHz</td><td class="num">bez NaN, ≤ −0,3 dBFS</td></tr>
-        <tr><td>FILTER: LP na 3 kHz / HP na 110 Hz (5 modelů)</td><td class="num">−31 až −64 / −53 až −109 dB</td></tr>
+        <tr><td>FILTER: LP na 3 kHz / HP na 110 Hz (5 analogových modelů)</td><td class="num">−31 až −64 / −53 až −109 dB</td></tr>
         <tr><td>ROUTING Split: lead přes HP 3 kHz / drone přes A</td><td class="num">−33 dB / beze změny</td></tr>
         <tr><td>LEAD Poly 8: akord C-E-G, rozdíl úrovní not</td><td class="num">0,7 dB</td></tr>
         <tr><td>LFO 1/4 v tempu 120 BPM: hran za 2 s</td><td class="num">8 (přesně)</td></tr>

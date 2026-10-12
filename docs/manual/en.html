@@ -228,7 +228,7 @@
       <thead><tr><th>Panel</th><th>Controls</th></tr></thead>
       <tbody>
         <tr><td>LEAD OSC</td><td><strong>WAVE</strong> morphs sine → triangle → shark fin → saw → square (icons around the knob). <strong>OSC 2</strong> interval ±12 semitones, <strong>OSC 2 LEVEL</strong>, <strong>SYMMETRY</strong> (pulse width), <strong>OCTAVE</strong> ±2, <strong>SUB</strong> sine an octave below, <strong>SYNC</strong> = hard sync of OSC 2.</td></tr>
-        <tr><td>LEAD FILTER</td><td>A filter <strong>per note</strong>: <strong>CUTOFF</strong>, <strong>RESONANCE</strong>, <strong>ENV</strong> (how far the envelope moves the cutoff, ±6 octaves), <strong>KEY</strong> (the cutoff follows the note), <strong>MODEL</strong> (the same five as FILTER) and <strong>MODE</strong> (low, band, high pass). At 20 kHz with no envelope it is bypassed and colours nothing.</td></tr>
+        <tr><td>LEAD FILTER</td><td>A filter <strong>per note</strong>: <strong>CUTOFF</strong>, <strong>RESONANCE</strong>, <strong>ENV</strong> (how far the envelope moves the cutoff, ±6 octaves), <strong>KEY</strong> (the cutoff follows the note), <strong>MODEL</strong> (the same seven as FILTER; COMB with KEY 100 % and CUTOFF 262 Hz = C3 plays an in-tune plucked string) and <strong>MODE</strong> (low, band, high pass). At 20 kHz with no envelope it is bypassed and colours nothing.</td></tr>
         <tr><td>FILTER ENV</td><td>ADSR of the filter. The coloured pill in the header is the <strong>LEAD ENV</strong> source: drag it onto a knob and the lead envelope modulates anything (GRAVITY, say).</td></tr>
         <tr><td>AMP ENV</td><td>ADSR of the level: ATTACK 1 ms–10 s, DECAY and RELEASE 1 ms–30 s, SUSTAIN.</td></tr>
         <tr><td>LEAD VOICE</td><td><strong>VOICES</strong>: <em>Mono</em> (every note restarts the envelopes), <em>Legato</em> (overlapping notes only slide), <em>Poly 4</em> and <em>Poly 8</em> (chords and melodies over the drone). <strong>GLIDE</strong>, <strong>VELOCITY</strong> (how much the strike sets level and filter envelope), <strong>VIBRATO</strong>, <strong>VIB RATE</strong>, <strong>VIB DELAY</strong>, <strong>TOUCH VIB</strong>, <strong>VOLUME</strong>, <strong>PAN</strong>.</td></tr>
@@ -261,15 +261,26 @@
         <tr><td>DIODE</td><td class="num">24 dB</td><td>Diode ladder: a rubbery resonance that squeezes with the level and takes the lows. The diodes clip unevenly (even and odd harmonics). It does not ring on its own; the resonance bites more than it rings.</td></tr>
         <tr><td>SCREAM</td><td class="num">12 dB</td><td>Sallen-Key with diodes in the resonance: aggressive, bites even more with drive. From resonance ~9.3 it screams and rings with a harsh, almost square tone. DRIVE clips the hardest.</td></tr>
         <tr><td>SILK</td><td class="num">12 dB</td><td>A clean digital filter: linear, the resonance does not depend on the level and adds no harmonics. Very narrow, but it never rings on its own. DRIVE only pushes into a soft ceiling.</td></tr>
+        <tr><td>COMB</td><td class="num">tuned</td><td>Comb filter: CUTOFF is its pitch, RESONANCE its feedback. MODE LOW = a damped string (warm), BAND = every harmonic rings (metal), HIGH = only the odd harmonics an octave lower (a hollow tube, a clarinet). On the LEAD with KEY 100 % and CUTOFF 262 Hz it plays an in-tune plucked string.</td></tr>
+        <tr><td>VOWEL</td><td class="num">formants</td><td>Three formants like a throat and mouth: CUTOFF walks the vowels U–O–A–E–I (dark to bright), RESONANCE sharpens them, MODE is the size of the throat: LOW man, BAND woman, HIGH child.</td></tr>
       </tbody>
     </table></div>
-    <p>At full resonance Band Pass keeps its level: a narrow band doesn't vanish, it sings. The LEAD filter has the same five models.</p>
+    <p>At full resonance Band Pass keeps its level: a narrow band doesn't vanish, it sings. The LEAD filter has the same seven models.</p>
     <h3>ECHO</h3>
     <figure class="shot"><img src="img/echo.jpg" alt="ECHO" width="1172" height="546" loading="lazy"></figure>
+    <p>Five modes (<strong>MODE</strong>) on the same knobs. The knob names change with what they do in each mode.</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>MODE</th><th>TIME 1 · TIME 2 · MOD</th><th>Sound</th></tr></thead>
+      <tbody>
+        <tr><td>DUAL</td><td>TIME 1 · TIME 2 · MOD</td><td>Two lines, left and right, with cross feedback. MOD SOURCE <em>Self</em> = the echo modulates its own time, <em>LFO</em> = a slow sine.</td></tr>
+        <tr><td>TAPE</td><td>HEAD 1 · HEAD 2 · WOW</td><td>Tape echo: one tape loop, two playback heads. Recording saturates and compresses, every playback loses highs and lows (120 Hz–2.8 kHz), so the repeats darken. WOW is the wobble of the tape speed (wow, flutter, a slow drift), DUST adds tape hiss. A new time makes the pitch slide like a tape speed change.</td></tr>
+        <tr><td>PING-PONG</td><td>TIME L · TIME R · MOD</td><td>The input goes into the left line only, left feeds right and right feeds left: the repeats bounce left and right.</td></tr>
+        <tr><td>LO-FI</td><td>TIME 1 · TIME 2 · DEGRADE</td><td>A bad digital delay: the repeats lose sample rate (16 kHz down to ~3 kHz) and bits (12 down to 4), dark, grainy and a little noisy. DEGRADE sets how much.</td></tr>
+        <tr><td>MOD</td><td>TIME 1 · TIME 2 · DEPTH</td><td>Chorused repeats: each line swings by up to 8 ms, left and right a quarter apart. Clean and wide.</td></tr>
+      </tbody>
+    </table></div>
     <ul>
-      <li>Two lines (<strong>TIME 1</strong> left, <strong>TIME 2</strong> right, 5 ms–2 s) with cross feedback. Time changes glide like tape.</li>
-      <li><strong>FEEDBACK</strong>: above ~55 % the echo starts to sing on its own. The loop has a ceiling, so the level never runs away.</li>
-      <li><strong>MIX</strong>, <strong>MOD</strong> and <strong>MOD SOURCE</strong>: <em>Self</em> = the echo modulates its own time, <em>LFO</em> = a slow sine.</li>
+      <li><strong>FEEDBACK</strong>: above ~55 % the echo starts to sing on its own. The loop has a ceiling, so the level never runs away. Tape and LO-FI hiss fade with the echo, so it falls silent in silence.</li>
       <li><strong>TO VOICES</strong>: the echo returns into the voices as FM. See GRAVITY.</li>
     </ul>
     <h3>SPACE</h3>
@@ -528,7 +539,7 @@
         <tr><td>QUASAR at 1976 Hz, RATIO 3, INDEX 100 / NEBULA at 1976 Hz (every table)</td><td class="num">−76 / −88 dB</td></tr>
         <tr><td>GRAVITY: loudness change STILL → COLLAPSE</td><td class="num">2.2 dB</td></tr>
         <tr><td>Stability 60 s in every GRAVITY zone, 44.1–192 kHz</td><td class="num">no NaN, ≤ −0.3 dBFS</td></tr>
-        <tr><td>FILTER: LP at 3 kHz / HP at 110 Hz (5 models)</td><td class="num">−31 to −64 / −53 to −109 dB</td></tr>
+        <tr><td>FILTER: LP at 3 kHz / HP at 110 Hz (5 analog models)</td><td class="num">−31 to −64 / −53 to −109 dB</td></tr>
         <tr><td>ROUTING Split: lead through HP 3 kHz / drone through A</td><td class="num">−33 dB / unchanged</td></tr>
         <tr><td>LEAD Poly 8: chord C-E-G, level difference between notes</td><td class="num">0.7 dB</td></tr>
         <tr><td>LFO 1/4 in tempo at 120 BPM: edges in 2 s</td><td class="num">8 (exact)</td></tr>

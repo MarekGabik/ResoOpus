@@ -1093,6 +1093,96 @@ static void testEffects()
         check (win (0.25) > win (0.15) + 30.0, "ECHO: the pluck repeats after TIME 1 = 250 ms (" + String (win (0.15), 1) + " -> " + String (win (0.25), 1) + " dB)");
     }
     {
+        // ECHO modes: one pluck, TIME 1 = 250 ms, TIME 2 = 375 ms
+        auto pluck = [sr] (int mode, float fb, float mod, double seconds = 2.5)
+        {
+            auto p = makeProc (sr);
+            dryPluck (*p);
+            setParam (*p, "echo_mode", (float) mode); setParam (*p, "echo_mix", 100.0f); setParam (*p, "echo_fb", fb); setParam (*p, "echo_mod", mod);
+            setParam (*p, "echo_time1", 0.25f); setParam (*p, "echo_time2", 0.375f);
+            return render (*p, seconds, note (60, 0.0, 0.05));
+        };
+        auto chan = [sr] (const AudioBuffer<float>& out, int ch, double t, double len = 0.06)
+        {
+            double e = 0.0;
+            for (int i = (int) (t * sr); i < (int) ((t + len) * sr); ++i) e += (double) out.getSample (ch, i) * out.getSample (ch, i);
+            return 10.0 * std::log10 (e / (len * sr) + 1e-30);
+        };
+        // PING-PONG: left at 250 ms, then right at 625 ms, nothing on the other side
+        const auto pp = pluck (2, 60.0f, 0.0f);
+        check (chan (pp, 0, 0.25) > chan (pp, 1, 0.25) + 40.0 && chan (pp, 1, 0.625) > chan (pp, 0, 0.625) + 40.0,
+               "ECHO PING-PONG: the first repeat only on the left (" + String (chan (pp, 0, 0.25), 0) + " / " + String (chan (pp, 1, 0.25), 0)
+               + " dB), the next only on the right (" + String (chan (pp, 0, 0.625), 0) + " / " + String (chan (pp, 1, 0.625), 0) + " dB)");
+        // TAPE: two heads on one loop (250 and 375 ms), and each pass is darker: highs of the 1st vs the 4th head-1 repeat
+        const auto tp = pluck (1, 70.0f, 0.0f, 1.6);
+        AudioBuffer<float> dryTp;
+        {
+            auto p = makeProc (sr);
+            dryPluck (*p);
+            dryTp = render (*p, 0.3, note (60, 0.0, 0.05));
+        }
+        auto hiShare = [&] (double t, const AudioBuffer<float>& src)
+        {
+            AudioBuffer<float> b (2, (int) (0.06 * sr));
+            for (int c = 0; c < 2; ++c) b.copyFrom (c, 0, src, 0, (int) (t * sr), b.getNumSamples());
+            IIRFilter hp; hp.setCoefficients (IIRCoefficients::makeHighPass (sr, 2000.0));
+            double all = 0.0, hi = 0.0;
+            for (int i = 0; i < b.getNumSamples(); ++i) { const float x = b.getSample (0, i), y = hp.processSingleSampleRaw (x); all += (double) x * x; hi += (double) y * y; }
+            return 10.0 * std::log10 (hi / (all + 1e-30) + 1e-30);
+        };
+        const double dryHi = hiShare (0.0, dryTp), first = hiShare (0.25, tp), later = hiShare (1.0, tp);
+        check (chan (tp, 0, 0.25) > chan (tp, 0, 0.15) + 30.0 && chan (tp, 1, 0.375) > chan (tp, 1, 0.15) + 30.0 && first < dryHi - 3.0 && later < first - 3.0,
+               "ECHO TAPE: heads at 250 and 375 ms, the repeats darken (highs above 2 kHz: dry " + String (dryHi, 1) + ", 1st " + String (first, 1)
+               + ", after 1 s " + String (later, 1) + " dB)");
+        // LO-FI: DEGRADE adds grain off the harmonics of a steady drone
+        auto droneOff = [sr] (int mode, float mod)
+        {
+            auto p = makeProc (sr);
+            soloVoice1 (*p, 57.0f, VP::Quasar);
+            setParam (*p, "v1_q_index", 0.0f);
+            setParam (*p, "echo_mode", (float) mode); setParam (*p, "echo_mix", 100.0f); setParam (*p, "echo_fb", 30.0f); setParam (*p, "echo_mod", mod);
+            return render (*p, 4.0);
+        };
+        const double cleanIn = inharmonicDb (droneOff (3, 0.0f), sr, (int) (2.0 * sr), 220.0, 220.0), crushIn = inharmonicDb (droneOff (3, 100.0f), sr, (int) (2.0 * sr), 220.0, 220.0);
+        check (crushIn > cleanIn + 15.0, "ECHO LO-FI: DEGRADE 100 % adds grain off the harmonics (" + String (cleanIn, 0) + " -> " + String (crushIn, 0) + " dB)");
+        // MOD: DEPTH spreads a pure tone in the repeats (chorus)
+        auto spread = [&] (float mod)
+        {
+            const auto out = droneOff (4, mod);
+            const auto db = spectrum (out, (int) (2.0 * sr), 15);
+            const double binHz = sr / 32768.0;
+            double centre = 0.0, side = 0.0;
+            for (long k = std::lround (200.0 / binHz); k <= std::lround (240.0 / binHz); ++k)
+            {
+                const double pw = std::pow (10.0, db[(size_t) k] / 10.0);
+                if (std::abs (k * binHz - 220.0) < 2.0) centre += pw; else side += pw;
+            }
+            return 10.0 * std::log10 (side / (centre + 1e-30) + 1e-30);
+        };
+        const double still = spread (0.0f), swung = spread (100.0f);
+        check (swung > still + 15.0, "ECHO MOD: DEPTH 100 % spreads the repeats around the tone (" + String (still, 0) + " -> " + String (swung, 0) + " dB beside 220 Hz)");
+        // every mode at full feedback with TO VOICES and GRAVITY high stays bounded, and falls asleep in silence
+        bool ok = true;
+        double worst = -200.0;
+        for (int m = 0; m < 5; ++m)
+        {
+            auto p = makeProc (sr);
+            setParam (*p, "echo_mode", (float) m); setParam (*p, "echo_fb", 100.0f); setParam (*p, "echo_mix", 100.0f); setParam (*p, "echo_mod", 100.0f);
+            setParam (*p, "echo_voices", 100.0f); setParam (*p, "gravity", 90.0f); setParam (*p, "dust", 100.0f);
+            auto out = render (*p, 15.0);
+            ok = ok && allFinite (out);
+            worst = std::max (worst, peakDb (out));
+        }
+        check (ok && worst < 0.0, "ECHO every mode at FEEDBACK, MOD, TO VOICES and DUST 100 %, GRAVITY 90 % for 15 s: finite, peak " + String (worst, 1) + " dBFS");
+        bool quiet = true;
+        for (int m = 0; m < 5; ++m)
+        {
+            const auto out = pluck (m, 50.0f, 50.0f, 12.0);
+            quiet = quiet && rmsDb (out, (int) (10.0 * sr), out.getNumSamples()) < -120.0;
+        }
+        check (quiet, "ECHO every mode: after a pluck at FEEDBACK 50 % the echo dies away to silence (no endless hiss)");
+    }
+    {
         auto p = makeProc (sr);
         for (int v = 0; v < Params::numVoices; ++v) setParam (*p, Params::voiceID (v, "hold"), 100.0f);
         setParam (*p, "echo_fb", 100.0f); setParam (*p, "echo_mix", 100.0f); setParam (*p, "echo_mod", 100.0f); setParam (*p, "echo_voices", 100.0f);
@@ -1227,6 +1317,10 @@ static void testEffectLevels()
         { "ECHO 100 % wet, feedback 35 %", { { "echo_mix", 100.0f } } },
         { "ECHO 100 % wet, feedback 90 %", { { "echo_mix", 100.0f }, { "echo_fb", 90.0f } } },
         { "ECHO 100 % wet, feedback 100 %, SELF mod 100 %", { { "echo_mix", 100.0f }, { "echo_fb", 100.0f }, { "echo_mod", 100.0f } } },
+        { "ECHO TAPE 100 % wet, feedback 90 %", { { "echo_mode", 1.0f }, { "echo_mix", 100.0f }, { "echo_fb", 90.0f }, { "echo_mod", 50.0f } } },
+        { "ECHO PING-PONG 100 % wet, feedback 90 %", { { "echo_mode", 2.0f }, { "echo_mix", 100.0f }, { "echo_fb", 90.0f } } },
+        { "ECHO LO-FI 100 % wet, feedback 90 %, DEGRADE 50 %", { { "echo_mode", 3.0f }, { "echo_mix", 100.0f }, { "echo_fb", 90.0f }, { "echo_mod", 50.0f } } },
+        { "ECHO MOD 100 % wet, feedback 90 %, DEPTH 50 %", { { "echo_mode", 4.0f }, { "echo_mix", 100.0f }, { "echo_fb", 90.0f }, { "echo_mod", 50.0f } } },
         { "AURORA 100 %", { { "space_algo", 0.0f }, { "space_blend", 100.0f } } },
         { "VOID 100 %", { { "space_algo", 1.0f }, { "space_blend", 100.0f } } },
         { "RUNNER 100 %, feedback max", { { "space_algo", 2.0f }, { "space_blend", 100.0f }, { "space_x", 100.0f } } },
@@ -2098,6 +2192,47 @@ int main (int argc, char* argv[])
         editor->setPresetBrowser (false);
         ed.reset();
         std::cout << "done" << std::endl;
+        return 0;
+    }
+    if (argc > 1 && String (argv[1]) == "--echo")
+    {
+        static const char* names[] = { "DUAL", "TAPE", "PING-PONG", "LO-FI", "MOD" };
+        const double sr = 48000.0;
+        auto drone = [] (int mode, float fb, float mod)
+        {
+            auto p = makeProc();
+            setParam (*p, "space_blend", 0.0f); setParam (*p, "echo_mode", (float) mode);
+            setParam (*p, "echo_mix", 100.0f); setParam (*p, "echo_fb", fb); setParam (*p, "echo_mod", mod);
+            auto out = render (*p, 14.0);
+            double l = 0.0, r = 0.0;
+            for (int i = 6 * 48000; i < out.getNumSamples(); ++i) { l += out.getSample (0, i) * out.getSample (0, i); r += out.getSample (1, i) * out.getSample (1, i); }
+            return std::make_pair (rmsDb (out, 6 * 48000, out.getNumSamples()), 10.0 * std::log10 ((l + 1e-20) / (r + 1e-20)));
+        };
+        const double dry = drone (0, 35.0f, 10.0f).first - 0.0;   // reference: echo mix 100 on dual; use mix 0 below
+        auto p0 = makeProc(); setParam (*p0, "space_blend", 0.0f); setParam (*p0, "echo_mix", 0.0f);
+        auto o0 = render (*p0, 14.0);
+        const double dryDb = rmsDb (o0, 6 * 48000, o0.getNumSamples());
+        juce::ignoreUnused (dry);
+        for (int m = 0; m < 5; ++m)
+        {
+            String line = String (names[m]) + ":";
+            for (float fb : { 35.0f, 90.0f, 100.0f })
+            {
+                const auto r = drone (m, fb, 50.0f);
+                line << "  fb " << fb << " " << String (r.first - dryDb, 1) << " dB (L/R " << String (r.second, 1) << ")";
+            }
+            // a single pluck (D3 sine-ish choir) at time 250 / 375 ms: levels and brightness of the first repeats, left and right
+            auto p = makeProc (sr);
+            dryPluck (*p);
+            setParam (*p, "echo_mode", (float) m); setParam (*p, "echo_mix", 100.0f); setParam (*p, "echo_fb", 60.0f); setParam (*p, "echo_mod", 40.0f);
+            setParam (*p, "echo_time1", 0.25f); setParam (*p, "echo_time2", 0.375f);
+            auto out = render (*p, 2.5, note (60, 0.0, 0.05));
+            auto win = [&] (int ch, double t) { AudioBuffer<float> b (2, out.getNumSamples()); b.copyFrom (0, 0, out, ch, 0, out.getNumSamples()); b.copyFrom (1, 0, out, ch, 0, out.getNumSamples());
+                                                return rmsDb (b, (int) (t * sr), (int) ((t + 0.06) * sr)); };
+            line << "\n   repeats L/R: ";
+            for (double t : { 0.25, 0.375, 0.5, 0.625, 0.75 }) line << String (t, 3) << "s " << String (win (0, t), 0) << "/" << String (win (1, t), 0) << "  ";
+            std::cout << line << std::endl;
+        }
         return 0;
     }
     if (argc > 1 && String (argv[1]) == "--flevel")

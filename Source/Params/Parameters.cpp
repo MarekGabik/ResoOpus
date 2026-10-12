@@ -232,6 +232,9 @@ const std::vector<ParamDef>& Params::globalDefs()
         d.push_back (LogF ("menv_decay", "Mod Env Decay", 0.001f, 30.0f, 1.5f, Unit::Seconds, "MOD ENV: fall to SUSTAIN"));
         d.push_back (F ("menv_sustain", "Mod Env Sustain", 0.0f, 100.0f, 40.0f, Unit::Percent, "MOD ENV: level while keys are held"));
         d.push_back (LogF ("menv_release", "Mod Env Release", 0.001f, 30.0f, 3.0f, Unit::Seconds, "MOD ENV: fall to zero after the last key is let go"));
+        d.push_back (C ("echo_mode", "Echo Mode", { "Dual", "Tape", "Ping-Pong", "Lo-Fi", "Mod" }, 0,
+                        "Dual: two lines feeding each other. Tape: a tape loop with two heads, wow and flutter, darker and saturated "
+                        "repeats. Ping-Pong: the repeats bounce left and right. Lo-Fi: a degraded, crunchy digital delay. Mod: chorused repeats"));
         return d;
     }();
     return defs;

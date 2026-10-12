@@ -939,16 +939,20 @@ FxPage::FxPage (ResoOpusProcessor& p) : Page (p)
     filterBControls = { cutB, resB, drvB, modelB, modeB };
 
     // ECHO
-    auto* echoPanel = panel ("ECHO", Palette::mixer, { 0, y2, half, rowH }, -1, "2 LINES");
-    auto* src = new LedRadio (proc, "echo_self", "MOD SOURCE", { "SELF", "LFO" });
-    owned.add (src);
+    echoPanel = panel ("ECHO", Palette::mixer, { 0, y2, half, rowH }, -1, "DUAL");
+    echoSrc = new LedRadio (proc, "echo_self", "MOD SOURCE", { "SELF", "LFO" });
+    owned.add (echoSrc);
+    auto* echoMode = new LedRadio (proc, "echo_mode", "MODE", { "DUAL", "TAPE", "PING-PONG", "LO-FI", "MOD" });
+    owned.add (echoMode);
+    echoKnobs[0] = knob ("echo_time1", "TIME 1", Palette::mixer, sm ("5ms", "2s"));
+    echoKnobs[1] = knob ("echo_time2", "TIME 2", Palette::mixer, sm ("5ms", "2s"));
+    echoKnobs[2] = knob ("echo_mod", "MOD", Palette::mixer, sm ("0", "100"));
     echoPanel->setGrid ({ 1.0f, 1.0f, 1.0f, 1.0f }, {
-        knob ("echo_time1", "TIME 1", Palette::mixer, sm ("5ms", "2s")),
-        knob ("echo_time2", "TIME 2", Palette::mixer, sm ("5ms", "2s")),
+        echoKnobs[0], echoKnobs[1],
         knob ("echo_fb", "FEEDBACK", Palette::mixer, sm ("0", "MAX")),
         knob ("echo_mix", "MIX", Palette::mixer, sm ("DRY", "WET")),
-        knob ("echo_mod", "MOD", Palette::mixer, sm ("0", "100")), src,
-        knob ("echo_voices", "TO VOICES", Palette::mixer, sm ("0", "100")), nullptr });
+        echoMode, echoKnobs[2], echoSrc,
+        knob ("echo_voices", "TO VOICES", Palette::mixer, sm ("0", "100")) });
 
     // SPACE
     spacePanel = panel ("SPACE", Palette::fx2, { half + 8, y2, width - half - 8, rowH }, -1, "VOID");
@@ -985,6 +989,18 @@ void FxPage::refreshLive()
     {
         shownRoute = r;
         routingPanel->setRightText (r < 0 ? String ("B OFF") : Params::findDef ("flt_route")->choices[jlimit (0, 3, r)].toUpperCase());
+    }
+    const int em = roundToInt (proc.getParamReal ("echo_mode"));
+    if (em != shownEcho)
+    {
+        // the same knobs, named for what they do in this mode
+        shownEcho = em;
+        static const char* names[5][3] = { { "TIME 1", "TIME 2", "MOD" }, { "HEAD 1", "HEAD 2", "WOW" }, { "TIME L", "TIME R", "MOD" },
+                                           { "TIME 1", "TIME 2", "DEGRADE" }, { "TIME 1", "TIME 2", "DEPTH" } };
+        const int m = jlimit (0, 4, em);
+        for (int i = 0; i < 3; ++i) echoKnobs[i]->setLabel (names[m][i]);
+        echoPanel->setRightText (Params::findDef ("echo_mode")->choices[m].toUpperCase());
+        echoSrc->setAlpha (m == 0 || m == 2 ? 1.0f : 0.35f);   // SELF / LFO only steer DUAL and PING-PONG
     }
     const int a = roundToInt (proc.getParamReal ("space_algo"));
     if (a == shownAlgo) return;

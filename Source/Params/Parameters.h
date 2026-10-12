@@ -173,6 +173,7 @@ namespace GP
         rnd_rate, rnd_mode, rnd_slew, rnd_sync, rnd_div,
         lead_sym, grit,
         menv_attack, menv_decay, menv_sustain, menv_release,
+        echo_mode,
         count
     };
     enum PlayMode { Plates = 0, Keys };

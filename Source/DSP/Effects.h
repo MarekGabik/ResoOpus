@@ -38,7 +38,8 @@ public:
     void reset()
     {
         s1 = s2 = 0.0f; for (auto& z : st) z = 0.0f; for (auto& z : dz) z = 0.0; dz4 = 0.0; clipPrev = 0.0f; dc = 0.0f;
-        std::fill (combBuf.begin(), combBuf.end(), 0.0f); combW = 0; combLp = 0.0f;
+        if (combUsed) { std::fill (combBuf.begin(), combBuf.end(), 0.0f); combUsed = false; }   // only when COMB ran
+        combW = 0; combLp = 0.0f;
         for (auto& f : form) f[0] = f[1] = 0.0f;
     }
 
@@ -213,7 +214,8 @@ private:
     float comb (float x, float g, float res, float drive, int mode)
     {
         if (combBuf.empty()) return x;
-        if (g != combG || mode != combMode)
+        combUsed = true;
+        if (g < combG || g > combG || mode != combMode)   // a new pitch (exact compare: only a changed value)
         {
             combG = g; combMode = mode;
             combD = pi / std::atan ((double) g);   // fs / f, since g = tan (pi f / fs)
@@ -250,7 +252,7 @@ private:
     float vowel (float x, float g, float res, float drive, int mode)
     {
         if (drive > 0.0f) x += std::min (1.0f, 3.0f * drive) * (tanhFast (x) - x);
-        if (g != vowelG || res != vowelRes || mode != vowelMode)
+        if (g < vowelG || g > vowelG || res < vowelRes || res > vowelRes || mode != vowelMode)
         {
             vowelG = g; vowelRes = res; vowelMode = mode;
             static const float table[5][3] = { { 300.0f, 870.0f, 2240.0f },     // U
@@ -295,6 +297,7 @@ private:
     double combD = 100.0, fsRate = 48000.0;
     float combG = -1.0f, combLp = 0.0f, combC = 0.1f, vowelG = -1.0f, vowelRes = -1.0f, vowelGain = 3.0f;
     int vowelMode = -1, combMode = -1;
+    bool combUsed = false;
     float form[3][2] {}, formG[3] {}, formK[3] {}, formA[3] {};
 
     float s1 = 0.0f, s2 = 0.0f, clipPrev = 0.0f;
@@ -417,12 +420,21 @@ private:
 };
 
 //==============================================================================
-// ECHO: two delay lines with cross feedback (left feeds right and back), soft limiting and damping in the loop
-// (self-oscillates above ~55 % feedback without blowing up). The time of each line wobbles from an internal LFO
-// or from its own output (SELF: stable resonances turn unstable). TO VOICES: the wet signal for the GRAVITY network.
+// ECHO: five modes on two delay lines, all with soft limiting in the loop (they sing at high FEEDBACK without
+// blowing up). TO VOICES: the wet signal for the GRAVITY network.
+//  DUAL       two lines with cross feedback (left feeds right and back); the times wobble from an LFO or from
+//             their own output (SELF: stable resonances turn unstable)
+//  TAPE       one tape loop, two playback heads (TIME 1 and TIME 2). Recording saturates and compresses, every
+//             playback loses highs and lows (120 Hz .. 2.8 kHz), wow / flutter / drift move the tape speed (MOD), DUST adds tape hiss, and a new
+//             time is reached slowly (the pitch slides like a tape speed change)
+//  PING-PONG  the input goes into the left line only; left feeds right and right feeds left, so the repeats bounce
+//  LO-FI      a degraded digital delay: the repeats lose sample rate and bits (MOD = degrade), dark, noisy, crunchy
+//  MOD        chorused repeats: each line swings by up to 8 ms (MOD = depth), left and right a quarter apart
 class Echo
 {
 public:
+    enum Mode { Dual = 0, Tape, PingPong, LoFi, ModDelay };
+
     void prepare (double fs)
     {
         sr = fs;
@@ -435,15 +447,21 @@ public:
         balance.reset();
         for (auto& l : lines) l.reset();
         for (auto& d : damp) d.reset();
+        for (auto& d : damp2) d.reset();
+        for (auto& d : low) d.reset();
         fbL = fbR = 0.0f; selfMod[0] = selfMod[1] = 0.0f; lfo = 0.0; wet = 0.0f;
+        wow = flutter = chorus = 0.0; driftS = driftTarget = 0.0f; driftCount = 0;
+        held[0] = held[1] = 0.0f; holdPhase = 0.0; lastMode = -1; hissEnv = 0.0f;
         timeR[0].reset ((float) (0.3 * sr)); timeR[1].reset ((float) (0.45 * sr));
+        tapeT[0] = 0.3 * sr; tapeT[1] = 0.45 * sr;
         primed = false;
     }
 
-    struct Settings { float time1 = 0.3f, time2 = 0.45f, feedback = 0.3f, mix = 0.0f, mod = 0.0f, dust = 0.0f; bool self = true; };
+    struct Settings { float time1 = 0.3f, time2 = 0.45f, feedback = 0.3f, mix = 0.0f, mod = 0.0f, dust = 0.0f; bool self = true; int mode = Dual; };
 
     void process (float* L, float* R, int n, const Settings& s, Rng& rng, float* wetOut = nullptr)
     {
+        if (s.mode != lastMode) { if (lastMode >= 0) { const bool p = primed; reset(); primed = p; } lastMode = s.mode; }
         if (sleeper.asleep (L, R, n, 0.25 * sr))
         {
             if (wetOut != nullptr) std::fill (wetOut, wetOut + n, 0.0f);
@@ -451,29 +469,116 @@ public:
             return;
         }
         const float t1 = (float) (s.time1 * sr), t2 = (float) (s.time2 * sr);
-        if (primed) { timeR[0].set (t1, n); timeR[1].set (t2, n); } else { timeR[0].reset (t1); timeR[1].reset (t2); primed = true; }
+        if (primed) { timeR[0].set (t1, n); timeR[1].set (t2, n); } else { timeR[0].reset (t1); timeR[1].reset (t2); tapeT[0] = t1; tapeT[1] = t2; primed = true; }
         const float fb = 1.25f * s.feedback;
         // the more the loop holds, the more its output is turned down (steady-state gain of the loop)
-        const float g = std::min (0.98f, fb);
+        // TAPE / LO-FI / MOD lose more in their loop (filters, saturation), so they need less of that correction
+        const float loss = s.mode == Tape ? 0.8f : (s.mode == LoFi ? 0.7f : (s.mode == ModDelay ? 0.85f : 1.0f));
+        const float g = std::min (0.98f, loss * fb);
         const float comp = std::sqrt (1.0f - g * g);
         const float dampC = OnePole::coefFor (7000.0 - 4500.0 * s.dust, sr);
         const double lfoInc = 0.23 / sr;
+        const float envC = (float) (1.0 - std::exp (-1.0 / (0.5 * sr)));
+        // TAPE: the tape speed settles over ~0.25 s; one pass keeps 120 Hz .. 2.8 kHz (darker with DUST)
+        const double tapeC = 1.0 - std::exp (-1.0 / (0.25 * sr));
+        const float tapeLp = OnePole::coefFor (2800.0 - 900.0 * s.dust, sr), tapeHp = OnePole::coefFor (120.0, sr);
+        // LO-FI: sample rate 16 kHz .. ~2.8 kHz and 12 .. 4 bits, a dark loop
+        const double holdInc = 16000.0 * std::exp2 (-2.5 * (double) s.mod) / sr;
+        const float steps = std::exp2 (12.0f - 8.0f * s.mod) * 0.5f;
+        const float lofiLp = OnePole::coefFor (3200.0 - 1400.0 * s.mod, sr);
         for (int k = 0; k < n; ++k)
         {
             lfo += lfoInc; lfo -= std::floor (lfo);
             const float lf = (float) std::sin (twoPi * lfo);
-            const float m0 = s.self ? selfMod[0] : lf, m1 = s.self ? selfMod[1] : -lf;
-            const double d0 = std::max (2.0, (double) timeR[0].next() * (1.0 + 0.35 * s.mod * m0));
-            const double d1 = std::max (2.0, (double) timeR[1].next() * (1.0 + 0.35 * s.mod * m1));
-            const float y0 = lines[0].read (d0), y1 = lines[1].read (d1);
+            const double tm0 = timeR[0].next(), tm1 = timeR[1].next();
+            float y0 = 0.0f, y1 = 0.0f, wl = 0.0f, wr = 0.0f;
+            // hiss (TAPE, LO-FI) follows what is in the loop, so a quiet echo can still fall asleep
+            hissEnv += envC * (std::min (1.0f, 30.0f * (std::abs (L[k]) + std::abs (R[k]) + wetBuf[(k + 255) & 255])) - hissEnv);
+            switch (s.mode)
+            {
+                case Tape:
+                {
+                    tapeT[0] += tapeC * (tm0 - tapeT[0]);
+                    tapeT[1] += tapeC * (tm1 - tapeT[1]);
+                    wow += 0.6 / sr; wow -= std::floor (wow);
+                    flutter += 8.5 / sr; flutter -= std::floor (flutter);
+                    if (--driftCount <= 0) { driftTarget = rng.next(); driftCount = (int) (0.4 * sr); }
+                    driftS += (float) (1.0 - std::exp (-1.0 / (0.2 * sr))) * (driftTarget - driftS);
+                    // both heads read the same tape, so they share its speed
+                    const double speed = 1.0 + s.mod * (0.006 * std::sin (twoPi * wow) + 0.0015 * std::sin (twoPi * flutter) + 0.004 * driftS);
+                    // playback: every head loses highs and lows, already on the first repeat and again on every pass
+                    auto head = [&] (int h, double d)
+                    {
+                        float v = lines[0].read (std::max (2.0, d));
+                        v = damp2[h].lp (damp[h].lp (v, tapeLp), tapeLp);
+                        return v - low[h].lp (v, tapeHp);
+                    };
+                    y0 = head (0, tapeT[0] * speed);
+                    y1 = head (1, tapeT[1] * speed);
+                    const float back = 0.6f * (y0 + y1);
+                    const float rec = 0.5f * (L[k] + R[k]) + fb * back + hissEnv * (s.dust * 0.004f + 0.00015f) * rng.next();
+                    // recording saturates and compresses (a little more on one side, like tape)
+                    lines[0].push (rec > 0.0f ? 0.7f * tanhFast (rec / 0.7f) : 0.62f * tanhFast (rec / 0.62f));
+                    wl = (y0 + 0.5f * y1) * comp * 0.8f;
+                    wr = (y1 + 0.5f * y0) * comp * 0.8f;
+                    break;
+                }
+                case PingPong:
+                {
+                    const float m0 = s.self ? selfMod[0] : lf, m1 = s.self ? selfMod[1] : -lf;
+                    y0 = lines[0].read (std::max (2.0, tm0 * (1.0 + 0.35 * s.mod * m0)));
+                    y1 = lines[1].read (std::max (2.0, tm1 * (1.0 + 0.35 * s.mod * m1)));
+                    // only the left line hears the input: left -> right -> left ...
+                    lines[0].push (0.5f * (L[k] + R[k]) + damp[0].lp (ceilingClip (fb * y1, 0.5f), dampC) + s.dust * 0.003f * rng.next());
+                    lines[1].push (damp[1].lp (ceilingClip (fb * y0, 0.5f), dampC));
+                    wl = y0 * comp; wr = y1 * comp;
+                    break;
+                }
+                case LoFi:
+                {
+                    y0 = lines[0].read (std::max (2.0, tm0));
+                    y1 = lines[1].read (std::max (2.0, tm1));
+                    // a coarse clock and few bits: aliasing and grain, dark and a little noisy
+                    holdPhase += holdInc;
+                    if (holdPhase >= 1.0)
+                    {
+                        holdPhase -= std::floor (holdPhase);
+                        held[0] = std::round (y0 * steps) / steps;
+                        held[1] = std::round (y1 * steps) / steps;
+                    }
+                    const float c0 = damp[0].lp (held[0], lofiLp), c1 = damp[1].lp (held[1], lofiLp);
+                    const float noise = hissEnv * (0.001f + 0.004f * s.mod) * rng.next();
+                    lines[0].push (L[k] + ceilingClip (fb * c1, 0.4f) + noise);
+                    lines[1].push (R[k] + ceilingClip (fb * c0, 0.4f) + noise);
+                    wl = c0 * comp; wr = c1 * comp;
+                    break;
+                }
+                case ModDelay:
+                {
+                    chorus += 0.7 / sr; chorus -= std::floor (chorus);
+                    const double depth = s.mod * 0.008 * sr;
+                    y0 = lines[0].read (std::max (2.0, tm0 + depth * (1.0 + std::sin (twoPi * chorus))));
+                    y1 = lines[1].read (std::max (2.0, tm1 + depth * (1.0 + std::cos (twoPi * chorus))));
+                    const float c = OnePole::coefFor (9000.0, sr);
+                    lines[0].push (L[k] + damp[0].lp (ceilingClip (fb * y1, 0.5f), c));
+                    lines[1].push (R[k] + damp[1].lp (ceilingClip (fb * y0, 0.5f), c));
+                    wl = y0 * comp; wr = y1 * comp;
+                    break;
+                }
+                default:   // Dual
+                {
+                    const float m0 = s.self ? selfMod[0] : lf, m1 = s.self ? selfMod[1] : -lf;
+                    y0 = lines[0].read (std::max (2.0, tm0 * (1.0 + 0.35 * s.mod * m0)));
+                    y1 = lines[1].read (std::max (2.0, tm1 * (1.0 + 0.35 * s.mod * m1)));
+                    // cross feedback with damping and a soft limiter; DUST adds hiss in the loop
+                    lines[0].push (L[k] + damp[0].lp (ceilingClip (fb * y1, 0.5f), dampC) + s.dust * 0.003f * rng.next());
+                    lines[1].push (R[k] + damp[1].lp (ceilingClip (fb * y0, 0.5f), dampC));
+                    wl = y0 * comp; wr = y1 * comp;
+                    break;
+                }
+            }
             selfMod[0] += 0.002f * (y0 - selfMod[0]);
             selfMod[1] += 0.002f * (y1 - selfMod[1]);
-            // cross feedback with damping and a soft limiter; DUST adds hiss in the loop
-            const float in0 = L[k] + damp[0].lp (ceilingClip (fb * y1, 0.5f), dampC) + s.dust * 0.003f * rng.next();
-            const float in1 = R[k] + damp[1].lp (ceilingClip (fb * y0, 0.5f), dampC);
-            lines[0].push (in0);
-            lines[1].push (in1);
-            float wl = y0 * comp, wr = y1 * comp;
             balance.process (wl, wr, L[k], R[k]);
             wet = 0.5f * (wl + wr);
             if (wetOut != nullptr) wetOut[k] = wet;
@@ -489,11 +594,12 @@ public:
     float lastWet() const { return wet; }
 
 private:
-    double sr = 48000.0, lfo = 0.0;
+    double sr = 48000.0, lfo = 0.0, wow = 0.0, flutter = 0.0, chorus = 0.0, holdPhase = 0.0, tapeT[2] { 14400.0, 21600.0 };
     DelayLine lines[2];
-    OnePole damp[2];
+    OnePole damp[2], damp2[2], low[2];
     Ramp timeR[2];
-    float fbL = 0.0f, fbR = 0.0f, selfMod[2] {}, wet = 0.0f, wetBuf[256] {};
+    float fbL = 0.0f, fbR = 0.0f, selfMod[2] {}, wet = 0.0f, wetBuf[256] {}, driftS = 0.0f, driftTarget = 0.0f, held[2] {}, hissEnv = 0.0f;
+    int driftCount = 0, lastMode = -1;
     bool primed = false;
     Sleeper sleeper;
     AutoBalance balance;
